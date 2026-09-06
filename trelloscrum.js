@@ -205,21 +205,363 @@ function updateBurndownLink(){
 			}
 			buttons += "</a>";
 		}
+
+		// Link for Members Burndown
+		buttons += "<a id='membersBurndownLink' class='s4tLink quiet ed board-header-btn dark-hover s4t-members-header-btn' href='#' title='View live burndown and story points by team member'>";
+		buttons += "<span class='icon-sm board-header-btn-icon' style='display:inline-flex;align-items:center;margin-right:4px;'>👥</span>";
+		buttons += "<span class='text board-header-btn-text' style='font-weight:600;'>Members Burndown</span>";
+		buttons += "</a>";
+
 		// Link for settings
 		buttons += "<a id='scrumSettingsLink' class='s4tLink quiet ed board-header-btn dark-hover' href='#'>";
 		buttons += "<span class='icon-sm board-header-btn-icon'><img src='"+scrumLogoUrl+"' width='12' height='12' title='Settings: Scrum for Trello'/></span>";
 		//buttons += "<span class='text board-header-btn-text'>Settings</span>"; // too big :-/ icon only for now
 		buttons += "</a>";
-		var showOnLeft = true;
-		if(showOnLeft){
-			$('.board-header-btns.mod-left').last().after(buttons);
+		
+		var $target = $('.board-header-btns.mod-left').last();
+		if($target.length === 0){
+			$target = $('[data-testid="board-header-action-bar"], [data-testid="board-header"], .board-header-btns, #board-header').first();
+			if($target.length > 0) {
+				$target.append(buttons);
+			}
 		} else {
-			$('.board-header-btns.mod-right,#board-header a').last().after(buttons);
+			$target.after(buttons);
 		}
+
         $('#burndownLink').click(showBurndown);
 		$('#scrumSettingsLink').click(showSettings);
+		$('#membersBurndownLink').click(function(e){
+			e.preventDefault();
+			showMembersBurndown();
+		});
     }
 }
+
+function showMembersBurndown() {
+    var data = collectMembersBurndownData();
+    renderMembersBurndownModal(data);
+}
+
+function hideMembersBurndown() {
+    $('#s4t-modal-overlay').fadeOut(150, function(){
+        $(this).remove();
+    });
+    $(document).off('keydown.s4tEsc');
+}
+
+function collectMembersBurndownData() {
+    var membersMap = {};
+    var unassigned = {
+        name: 'Unassigned',
+        avatar: '',
+        initials: '?',
+        completed: 0,
+        remaining: 0,
+        total: 0,
+        cardsTotal: 0,
+        cardsCompleted: 0,
+        cardsPending: 0
+    };
+
+    var teamStats = {
+        totalPoints: 0,
+        completedPoints: 0,
+        remainingPoints: 0,
+        cardsTotal: 0,
+        cardsCompleted: 0,
+        cardsPending: 0
+    };
+
+    var $lists = $("[data-testid='list'], .list, .js-list");
+
+    $lists.each(function(){
+        var $list = $(this);
+        var listTitle = $list.find("[data-testid='list-name'], [data-testid='list-title'], .list-header-name-assist, .js-list-name-assist, .list-header-target-name, textarea.list-header-name").text().trim() || $list.find(".list-header").text().trim() || '';
+        var isDoneList = /done|closed|complete|completed|shipped|released/i.test(listTitle);
+
+        var $cards = $list.find("[data-testid='list-card'], .list-card, .js-member-droppable");
+        $cards.each(function(){
+            var $card = $(this);
+            var cardTitle = $card.find("[data-testid='card-name'], .list-card-title, .js-card-name").text().trim() || this.textContent || '';
+
+            var pendingPoints = 0;
+            var completedPoints = 0;
+            var hasPoints = false;
+
+            if (this.listCard) {
+                if (this.listCard.points && !isNaN(Number(this.listCard.points.points))) {
+                    pendingPoints = Number(this.listCard.points.points);
+                    hasPoints = true;
+                }
+                if (this.listCard.cpoints && !isNaN(Number(this.listCard.cpoints.points))) {
+                    completedPoints = Number(this.listCard.cpoints.points);
+                    hasPoints = true;
+                }
+            }
+
+            if (!hasPoints) {
+                var pendingMatch = cardTitle.match(/\(\s*([0-9]+(?:\.[0-9]+)?|\?)\s*\)/);
+                if (pendingMatch && pendingMatch[1] !== '?') {
+                    pendingPoints = parseFloat(pendingMatch[1]) || 0;
+                    hasPoints = true;
+                }
+                var completedMatch = cardTitle.match(/\[\s*([0-9]+(?:\.[0-9]+)?|\?)\s*\]/);
+                if (completedMatch && completedMatch[1] !== '?') {
+                    completedPoints = parseFloat(completedMatch[1]) || 0;
+                    hasPoints = true;
+                }
+            }
+
+            if (isDoneList) {
+                if (completedPoints === 0 && pendingPoints > 0) {
+                    completedPoints = pendingPoints;
+                    pendingPoints = 0;
+                }
+            }
+
+            var cardDone = completedPoints;
+            var cardPending = pendingPoints;
+            var cardTotal = cardDone + cardPending;
+            var isCardComplete = isDoneList || (cardPending === 0 && cardDone > 0);
+
+            teamStats.cardsTotal++;
+            if (isCardComplete) teamStats.cardsCompleted++;
+            else teamStats.cardsPending++;
+
+            teamStats.totalPoints += cardTotal;
+            teamStats.completedPoints += cardDone;
+            teamStats.remainingPoints += cardPending;
+
+            var cardMembers = [];
+            var $memberEls = $card.find("[data-testid='card-front-avatar'], .member, .js-member, img.member-avatar");
+
+            $memberEls.each(function(){
+                var $m = $(this);
+                var rawName = $m.attr('alt') || $m.attr('title') || $m.attr('aria-label') || $m.text() || '';
+                rawName = rawName.trim();
+                var cleanName = rawName.replace(/\s*\([^)]*\)$/, '').trim();
+                if (!cleanName && rawName) cleanName = rawName;
+
+                var avatarUrl = $m.find('img').attr('src') || ($m.is('img') ? $m.attr('src') : '') || '';
+                var initials = cleanName.split(' ').map(function(s){ return s[0]; }).join('').toUpperCase().slice(0, 2);
+
+                if (cleanName && cardMembers.indexOf(cleanName) === -1) {
+                    cardMembers.push(cleanName);
+                    if (!membersMap[cleanName]) {
+                        membersMap[cleanName] = {
+                            name: cleanName,
+                            avatar: avatarUrl,
+                            initials: initials || cleanName.slice(0, 2).toUpperCase(),
+                            completed: 0,
+                            remaining: 0,
+                            total: 0,
+                            cardsTotal: 0,
+                            cardsCompleted: 0,
+                            cardsPending: 0
+                        };
+                    }
+                    if (avatarUrl && !membersMap[cleanName].avatar) {
+                        membersMap[cleanName].avatar = avatarUrl;
+                    }
+                }
+            });
+
+            if (cardMembers.length === 0) {
+                unassigned.cardsTotal++;
+                if (isCardComplete) unassigned.cardsCompleted++;
+                else unassigned.cardsPending++;
+                unassigned.completed += cardDone;
+                unassigned.remaining += cardPending;
+                unassigned.total += cardTotal;
+            } else {
+                cardMembers.forEach(function(mName){
+                    var m = membersMap[mName];
+                    m.cardsTotal++;
+                    if (isCardComplete) m.cardsCompleted++;
+                    else m.cardsPending++;
+                    m.completed += cardDone;
+                    m.remaining += cardPending;
+                    m.total += cardTotal;
+                });
+            }
+        });
+    });
+
+    teamStats.totalPoints = Math.round(teamStats.totalPoints * 100) / 100;
+    teamStats.completedPoints = Math.round(teamStats.completedPoints * 100) / 100;
+    teamStats.remainingPoints = Math.round(teamStats.remainingPoints * 100) / 100;
+    teamStats.completionPercentage = teamStats.totalPoints > 0 
+        ? Math.round((teamStats.completedPoints / teamStats.totalPoints) * 100) 
+        : 0;
+
+    var membersList = Object.keys(membersMap).map(function(k){
+        var m = membersMap[k];
+        m.completed = Math.round(m.completed * 100) / 100;
+        m.remaining = Math.round(m.remaining * 100) / 100;
+        m.total = Math.round(m.total * 100) / 100;
+        m.completionPercentage = m.total > 0 ? Math.round((m.completed / m.total) * 100) : 0;
+        return m;
+    });
+
+    membersList.sort(function(a, b){
+        if (b.remaining !== a.remaining) return b.remaining - a.remaining;
+        return b.total - a.total;
+    });
+
+    if (unassigned.cardsTotal > 0 && unassigned.total > 0) {
+        unassigned.completed = Math.round(unassigned.completed * 100) / 100;
+        unassigned.remaining = Math.round(unassigned.remaining * 100) / 100;
+        unassigned.total = Math.round(unassigned.total * 100) / 100;
+        unassigned.completionPercentage = unassigned.total > 0 ? Math.round((unassigned.completed / unassigned.total) * 100) : 0;
+        membersList.push(unassigned);
+    }
+
+    var boardName = $('.board-name span.text, [data-testid="board-name-display"]').text().trim() || 'Active Board';
+
+    return {
+        team: teamStats,
+        members: membersList,
+        boardName: boardName
+    };
+}
+
+function renderMembersBurndownModal(data) {
+    $('#s4t-modal-overlay').remove();
+
+    var membersHtml = '';
+    if (data.members.length === 0) {
+        membersHtml = '<div class="s4t-empty-state">No members with cards found on this board. Make sure cards have members assigned and (story points) in titles.</div>';
+    } else {
+        data.members.forEach(function(m){
+            var avatarMarkup = m.avatar 
+                ? '<img class="s4t-avatar" src="' + m.avatar + '" alt="' + m.name + '"/>'
+                : '<div class="s4t-avatar">' + (m.initials || '👤') + '</div>';
+
+            membersHtml += [
+                '<div class="s4t-member-card" data-member-name="' + m.name.toLowerCase() + '">',
+                    '<div class="s4t-member-info">',
+                        avatarMarkup,
+                        '<div class="s4t-member-meta">',
+                            '<div class="s4t-member-name">' + m.name + '</div>',
+                            '<div class="s4t-member-cards-count">' + m.cardsTotal + ' cards (' + m.cardsCompleted + ' done, ' + m.cardsPending + ' pending)</div>',
+                        '</div>',
+                    '</div>',
+                    '<div class="s4t-member-bar-area">',
+                        '<div class="s4t-member-bar-label">',
+                            '<span>Progress</span>',
+                            '<span style="font-weight:600; color:' + (m.completionPercentage === 100 ? '#10b981' : '#f8fafc') + ';">' + m.completionPercentage + '%</span>',
+                        '</div>',
+                        '<div class="s4t-progress-track">',
+                            '<div class="s4t-progress-fill" style="width:' + m.completionPercentage + '%;"></div>',
+                        '</div>',
+                    '</div>',
+                    '<div class="s4t-member-pills">',
+                        '<span class="s4t-pill s4t-pill-done" title="Completed Points">✓ ' + m.completed + ' pts</span>',
+                        '<span class="s4t-pill s4t-pill-pending" title="Remaining Points">⏳ ' + m.remaining + ' pts</span>',
+                        '<span class="s4t-pill s4t-pill-total" title="Total Points">Total ' + m.total + '</span>',
+                    '</div>',
+                '</div>'
+            ].join('');
+        });
+    }
+
+    var modalHtml = [
+        '<div id="s4t-modal-overlay">',
+            '<div id="s4t-members-modal">',
+                '<div class="s4t-modal-header">',
+                    '<div class="s4t-modal-title-area">',
+                        '<h2 class="s4t-modal-title">👥 Members Burndown</h2>',
+                        '<span class="s4t-board-badge">' + data.boardName + '</span>',
+                    '</div>',
+                    '<div class="s4t-header-actions">',
+                        '<button class="s4t-refresh-btn" id="s4t-refresh-action" title="Recalculate from board">🔄 Refresh</button>',
+                        '<button class="s4t-close-btn" id="s4t-close-action" title="Close dialog">✕</button>',
+                    '</div>',
+                '</div>',
+                '<div class="s4t-modal-body">',
+                    '<div class="s4t-summary-card">',
+                        '<div class="s4t-stats-grid">',
+                            '<div class="s4t-stat-box">',
+                                '<div class="s4t-stat-label">Total Points</div>',
+                                '<div class="s4t-stat-value s4t-stat-val-blue">' + data.team.totalPoints + '</div>',
+                            '</div>',
+                            '<div class="s4t-stat-box">',
+                                '<div class="s4t-stat-label">Completed</div>',
+                                '<div class="s4t-stat-value s4t-stat-val-green">' + data.team.completedPoints + '</div>',
+                            '</div>',
+                            '<div class="s4t-stat-box">',
+                                '<div class="s4t-stat-label">Remaining</div>',
+                                '<div class="s4t-stat-value s4t-stat-val-amber">' + data.team.remainingPoints + '</div>',
+                            '</div>',
+                            '<div class="s4t-stat-box">',
+                                '<div class="s4t-stat-label">Completion</div>',
+                                '<div class="s4t-stat-value">' + data.team.completionPercentage + '%</div>',
+                            '</div>',
+                        '</div>',
+                        '<div class="s4t-progress-container">',
+                            '<div class="s4t-progress-info">',
+                                '<span>Overall Team Release Progress</span>',
+                                '<span>' + data.team.cardsCompleted + ' of ' + data.team.cardsTotal + ' cards finished</span>',
+                            '</div>',
+                            '<div class="s4t-progress-track">',
+                                '<div class="s4t-progress-fill" style="width:' + data.team.completionPercentage + '%;"></div>',
+                            '</div>',
+                        '</div>',
+                    '</div>',
+                    '<div class="s4t-search-wrapper">',
+                        '<span class="s4t-search-icon">🔍</span>',
+                        '<input type="text" class="s4t-search-input" id="s4t-member-search" placeholder="Search team member by name..." />',
+                    '</div>',
+                    '<div class="s4t-members-list" id="s4t-members-container">',
+                        membersHtml,
+                    '</div>',
+                '</div>',
+            '</div>',
+        '</div>'
+    ].join('');
+
+    $('body').append(modalHtml);
+
+    // Filter functionality
+    $('#s4t-member-search').on('input', function(){
+        var q = $(this).val().toLowerCase().trim();
+        if (!q) {
+            $('.s4t-member-card').show();
+        } else {
+            $('.s4t-member-card').each(function(){
+                var name = $(this).attr('data-member-name') || '';
+                if (name.indexOf(q) !== -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+    });
+
+    // Event handlers
+    $('#s4t-close-action').click(hideMembersBurndown);
+    $('#s4t-refresh-action').click(function(){
+        calcListPoints();
+        setTimeout(function(){
+            var refreshedData = collectMembersBurndownData();
+            renderMembersBurndownModal(refreshedData);
+        }, 150);
+    });
+
+    $('#s4t-modal-overlay').click(function(e){
+        if (e.target.id === 's4t-modal-overlay') {
+            hideMembersBurndown();
+        }
+    });
+
+    $(document).off('keydown.s4tEsc').on('keydown.s4tEsc', function(e){
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            hideMembersBurndown();
+        }
+    });
+}
+
 
 var ignoreClicks = function(){ return false; };
 function showBurndown()
