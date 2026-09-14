@@ -1,0 +1,10 @@
+const {test}=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs'), vm=require('node:vm');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../sprint-helper.js'),'utf8'), ctx={};
+vm.runInNewContext(source.slice(source.indexOf('function s4tGroupCards('),source.indexOf('/* Cards List:')),ctx);
+const board={members:[{id:'a',fullName:'Alex'},{id:'b',fullName:'Blair'}],labels:[{id:'h',name:'Hotfix'},{id:'u',name:'UI'},{id:'x',name:'',color:'green'}],lists:[{id:'todo',name:'Todo'},{id:'done',name:'Done'}]};
+const cards=[{id:'1',idMembers:['a','b','a'],idLabels:['h','u','h'],idList:'todo'},{id:'2',idMembers:[],idLabels:[],idList:'done'},{id:'3',idMembers:['a'],idLabels:['x'],idList:'todo'}];
+const groups=mode=>JSON.parse(JSON.stringify(ctx.s4tGroupCards(cards,board,mode))).map(g=>[g.name,g.cards.map(c=>c.id)]);
+test('developer grouping preserves shared assignments without duplicates',()=>assert.deepEqual(groups('dev'),[['@Alex',['1','3']],['@Blair',['1']],['Unassigned',['2']]]));
+test('label grouping includes each label and unlabeled cards',()=>assert.deepEqual(groups('labels'),[['Hotfix',['1']],['UI',['1']],['green label',['3']],['No labels',['2']]]));
+test('list grouping assigns each selected card once',()=>assert.deepEqual(groups('lists'),[['Todo',['1','3']],['Done',['2']]]));
+test('empty selection has no sections',()=>assert.equal(ctx.s4tGroupCards([],board,'labels').length,0));

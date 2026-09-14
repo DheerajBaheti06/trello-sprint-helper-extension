@@ -1,0 +1,20 @@
+# Local agent/editor configuration
+.agents/
+.codex/
+.vscode/
+.idea/
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Generated files and packages
+node_modules/
+__pycache__/
+*.pyc
+*.log
+*.zip
+*.crx
+.DS_Store
+Thumbs.db

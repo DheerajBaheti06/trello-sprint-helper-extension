@@ -1,0 +1,23 @@
+from pathlib import Path
+import runpy
+root = Path(__file__).resolve().parent.parent
+base = runpy.run_path(str(root / 'tests/build-panel-ui.py'))
+setup = base['setup'] + '''
+window.confirm=()=>{throw new Error('Unexpected confirmation alert')};
+history.replaceState(null, '', location.pathname + '?view=board&filter=member:member#anchor');
+// Exercise fallback clearing: native Clear is present but does not update the controls.
+document.getElementById('native-clear').addEventListener('click',()=>{});
+'''
+tests = '''setTimeout(async()=>{const check=(value,message)=>{if(!value)fixtureErrors.push(message)},wait=ms=>new Promise(r=>setTimeout(r,ms));try{
+document.getElementById('s4t-attention-button').click();pending.shift().resolve(boardData);await wait(300);
+const panel=document.getElementById('s4t-attention-panel'),columns=panel.querySelector('.s4t-attention-columns'),gate=panel.querySelector('.s4t-attention-conflict'),message=panel.querySelector('.s4t-attention-pause-message'),prompt=panel.querySelector('.s4t-attention-switch-prompt');
+check(columns.hidden&&getComputedStyle(columns).display==='none','main content hidden with native filters');check(!gate.hidden,'switch prompt visible');check(message.parentElement===panel.querySelector('.s4t-attention-heading')&&!message.hidden,'pause message beside heading');check(panel.querySelector('.s4t-attention-count').hidden,'count hidden while paused');
+const bounds=gate.getBoundingClientRect(),box=prompt.getBoundingClientRect();check(Math.abs((box.left+box.right)-(bounds.left+bounds.right))<2,'prompt horizontally centered');check(Math.abs((box.top+box.bottom)-(bounds.top+bounds.bottom))<2,'prompt vertically centered');
+gate.querySelector('button').focus();gate.querySelector('button').click();check(columns.classList.contains('s4t-loading-surface')&&columns.hasAttribute('inert')&&gate.hidden,'content skeleton starts immediately');await wait(100);check(getComputedStyle(columns.firstElementChild).visibility==='hidden','real content stays hidden during switch');await wait(800);
+check(gate.hidden&&!columns.hidden,'content revealed after successful switch');check(!columns.classList.contains('s4t-loading-surface')&&!columns.hasAttribute('inert'),'content skeleton clears');check(document.getElementById('native-mode').checked,'exact-match preference left intact');check(!new URLSearchParams(location.search).has('filter')&&location.hash==='#anchor'&&new URLSearchParams(location.search).get('view')==='board','stale filter URL reconciled without navigation');check(message.hidden,'paused heading cleared');check(panel.querySelector('[data-attention-member="member"]').checked,'member selection imported');
+document.getElementById('native-member').checked=true;panel.querySelector('[data-refresh]').click();pending.shift().resolve(boardData);await wait(300);check(columns.hidden&&!gate.hidden,'new native filters restore prompt');
+history.replaceState(null, '', location.pathname+'?filter=member:member');document.getElementById('native-member').addEventListener('click',function(){this.checked=true;});gate.querySelector('button').click();await wait(2400);check(!gate.hidden&&columns.hidden&&!columns.classList.contains('s4t-loading-surface'),'failed switch restores prompt without exposing content');check(new URLSearchParams(location.search).has('filter'),'failed native clear never strips active URL');check(!gate.querySelector('button').disabled,'failed switch enables retry');
+}catch(error){fixtureErrors.push(error.message);}document.getElementById('result').textContent=fixtureErrors.length?'FAIL: '+fixtureErrors.join('; '):'PASS: centered prompt, hidden columns, heading message, switching guard, imported selections, resumed content';},200);'''
+native = '<div role="dialog" aria-label="Filters"><label><input id="native-member" type="checkbox" value="member" style="display:none" checked>Alex</label><label><input id="native-mode" type="checkbox" checked>Exact match</label><button id="native-clear">Clear all filters</button></div>'
+html = '<!doctype html><html><head><meta charset="utf-8"><style>body{font:14px system-ui;background:#f1f1f1}#result{position:fixed;bottom:0;z-index:20000;background:white;font-size:11px}</style><style>'+(root/'sprint-helper.css').read_text()+'</style></head><body><div id="s4t-board-tools"><button id="membersBurndownLink">Members</button></div>'+native+'<pre id="result">RUNNING</pre><script>'+(root/'jquery-2.1.4.min.js').read_text()+'</script><script>'+setup+base['helpers']+base['attention']+'</script><script>'+tests+'</script></body></html>'
+Path('/tmp/s4t-attention-switch-ui.html').write_text(html)
