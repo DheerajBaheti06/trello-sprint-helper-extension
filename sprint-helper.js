@@ -2744,6 +2744,26 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         sync();
     }, 500);
     new MutationObserver(function (mutations) {
+        if (active() && !nativeBlocked && data && currentBoard() === board) {
+            var index = attentionResult().index;
+            mutations.forEach(function (mutation) {
+                var roots = mutation.type === 'attributes' ? [mutation.target] : Array.from(mutation.addedNodes);
+                roots.forEach(function (root) {
+                    if (root.nodeType !== 1 || root.closest('#s4t-attention-panel, #s4t-cards-overlay, #s4t-modal-overlay')) return;
+                    if (mutation.type === 'attributes' && !root.closest(S4T_CARD_SEL)) return;
+                    var cards = Array.from(root.querySelectorAll(S4T_CARD_SEL));
+                    if (root.matches(S4T_CARD_SEL)) cards.push(root);
+                    var parentCard = root.closest(S4T_CARD_SEL); if (parentCard) cards.push(parentCard);
+                    cards.forEach(function (card) {
+                        var link = card.matches('a[href*="/c/"]') ? card : card.querySelector('a[href*="/c/"]');
+                        var match = link && (link.getAttribute('href') || '').match(/\/c\/([A-Za-z0-9]+)/);
+                        var hidden = !!(match && index[match[1]] === false);
+                        if (card.classList.contains('s4t-attention-hidden') !== hidden) card.classList.toggle('s4t-attention-hidden', hidden);
+                    });
+                });
+            });
+        }
+        if (mutations.every(function (mutation) { return mutation.type === 'attributes'; })) return;
         if (mutations.every(function (mutation) {
             return $(mutation.target).closest('.s4t-comment-navigator, #s4t-attention-panel, #s4t-board-tools, #s4t-cards-overlay, #s4t-modal-overlay, #s4t-icon-tooltip, #s4t-attention-notice, [role="dialog"], .window, .card-detail-window, [data-testid="card-back"], [data-testid="card-back-container"]').length > 0;
         })) return;
@@ -2751,7 +2771,24 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             observerTimer = null;
             sync();
         }, 250);
-    }).observe(document.body, { childList: true, subtree: true });
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'href'] });
+    document.addEventListener('keydown', function (event) {
+        if (!active() || nativeBlocked || !data || !/^\/c\//.test(location.pathname) || !['ArrowLeft','ArrowRight'].includes(event.key)) return;
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"],[role="listbox"],[id^="s4t-"]')) return;
+        var current = location.pathname.match(/^\/c\/([A-Za-z0-9]+)/), index = attentionResult().index;
+        var links = Array.from(document.querySelectorAll(S4T_CARD_SEL)).map(function (card) { return card.matches('a[href*="/c/"]') ? card : card.querySelector('a[href*="/c/"]'); }).filter(Boolean);
+        var seen = new Set();
+        links = links.filter(function (link) { var match = (link.getAttribute('href') || '').match(/\/c\/([A-Za-z0-9]+)/); if (!match || seen.has(match[1])) return false; seen.add(match[1]); return true; });
+        var position = links.findIndex(function (link) { return (link.getAttribute('href') || '').split('/c/')[1].split('/')[0] === current[1]; });
+        // Block Trello's unfiltered navigation even at the end of the filtered set.
+        event.preventDefault(); event.stopImmediatePropagation();
+        if (position < 0) return;
+        var step = event.key === 'ArrowRight' ? 1 : -1;
+        for (var next = position + step; next >= 0 && next < links.length; next += step) {
+            var id = links[next].getAttribute('href').match(/\/c\/([A-Za-z0-9]+)/)[1];
+            if (index[id] === true) { links[next].click(); return; }
+        }
+    }, true);
     $(document).on('keydown.s4tAttention', function (event) {
         if (event.key === 'Escape' && panel) { close(); if (button) button.focus(); }
     }).on('mousedown.s4tAttention', function (event) {
@@ -2790,7 +2827,16 @@ var s4tOpenCardsList = (function () {
     if (typeof document === 'undefined') return function () { };
     var state, overlay, context, editor, boardData, burndownData = {}, loadToken = 0;
     function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-    function showSheetSuccessToast(message) { if (overlay) overlay.find('.s4t-cards-status').text(message); }
+    function showSheetSuccessToast(message) {
+        if (!overlay) return;
+        var current = overlay;
+        clearTimeout(state.statusTimer);
+        current.find('.s4t-cards-status').text(message).prop('hidden', !message);
+        if (message) {
+            document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
+            state.statusTimer = setTimeout(function () { current.find('.s4t-cards-status').prop('hidden',true); },3500);
+        }
+    }
     function button(text, handler, attrs) { return $('<button type="button">').text(text).attr(attrs || {}).on('click', handler); }
     function selectedCards() { return candidates().filter(function (c) { return !state.excludedCardIds.has(c.id); }); }
     function cleanTitle(title) { return title.replace(/[([{]\s*(?:\?|\d+(?:\.\d+)?)(?:\s*\/\s*\d+(?:\.\d+)?)?\s*(?:pts?|points?)?\s*[)\]}]/gi, ' ').replace(/\s+/g, ' ').trim() || title; }
@@ -2821,7 +2867,11 @@ var s4tOpenCardsList = (function () {
         return groups.filter(function (g) { return g.cards.length; }).map(function (g) {
             return g.name + suffix + '\n' + g.cards.map(function (c) {
                 var title = cleanTitle(c.name), url = 'https://trello.com/c/' + c.shortLink;
-                return '• ' + (state.format === 'links' ? url : state.format === 'titles' ? title : title + ': ' + url);
+                var names = state.groupBy === 'labels' && state.includeDevelopers ? Array.from(new Set(c.idMembers || [])).map(function (id) {
+                    var member = boardData.members.find(function (m) { return m.id === id; });
+                    return member && (state.mentionDevelopers ? '@' : '') + (member.fullName || member.username);
+                }).filter(Boolean).join(', ') : '';
+                return '• ' + (state.format === 'links' ? url : state.format === 'titles' ? title : title + ': ' + url) + (names ? ' — ' + names : '');
             }).join('\n');
         }).join('\n\n');
     }
@@ -2864,7 +2914,7 @@ var s4tOpenCardsList = (function () {
         });
         overlay.find('.s4t-cards-toolbar').attr('inert', value ? '' : null);
         overlay.find('[data-cards-resync]').prop('disabled', value).toggleClass('s4t-refreshing', value).attr('aria-busy', String(value));
-        overlay.find('[data-cards-copy], select[data-preview-only], [data-cards-group]').prop('disabled', value);
+        overlay.find('[data-cards-copy], select[data-preview-only], [data-cards-group], [data-add-developers] input, [data-mention-developers] input').prop('disabled', value);
         if (value) hideSlackMentionAutocomplete();
     }
     function load() {
@@ -2876,8 +2926,8 @@ var s4tOpenCardsList = (function () {
                 if (err || !result) { showSheetSuccessToast('Could not refresh cards. Try again.'); return; }
                 boardData = result;
                 state.selection = context.selection();
-                overlay.find('.s4t-cards-source').text(state.selection.source);
-                overlay.find('.s4t-cards-source-note').text(state.selection.limited ? 'Using loaded Trello matches. Scroll the board to load more, then refresh Cards.' : '').prop('hidden', !state.selection.limited);
+
+                if (state.selection.limited) showSheetSuccessToast('Using loaded cards. Scroll the board and refresh to include more.');
                 state.developers = result.members.map(function (m) { return { name: m.fullName || m.username }; });
                 changedSelection();
                 if (!state.hasUserEditedPreview) showSheetSuccessToast('');
@@ -2909,22 +2959,31 @@ var s4tOpenCardsList = (function () {
         overlay.find('[data-cards-tab="' + tab + '"]').attr('aria-selected', 'true');
         if (tab === 'preview' && !state.loading && !state.hasUserEditedPreview) renderMissingEstimatesPreview();
     }
+    function copied() {
+        var current = overlay, action = current.find('[data-cards-copy]');
+        current.find('.s4t-cards-status').text('').prop('hidden',true);
+        action.addClass('s4t-copy-success').attr('data-tooltip','Copied!');
+        current.find('.s4t-cards-copy-toast').text('Copied for Slack').prop('hidden',false);
+        document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
+        clearTimeout(state.copyTimer);
+        state.copyTimer = setTimeout(function () { action.removeClass('s4t-copy-success').attr('data-tooltip','Copy for Slack'); current.find('.s4t-cards-copy-toast').prop('hidden',true); },1800);
+    }
     async function copyMessage() {
         var text = state.hasUserEditedPreview ? extractPlainTextFromRichEditor(editor) : generateMissingEstimatesSlackText();
         if (!text.trim()) { showSheetSuccessToast('The message is empty. Select cards or write a message first.'); return; }
-        try { await navigator.clipboard.writeText(text); showSheetSuccessToast('Copied. Paste into Slack, review mentions, and send.'); }
+        try { await navigator.clipboard.writeText(text); copied(); }
         catch (_) {
             var field = $('<textarea>').val(text).css({ position: 'fixed', left: '-9999px' }).appendTo(overlay);
             field[0].select(); var ok = false;
             try { ok = document.execCommand('copy'); } catch (_) { }
-            field.remove(); showSheetSuccessToast(ok ? 'Copied. Paste into Slack, review mentions, and send.' : 'Copy was blocked. Select the preview text and copy it manually.');
+            field.remove(); if (ok) copied(); else showSheetSuccessToast('Copy was blocked. Select the preview text and copy it manually.');
         }
     }
     function open(options) {
         if (overlay && state.board === options.board) { context = options; overlay.prop('hidden', false); overlay.find('button').first().focus(); load(); return; }
         if (overlay) overlay.remove();
         context = options; boardData = null; loadToken++;
-        state = { board: options.board, tab: 'cards', groupBy: 'dev', excludedCardIds: new Set(), search: '', format: 'both', hasUserEditedPreview: false, developers: [], devCardsMap: {} };
+        state = { board: options.board, tab: 'cards', groupBy: 'dev', includeDevelopers: false, mentionDevelopers: false, excludedCardIds: new Set(), search: '', format: 'both', hasUserEditedPreview: false, developers: [], devCardsMap: {} };
         overlay = $('<div id="s4t-cards-overlay">');
         var dialog = $('<section id="s4t-cards-dialog" role="dialog" aria-modal="true" aria-label="Cards List and Slack preview">');
         var header = $('<header>').append($('<div class="s4t-feature-title">').append($('<h2>').text('Cards List'), s4tFeatureHelp('Cards List', 'Share selected Trello tasks in Slack.', 'Developer, label or list grouping; title/link formats and an editable Slack preview.', 'Build one message without copying card links individually.', 'Filter the board with Trello or Attention, select cards, edit the preview, then copy and paste into Slack.')), $('<span class="s4t-cards-count">').text('— selected / — cards'),
@@ -2932,12 +2991,12 @@ var s4tOpenCardsList = (function () {
                 if (state.tab === 'preview') {
                     if (!state.hasUserEditedPreview || window.confirm('Replace your edited draft with the selected cards?')) rebuildPreview();
                 } else load();
-            }, { 'data-cards-resync': '', 'data-tooltip': 'Refresh filtered cards', 'aria-label': 'Refresh filtered cards', 'class': 's4t-cards-icon-button' }), button('Copy for Slack', copyMessage, { 'data-cards-copy': '' }), button('✕', close, { 'aria-label': 'Close Cards List', 'data-tooltip': 'Close', 'class': 's4t-cards-icon-button' }));
+            }, { 'data-cards-resync': '', 'data-tooltip': 'Refresh filtered cards', 'aria-label': 'Refresh filtered cards', 'class': 's4t-cards-icon-button' }), button('✕', close, { 'aria-label': 'Close Cards List', 'data-tooltip': 'Close', 'class': 's4t-cards-icon-button' }));
         dialog.append(header);
         var tabs = $('<div class="s4t-cards-tabs" role="tablist">').append(
             button('Cards', function () { switchTab('cards'); }, { role: 'tab', 'data-cards-tab': 'cards', 'aria-selected': 'true' }),
             button('Slack Preview & Edit', function () { switchTab('preview'); }, { role: 'tab', 'data-cards-tab': 'preview', 'aria-selected': 'false' }));
-        tabs.append($('<span class="s4t-cards-source">'));
+
         dialog.append(tabs);
         var cardsPane = $('<div data-cards-pane="cards" class="s4t-cards-grid">');
         var cardsToolbar = $('<div class="s4t-cards-toolbar">').append(
@@ -2960,17 +3019,44 @@ var s4tOpenCardsList = (function () {
         ).on('change', function () {
             if (state.hasUserEditedPreview && !window.confirm('Replace your edited draft with cards grouped this way?')) { this.value = state.groupBy; return; }
             state.groupBy = this.value;
+            overlay.find('[data-add-developers]').prop('hidden', state.groupBy !== 'labels');
+            overlay.find('[data-mention-developers]').prop('hidden', state.groupBy !== 'labels' || !state.includeDevelopers);
             rebuildPreview();
         }));
         header.find('[data-cards-resync]').html(s4tRefreshIcon()).before(grouping, format);
         editor = $('<div id="missing-slack-preview-rich" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Editable Slack message" spellcheck="true">')[0];
-        preview.append(editor, $('<textarea id="missing-slack-preview" hidden>'), $('<div id="slack-mention-autocomplete" class="hidden" role="listbox">'));
+        var previewTools = $('<div class="s4t-cards-preview-tools">');
+        var developerOption = $('<label data-add-developers data-tooltip="Append developer names after each card when grouped by labels" hidden>').append($('<input type="checkbox" aria-label="Add developer names to each card">').on('change', function () {
+            if (state.hasUserEditedPreview && !window.confirm('Replace your edited draft with this developer-name setting?')) { this.checked = state.includeDevelopers; return; }
+            state.includeDevelopers = this.checked;
+            overlay.find('[data-mention-developers]').prop('hidden', !this.checked);
+            var scrollTop = editor.scrollTop;
+            state.hasUserEditedPreview = false;
+            renderMissingEstimatesPreview();
+            editor.scrollTop = scrollTop;
+            var current = overlay, option = current.find('[data-add-developers]');
+            option.addClass('s4t-option-success');
+            current.find('.s4t-cards-copy-toast').text(this.checked ? 'Developer names added' : 'Developer names removed').prop('hidden',false);
+            document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
+            clearTimeout(state.copyTimer); state.copyTimer = setTimeout(function () { option.removeClass('s4t-option-success'); current.find('.s4t-cards-copy-toast').prop('hidden',true); },1800);
+        }));
+        var mentionOption = $('<label data-mention-developers data-tooltip="Format developer names with @ for Slack (names only, not linked Slack mentions)" hidden>').append($('<input type="checkbox" aria-label="Format developer names with @">').on('change', function () {
+            if (state.hasUserEditedPreview && !window.confirm('Replace your edited draft with this name format?')) { this.checked = state.mentionDevelopers; return; }
+            state.mentionDevelopers = this.checked;
+            var scrollTop = editor.scrollTop;
+            state.hasUserEditedPreview = false; renderMissingEstimatesPreview(); editor.scrollTop = scrollTop;
+            var current = overlay, option = current.find('[data-mention-developers]'); option.addClass('s4t-option-success');
+            current.find('.s4t-cards-copy-toast').text(this.checked ? '@ formatting enabled' : '@ formatting removed').prop('hidden',false);
+            document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
+            clearTimeout(state.copyTimer); state.copyTimer = setTimeout(function () { option.removeClass('s4t-option-success'); current.find('.s4t-cards-copy-toast').prop('hidden',true); },1800);
+        }));
+        previewTools.append(developerOption, mentionOption, button('', copyMessage, {'data-cards-copy':'', 'aria-label':'Copy for Slack', 'data-tooltip':'Copy for Slack', 'class':'s4t-cards-icon-button'}).html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>'));
+        var editorFrame = $('<div class="s4t-cards-editor-frame">').append(previewTools, $('<div class="s4t-cards-copy-toast" role="status" hidden>'), editor);
+        preview.append(editorFrame, $('<textarea id="missing-slack-preview" hidden>'), $('<div id="slack-mention-autocomplete" class="hidden" role="listbox">'));
         var footer = $('<footer class="s4t-cards-footer">').append(
-            $('<p class="s4t-cards-source-note" hidden>'),
-            $('<p class="s4t-cards-help" data-preview-only hidden>').text('Edit your message · Type @ for suggestions.'),
-            $('<p class="s4t-cards-status" role="status">')
+            $('<p class="s4t-cards-help">').text('Edit your message · Type @ for suggestions.')
         );
-        dialog.append(preview, footer);
+        dialog.append(preview, footer, $('<div class="s4t-cards-status" role="status" hidden>'));
         overlay.append(dialog).appendTo('body');
         overlay.on('mousedown', function (event) { if (event.target === overlay[0]) close(); });
         overlay.on('keydown', function (event) {
@@ -3573,13 +3659,18 @@ var s4tOpenCardsList = (function () {
         owner = null;
         if (tip) tip.hidden = true;
     }
+    function toastVisible(node) {
+        var dialog = node && node.closest('#s4t-cards-dialog');
+        return dialog && dialog.querySelector('.s4t-cards-copy-toast:not([hidden]), .s4t-cards-status:not([hidden])');
+    }
+    document.addEventListener('s4t-dismiss-tooltip', hide);
     function show(node, pin) {
         hide();
         pinned = !!pin;
-        if (!node || node.disabled) return;
+        if (!node || node.disabled || toastVisible(node)) return;
         owner = node;
         timer = setTimeout(function () {
-            if (!owner || !owner.isConnected) return;
+            if (!owner || !owner.isConnected || toastVisible(owner)) return;
             if (!tip) {
                 tip = document.createElement('div'); tip.id = 's4t-icon-tooltip'; tip.setAttribute('role', 'tooltip'); document.body.appendChild(tip);
             }
@@ -3652,7 +3743,7 @@ async function s4tCompleteChecklist(adapter) {
     if (typeof document === 'undefined') return;
     var roots = '.checklist, [data-testid="checklist"], [data-testid="checklist-container"], [data-testid="checklist-section"]';
     var itemSelector = 'input[type="checkbox"], [role="checkbox"], .checklist-item-checkbox, [data-testid="check-item-checkbox"], [data-testid="checklist-item-checkbox"]';
-    var pending;
+    var pending, running = new Set();
     function controls(root) {
         var candidates = Array.from(root.querySelectorAll(itemSelector)).filter(function (node) {
             return !node.closest('.s4t-checklist-actions') &&
@@ -3663,7 +3754,9 @@ async function s4tCompleteChecklist(adapter) {
     }
     function itemKey(node) {
         var row = node.closest('.checklist-item, [data-testid="checklist-item"], [data-testid="check-item"], [data-testid="checklist-item-container"], [data-testid="check-item-container"], [data-checkitem-id]');
-        return node.id || node.getAttribute('data-checkitem-id') || (row && (row.getAttribute('data-checkitem-id') || row.getAttribute('data-id') || row.id || row.textContent.trim())) || node.getAttribute('aria-label') || '';
+        var text = row && row.querySelector('[data-testid="checklist-item-text"], [data-testid="check-item-text"], .checklist-item-details-text, .checklist-item-details-text-current, label');
+        return (row && (row.getAttribute('data-checkitem-id') || row.getAttribute('data-id') || row.id)) || node.getAttribute('data-checkitem-id') ||
+            (text && text.textContent.trim()) || node.getAttribute('aria-label') || (row && row.textContent.trim()) || node.id || '';
     }
     async function revealItems(root) {
         var clicked = new Set();
@@ -3686,9 +3779,18 @@ async function s4tCompleteChecklist(adapter) {
         return node.checked === true || node.getAttribute('aria-checked') === 'true' || node.getAttribute('data-state') === 'checked' ||
             !!node.closest('.checklist-item-state-complete');
     }
+    function positionAction(actions) {
+        var remove = actions._nativeDelete;
+        if (!remove || !remove.isConnected) return;
+        actions.style.left = remove.offsetLeft + 'px';
+        actions.style.top = remove.offsetTop + 'px';
+        actions.style.width = Math.max(remove.offsetWidth, 64) + 'px';
+    }
     function mount() {
         document.querySelectorAll(roots).forEach(function (root) {
-            if (root.querySelector('.s4t-checklist-action') || !root.getClientRects().length) return;
+            if (!root.getClientRects().length) return;
+            var existing = root.querySelector('.s4t-checklist-actions');
+            if (existing) { positionAction(existing); return; }
             var deletes = Array.from(root.querySelectorAll('button, a')).filter(function (node) {
                 return /^delete$/i.test(node.textContent.trim()) || node.matches('.js-delete-checklist, [data-testid="checklist-delete-button"]');
             });
@@ -3701,56 +3803,77 @@ async function s4tCompleteChecklist(adapter) {
             action.setAttribute('data-tooltip', 'Checks only this checklist on this card');
             action.addEventListener('click', async function (event) {
                 event.preventDefault(); event.stopPropagation();
-                if (action.disabled) return;
+                var rootId = root.getAttribute('data-checklist-id') || root.getAttribute('data-id') || root.id;
+                var runKey = window.location.pathname + ':' + (rootId || Array.from(document.querySelectorAll(roots)).indexOf(root));
+                if (action.disabled || running.has(runKey)) return;
+                running.add(runKey);
+                function liveRoot() {
+                    if (root.isConnected) return root;
+                    if (!rootId) return null;
+                    var matches = Array.from(document.querySelectorAll(roots)).filter(function (candidate) { return (candidate.getAttribute('data-checklist-id') || candidate.getAttribute('data-id') || candidate.id) === rootId; });
+                    if (matches.length !== 1) return null;
+                    root = matches[0]; return root;
+                }
                 var originalPath = window.location.pathname;
                 var oldStatus = root.querySelector('.s4t-checklist-status'); if (oldStatus) oldStatus.remove();
-                action.disabled = true; action.textContent = 'Checking…';
+                action.disabled = true;
                 try {
                     await revealItems(root);
-                    if (!root.isConnected || window.location.pathname !== originalPath) throw new Error('Card closed. Stopped.');
+                    if (!liveRoot() || window.location.pathname !== originalPath) throw new Error('Card closed. Stopped.');
                     var original = controls(root), keys = original.map(itemKey);
                     if (!original.length) {
                         var progress = root.querySelector('[role="progressbar"], .checklist-progress-percentage');
                         var value = progress && (progress.getAttribute('aria-valuenow') || progress.textContent);
-                        if (value && /100/.test(value)) { action.textContent = 'All checked'; return; }
+                        if (value && /100/.test(value)) return;
                         throw new Error('No checklist item controls found.');
                     }
                     await s4tCompleteChecklist({
                         count: original.length,
-                        valid: function () { return root.isConnected && window.location.pathname === originalPath && controls(root).length === original.length && controls(root).every(function (node, i) { return itemKey(node) === keys[i]; }); },
+                        valid: function () { return window.location.pathname === originalPath && !!liveRoot() && controls(root).length === original.length && controls(root).every(function (node, i) { return itemKey(node) === keys[i]; }); },
                         checked: function (i) { return checked(controls(root)[i]); },
                         check: async function (i) {
                             var node = controls(root)[i];
                             if (node.disabled || node.getAttribute('aria-disabled') === 'true') throw new Error('No permission to check this item.');
                             node.click();
-                            for (var wait = 0; wait < 20; wait++) {
+                            var stableSince = 0;
+                            for (var wait = 0; wait < 50; wait++) {
                                 await new Promise(function (resolve) { setTimeout(resolve, 100); });
-                                if (!root.isConnected || window.location.pathname !== originalPath) return;
-                                var current = controls(root)[i];
-                                if (current && checked(current)) return;
+                                if (window.location.pathname !== originalPath) return;
+                                var currentRoot = liveRoot(), current = currentRoot && controls(currentRoot)[i];
+                                if (current && itemKey(current) === keys[i] && checked(current) && !current.disabled && current.getAttribute('aria-disabled') !== 'true') {
+                                    if (!stableSince) stableSince = Date.now();
+                                    // Trello's first update can remount inputs and briefly show optimistic state.
+                                    if (Date.now() - stableSince >= 350) return;
+                                } else stableSince = 0;
                             }
                         }
                     });
-                    action.textContent = 'All checked';
                 } catch (_) {
                     // Stop immediately and quietly; another click can resume unchecked items.
                     action.textContent = 'Check all';
                     action.setAttribute('data-tooltip', 'Checks only this checklist on this card');
                 } finally {
+                    running.delete(runKey);
                     action.disabled = false;
+                    var mountedAction = liveRoot() && root.querySelector('.s4t-checklist-action');
+                    if (mountedAction) { mountedAction.disabled = false; mountedAction.textContent = action.textContent; }
                     document.dispatchEvent(new Event('s4t-checklist-updated'));
                 }
             });
             var actions = document.createElement('div');
             actions.className = 's4t-checklist-actions';
             remove.before(actions);
-            actions.append(action, remove);
+            actions.append(action);
+            actions._nativeDelete = remove;
+            remove.parentElement.classList.add('s4t-checklist-native-actions');
+            positionAction(actions);
         });
     }
     new MutationObserver(function (mutations) {
-        if (mutations.every(function (m) { var t = m.target.nodeType === 1 ? m.target : m.target.parentElement; return t && t.closest && t.closest('[id^="s4t-"], [class*="s4t-"]'); })) return;
+        if (mutations.every(function (m) { var t = m.target.nodeType === 1 ? m.target : m.target.parentElement; if (!t || !t.closest) return false; if (t.closest('.s4t-checklist-actions')) return true; if (t.closest(roots)) return false; return !!t.closest('[id^="s4t-"], [class*="s4t-"]'); })) return;
         if (!pending) pending = setTimeout(function () { pending = null; mount(); }, 120);
     }).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', mount);
     mount();
 })();
 

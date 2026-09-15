@@ -1380,3 +1380,35 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 
 #s4t-icon-tooltip.s4t-interactive-help { pointer-events: auto; user-select: text; max-height: calc(100vh - 24px); overflow-y: auto; }
 #s4t-cards-dialog .s4t-cards-grouping { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; color: var(--ds-text-subtle,#626f86); }
+
+#s4t-cards-dialog .s4t-cards-count { margin-left: 0; margin-right: auto; }
+#s4t-cards-dialog .s4t-cards-preview-tools { display:flex; align-items:center; gap:12px; flex-shrink:0; padding-bottom:8px; }
+#s4t-cards-dialog [data-add-developers] { display:inline-flex; align-items:center; gap:6px; font-size:12px; }
+#s4t-cards-dialog [data-cards-copy] { margin-left:auto; display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; padding:6px; }
+#s4t-cards-dialog [data-cards-pane="preview"] { position:relative; }
+#s4t-cards-dialog .s4t-cards-copy-toast { position:absolute; top:40px; right:8px; z-index:5; padding:8px 12px; border-radius:8px; background:var(--ds-background-success-bold,#216e4e); color:white; box-shadow:0 4px 12px #0002; }
+#s4t-cards-dialog .s4t-copy-success svg { animation:s4t-copy-pop .35s ease; }
+@keyframes s4t-copy-pop { 50% { transform:scale(1.2); } }
+@media(prefers-reduced-motion:reduce) { #s4t-cards-dialog .s4t-copy-success svg { animation:none; } }
+
+#s4t-cards-dialog .s4t-cards-editor-frame { position:relative; display:flex; flex-direction:column; flex:1; min-height:220px; border:1px solid var(--ds-border,#e4e4e7); border-radius:8px; background:var(--ds-background-input,#fafbfc); overflow:hidden; }
+#s4t-cards-dialog .s4t-cards-preview-tools { justify-content:flex-end; gap:10px; padding:8px 10px; background:inherit; }
+#s4t-cards-dialog .s4t-cards-preview-tools [data-cards-copy] { margin-left:0; flex:0 0 auto; }
+#s4t-cards-dialog #missing-slack-preview-rich { border:0; border-radius:0; background:transparent; }
+#s4t-cards-dialog .s4t-option-success { animation:s4t-option-flash .5s ease; }
+@keyframes s4t-option-flash { 50% { color:var(--ds-text-success,#216e4e); } }
+@media(prefers-reduced-motion:reduce) { #s4t-cards-dialog .s4t-option-success { animation:none; } }
+
+/* Overlay compact controls without adding a toolbar row above the message. */
+#s4t-cards-dialog .s4t-cards-preview-tools { position:absolute; top:6px; right:8px; z-index:2; padding:0; gap:8px; border-radius:6px; background:var(--ds-background-input,#fafbfc); }
+#s4t-cards-dialog [data-add-developers] { width:28px; height:32px; justify-content:center; }
+#s4t-cards-dialog [data-add-developers] input { margin:0; }
+#s4t-cards-dialog #missing-slack-preview-rich { padding-top:12px; padding-right:96px; }
+
+#s4t-cards-dialog [data-mention-developers] { display:inline-flex; width:28px; height:32px; align-items:center; justify-content:center; }
+#s4t-cards-dialog [data-mention-developers] input { margin:0; }
+#s4t-cards-dialog #missing-slack-preview-rich { padding-right:132px; }
+#s4t-cards-dialog { position:relative; }
+#s4t-cards-dialog > .s4t-cards-status { position:absolute; bottom:52px; right:18px; z-index:10; max-width:380px; padding:10px 14px; border-radius:8px; background:var(--ds-surface-overlay,#fff); border:1px solid var(--ds-border,#ddd); color:var(--ds-text,#172b4d); box-shadow:0 4px 16px #0002; }
+.s4t-checklist-native-actions { position:relative; }
+.s4t-checklist-actions { position:absolute; transform:translateY(calc(-100% - 2px)); z-index:1; }

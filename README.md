@@ -12,7 +12,7 @@ Built on [Scrum for Trello](https://github.com/Q42/TrelloScrum) by Q42, it exten
 | --- | --- |
 | **Members Burndown** | Review completed and remaining hours, card completion and individual workloads in one sprint overview. |
 | **Attention** | Combine scope, points, hotfix and checklist checks with member, label and list filters. Preserve selections and import native Trello filters. |
-| **Cards List & Slack Preview** | Select filtered cards, group them by developer, label or list, choose title/link formats and edit the message before sharing. |
+| **Cards List & Slack Preview** | Select filtered cards, group them by developer, label or list, choose title/link formats, optionally append developer names when grouping by labels, and copy from the preview panel. |
 | **EOW Update** | Build weekly reports with task categories, drag-and-drop organization, list exclusions, points display and editable Slack previews. |
 | **Card productivity** | Search and navigate comments, complete an individual checklist in one action, and manage estimated/completed story points. |
 
