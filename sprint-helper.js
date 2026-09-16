@@ -382,8 +382,9 @@ function computeBurndownFromBoardData(boardData) {
         cardsPending: 0
     };
 
-    var doneLists = {};
+    var doneLists = {}, notSureLists = {};
     (boardData.lists || []).forEach(function (l) {
+        if (!l.closed && /\bnot[\s_-]*sure\b/i.test(l.name || '')) notSureLists[l.id] = true;
         if (!l.closed && /done|closed|complete|completed|shipped|released|live|production|prod\b|deployed|verified|finished|resolved/i.test(l.name)) {
             doneLists[l.id] = true;
         }
@@ -451,6 +452,10 @@ function computeBurndownFromBoardData(boardData) {
                 if (isCardComplete) m.cardsCompleted++;
                 else m.cardsPending++;
                 m.assigned += cardAssigned;
+                if (notSureLists[card.idList]) {
+                    m.notSureAssigned = (m.notSureAssigned || 0) + cardAssigned;
+                    m.notSureCompleted = (m.notSureCompleted || 0) + cardCompleted;
+                }
                 m.completed += cardCompleted;
             }
         });
@@ -517,7 +522,8 @@ function updateModalContent(data) {
         $('#s4t-sum-pct-fill').css('width', summary.progress + '%');
         $('#s4t-sum-updated').text('Updated ' + summary.date);
     }
-    $('#s4t-members-container').html(renderMembersHtml(data.members));
+    $('#s4t-members-modal').data('members', data.members);
+    $('#s4t-members-container').html(renderMembersHtml(data.members, $('#s4t-exclude-not-sure').prop('checked')));
 }
 
 // Keep existing content in place while an opaque, non-interactive skeleton covers it.
@@ -883,6 +889,10 @@ function collectMembersBurndownData() {
                         if (isCardComplete) m.cardsCompleted++;
                         else m.cardsPending++;
                         m.assigned += cardAssigned;
+                        if (/\bnot[\s_-]*sure\b/i.test(listTitle)) {
+                            m.notSureAssigned = (m.notSureAssigned || 0) + cardAssigned;
+                            m.notSureCompleted = (m.notSureCompleted || 0) + cardCompleted;
+                        }
                         m.completed += cardCompleted;
                     }
                 });
@@ -931,12 +941,19 @@ function collectMembersBurndownData() {
     };
 }
 
-function renderMembersHtml(members) {
+function renderMembersHtml(members, excludeNotSure) {
     if (!members || members.length === 0) {
         return '<div class="s4t-empty-state">No members with cards found on this board. Make sure cards have members assigned and points in parenthesis (assigned) and braces {completed}.</div>';
     }
     var html = '';
     members.forEach(function (m) {
+        var assigned = m.assigned, completed = m.completed, remaining = m.remaining, progress = m.completionPercentage;
+        if (excludeNotSure && (m.notSureAssigned || m.notSureCompleted)) {
+            assigned = Math.round(Math.max(0, assigned - (m.notSureAssigned || 0)) * 100) / 100;
+            completed = Math.round(Math.max(0, completed - (m.notSureCompleted || 0)) * 100) / 100;
+            remaining = Math.round(Math.max(0, assigned - completed) * 100) / 100;
+            progress = assigned > 0 ? Math.min(100, Math.round(completed / assigned * 100)) : 0;
+        }
         var avatarMarkup = m.avatar
             ? '<img class="s4t-avatar" src="' + m.avatar + '" alt="' + m.name + '"/>'
             : '<div class="s4t-avatar">' + (m.initials || '👤') + '</div>';
@@ -953,16 +970,16 @@ function renderMembersHtml(members) {
             '<div class="s4t-member-bar-area">',
             '<div class="s4t-member-bar-label">',
             '<span>Progress</span>',
-            '<span style="font-weight:700;">' + m.completionPercentage + '%</span>',
+            '<span style="font-weight:700;">' + progress + '%</span>',
             '</div>',
             '<div class="s4t-progress-track">',
-            '<div class="s4t-progress-fill" style="width:' + m.completionPercentage + '%;"></div>',
+            '<div class="s4t-progress-fill" style="width:' + progress + '%;"></div>',
             '</div>',
             '</div>',
             '<div class="s4t-member-pills">',
-            '<span class="s4t-pill s4t-pill-assigned" title="Assigned Points (from parentheses)">' + m.assigned + ' assigned</span>',
-            '<span class="s4t-pill s4t-pill-done" title="Completed Points (from braces/brackets)">✓ ' + m.completed + ' done</span>',
-            '<span class="s4t-pill s4t-pill-pending" title="Remaining Points (assigned - completed)">' + m.remaining + ' remaining</span>',
+            '<span class="s4t-pill s4t-pill-assigned" title="Assigned Points (from parentheses)">' + assigned + ' assigned</span>',
+            '<span class="s4t-pill s4t-pill-done" title="Completed Points (from braces/brackets)">✓ ' + completed + ' done</span>',
+            '<span class="s4t-pill s4t-pill-pending" title="Remaining Points (assigned - completed)">' + remaining + ' remaining</span>',
             '</div>',
             '</div>'
         ].join('');
@@ -1002,7 +1019,7 @@ function renderMembersBurndownModal(data) {
     var fullDashboardUrl = '';
     $('#s4t-modal-overlay').remove();
 
-    var membersHtml = renderMembersHtml(data.members);
+    var membersHtml = renderMembersHtml(data.members, true);
     var summary = s4tSprintSummary(data.team);
 
     var modalHtml = [
@@ -1045,6 +1062,7 @@ function renderMembersBurndownModal(data) {
         '</div>',
         '</div>',
         '</div>',
+        '<div class="s4t-members-options"><label data-tooltip="Exclude Not Sure list points from member assigned, done, remaining and progress. Team summaries and card counts stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list count</label></div>',
         '<div class="s4t-members-list" id="s4t-members-container">',
         membersHtml,
         '</div>',
@@ -1054,6 +1072,10 @@ function renderMembersBurndownModal(data) {
     ].join('');
 
     $('body').append(modalHtml);
+    $('#s4t-members-modal').data('members', data.members);
+    $('#s4t-exclude-not-sure').on('change', function () {
+        $('#s4t-members-container').html(renderMembersHtml($('#s4t-members-modal').data('members'), this.checked));
+    });
 
     $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp('Members Burndown', 'Spot uneven workloads and unfinished sprint work.', 'Team totals, member points, remaining work and card progress.', 'Compare members without adding up cards manually.', 'Review the summary and member rows; refresh for the latest board data.'));
 

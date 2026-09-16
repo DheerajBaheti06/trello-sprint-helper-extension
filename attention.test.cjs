@@ -469,3 +469,27 @@ test('native exact-match checkbox alone does not count as an active criterion', 
     assert.equal(empty.progress, '0');
     assert.equal(empty.cardRate, '0');
 });
+
+test('Not Sure exclusion updates member points and progress without changing team totals', () => {
+    vm.runInContext(main.slice(main.indexOf('function renderMembersHtml('), main.indexOf('function s4tSprintSummary(')), context);
+    const result = context.computeBurndownFromBoardData({name:'Sprint',members:[{id:'member',fullName:'Alex'}],lists:[{id:'todo',name:'Todo'},{id:'maybe',name:'Alex - nOt SuRe'}],cards:[card({name:'(5) {2} Work'}),card({name:'(2.5) {1.5} Optional',idList:'maybe'})]});
+    assert.equal(result.members[0].notSureAssigned,2.5);
+    assert.equal(result.members[0].notSureCompleted,1.5);
+    const original=JSON.stringify(result);
+    const filtered=context.renderMembersHtml(result.members,true);
+    assert.match(filtered,/>5 assigned</);
+    assert.match(filtered,/✓ 2 done</);
+    assert.match(filtered,/>3 remaining</);
+    assert.match(filtered,/width:40%/);
+    const unfiltered=context.renderMembersHtml(result.members,false);
+    assert.match(unfiltered,/>7.5 assigned</);
+    assert.match(unfiltered,/✓ 3.5 done</);
+    assert.match(unfiltered,/>4 remaining</);
+    assert.equal(result.team.assigned,7.5);
+    assert.equal(JSON.stringify(result),original);
+    const allExcluded=context.renderMembersHtml([{...result.members[0],notSureAssigned:7.5,notSureCompleted:3.5}],true);
+    assert.match(allExcluded,/>0 assigned</);
+    assert.match(allExcluded,/✓ 0 done</);
+    assert.match(allExcluded,/>0 remaining</);
+    assert.match(allExcluded,/width:0%/);
+});

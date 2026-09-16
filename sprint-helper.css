@@ -1412,3 +1412,7 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 #s4t-cards-dialog > .s4t-cards-status { position:absolute; bottom:52px; right:18px; z-index:10; max-width:380px; padding:10px 14px; border-radius:8px; background:var(--ds-surface-overlay,#fff); border:1px solid var(--ds-border,#ddd); color:var(--ds-text,#172b4d); box-shadow:0 4px 16px #0002; }
 .s4t-checklist-native-actions { position:relative; }
 .s4t-checklist-actions { position:absolute; transform:translateY(calc(-100% - 2px)); z-index:1; }
+
+#s4t-members-modal .s4t-members-options { display:flex; justify-content:flex-end; flex:0 0 auto; padding:2px 0 6px; }
+#s4t-members-modal .s4t-members-options label { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--ds-text-subtle,#626f86); cursor:pointer; }
+#s4t-members-modal .s4t-members-options input { margin:0; }
