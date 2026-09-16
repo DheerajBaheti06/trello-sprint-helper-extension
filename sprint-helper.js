@@ -455,6 +455,8 @@ function computeBurndownFromBoardData(boardData) {
                 if (notSureLists[card.idList]) {
                     m.notSureAssigned = (m.notSureAssigned || 0) + cardAssigned;
                     m.notSureCompleted = (m.notSureCompleted || 0) + cardCompleted;
+                    m.notSureCardsTotal = (m.notSureCardsTotal || 0) + 1;
+                    m.notSureCardsCompleted = (m.notSureCardsCompleted || 0) + (isCardComplete ? 1 : 0);
                 }
                 m.completed += cardCompleted;
             }
@@ -892,6 +894,8 @@ function collectMembersBurndownData() {
                         if (/\bnot[\s_-]*sure\b/i.test(listTitle)) {
                             m.notSureAssigned = (m.notSureAssigned || 0) + cardAssigned;
                             m.notSureCompleted = (m.notSureCompleted || 0) + cardCompleted;
+                            m.notSureCardsTotal = (m.notSureCardsTotal || 0) + 1;
+                            m.notSureCardsCompleted = (m.notSureCardsCompleted || 0) + (isCardComplete ? 1 : 0);
                         }
                         m.completed += cardCompleted;
                     }
@@ -948,11 +952,15 @@ function renderMembersHtml(members, excludeNotSure) {
     var html = '';
     members.forEach(function (m) {
         var assigned = m.assigned, completed = m.completed, remaining = m.remaining, progress = m.completionPercentage;
-        if (excludeNotSure && (m.notSureAssigned || m.notSureCompleted)) {
+        var cardsTotal = m.cardsTotal, cardsCompleted = m.cardsCompleted, cardsPending = m.cardsPending;
+        if (excludeNotSure && (m.notSureAssigned || m.notSureCompleted || m.notSureCardsTotal)) {
+            cardsTotal = Math.max(0, cardsTotal - (m.notSureCardsTotal || 0));
+            cardsCompleted = Math.max(0, cardsCompleted - (m.notSureCardsCompleted || 0));
+            cardsPending = Math.max(0, cardsTotal - cardsCompleted);
             assigned = Math.round(Math.max(0, assigned - (m.notSureAssigned || 0)) * 100) / 100;
             completed = Math.round(Math.max(0, completed - (m.notSureCompleted || 0)) * 100) / 100;
             remaining = Math.round(Math.max(0, assigned - completed) * 100) / 100;
-            progress = assigned > 0 ? Math.min(100, Math.round(completed / assigned * 100)) : 0;
+            progress = assigned > 0 ? Math.min(100, Math.round(completed / assigned * 100)) : (cardsTotal > 0 ? Math.round(cardsCompleted / cardsTotal * 100) : 0);
         }
         var avatarMarkup = m.avatar
             ? '<img class="s4t-avatar" src="' + m.avatar + '" alt="' + m.name + '"/>'
@@ -964,7 +972,7 @@ function renderMembersHtml(members, excludeNotSure) {
             avatarMarkup,
             '<div class="s4t-member-meta">',
             '<div class="s4t-member-name" title="' + m.name + (m.username && m.username !== m.name ? ' (@' + m.username + ')' : '') + '">' + m.name + (m.username && m.username !== m.name ? ' <span class="s4t-member-username">(@' + m.username + ')</span>' : '') + '</div>',
-            '<div class="s4t-member-cards-count">' + m.cardsTotal + ' cards (' + m.cardsCompleted + ' done, ' + m.cardsPending + ' pending)</div>',
+            '<div class="s4t-member-cards-count">' + cardsTotal + ' cards (' + cardsCompleted + ' done, ' + cardsPending + ' pending)</div>',
             '</div>',
             '</div>',
             '<div class="s4t-member-bar-area">',
@@ -1062,7 +1070,7 @@ function renderMembersBurndownModal(data) {
         '</div>',
         '</div>',
         '</div>',
-        '<div class="s4t-members-options"><label data-tooltip="Exclude Not Sure list points from member assigned, done, remaining and progress. Team summaries and card counts stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list count</label></div>',
+        '<div class="s4t-members-options"><label data-tooltip="Exclude Not Sure list cards from member points, progress and card counts. Team summaries stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list</label></div>',
         '<div class="s4t-members-list" id="s4t-members-container">',
         membersHtml,
         '</div>',
@@ -1077,7 +1085,7 @@ function renderMembersBurndownModal(data) {
         $('#s4t-members-container').html(renderMembersHtml($('#s4t-members-modal').data('members'), this.checked));
     });
 
-    $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp('Members Burndown', 'Spot uneven workloads and unfinished sprint work.', 'Team totals, member points, remaining work and card progress.', 'Compare members without adding up cards manually.', 'Review the summary and member rows; refresh for the latest board data.'));
+    $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp('Members Burndown', 'Spot uneven workloads and unfinished sprint work.', 'Team summaries and member assigned, done, remaining points, progress and card counts.', 'Not Sure lists are excluded from member rows by default; the four team summaries always include them.', 'Uncheck Exclude Not Sure list to include those cards in member rows. Refresh for the latest board data.'));
 
     // Use Trello's live design tokens, just like Attention and Cards List.
     // Event handlers

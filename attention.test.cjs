@@ -481,10 +481,13 @@ test('Not Sure exclusion updates member points and progress without changing tea
     assert.match(filtered,/✓ 2 done</);
     assert.match(filtered,/>3 remaining</);
     assert.match(filtered,/width:40%/);
+    assert.match(filtered,/1 cards \(0 done, 1 pending\)/);
+    assert.equal(result.team.cardsTotal,2);
     const unfiltered=context.renderMembersHtml(result.members,false);
     assert.match(unfiltered,/>7.5 assigned</);
     assert.match(unfiltered,/✓ 3.5 done</);
     assert.match(unfiltered,/>4 remaining</);
+    assert.match(unfiltered,/2 cards \(0 done, 2 pending\)/);
     assert.equal(result.team.assigned,7.5);
     assert.equal(JSON.stringify(result),original);
     const allExcluded=context.renderMembersHtml([{...result.members[0],notSureAssigned:7.5,notSureCompleted:3.5}],true);
@@ -492,4 +495,14 @@ test('Not Sure exclusion updates member points and progress without changing tea
     assert.match(allExcluded,/✓ 0 done</);
     assert.match(allExcluded,/>0 remaining</);
     assert.match(allExcluded,/width:0%/);
+});
+
+test('Not Sure card counts include completed and unestimated cards', () => {
+    const result = context.computeBurndownFromBoardData({name:'Sprint',members:[{id:'member',fullName:'Alex'}],lists:[{id:'todo',name:'Todo'},{id:'maybe',name:'Not Sure'}],cards:[card({name:'Keep',dueComplete:true}),card({name:'Optional',idList:'maybe'}),card({name:'Completed optional',idList:'maybe',dueComplete:true})]});
+    const filtered=context.renderMembersHtml(result.members,true);
+    assert.match(filtered,/1 cards \(1 done, 0 pending\)/);
+    assert.match(filtered,/width:100%/);
+    assert.match(context.renderMembersHtml(result.members,false),/3 cards \(2 done, 1 pending\)/);
+    assert.equal(result.team.cardsTotal,3);
+    assert.equal(result.team.cardsCompleted,2);
 });
