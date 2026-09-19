@@ -331,7 +331,7 @@ function parsePoints(str) {
     if (!str || typeof str !== 'string') return { assigned: null, completed: null };
 
     // 1. Slash format: (1/3) or [1/3] or {1/3} -> completed/assigned
-    var slashM = str.match(/[(\[{\[]\s*([0-9]+(?:\.[0-9]+)?)\s*\/\s*([0-9]+(?:\.[0-9]+)?)\s*[)\]}]/);
+    var slashM = str.match(/[(\[{\[]\s*((?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+))\s*\/\s*((?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+))\s*[)\]}]/);
     if (slashM) {
         pCompleted = parseFloat(slashM[1]);
         pAssigned = parseFloat(slashM[2]);
@@ -339,14 +339,14 @@ function parsePoints(str) {
     }
 
     // 2. Parenthesis -> assigned points: (3), ( 3 ), (3.5), (3 pts), (3sp)
-    var pM = str.match(/\(\s*(?:est|estimate|points?|pts?|sp)?\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:pts?|points?|sp)?\s*\)/i);
+    var pM = str.match(/\(\s*(?:est|estimate|points?|pts?|sp)?\s*[:=]?\s*((?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+))\s*(?:pts?|points?|sp)?\s*\)/i);
     if (pM) {
         var v = parseFloat(pM[1]);
         if (!isNaN(v) && v >= 0) pAssigned = v;
     }
 
     // 3. Braces or brackets -> completed points: [1], {1}, [1.5], {1 pt}, {1pts}
-    var cM = str.match(/[\[\{]\s*(?:done|completed|spent|consumed)?\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:pts?|points?|sp)?\s*[\]\}]/i);
+    var cM = str.match(/[\[\{]\s*(?:done|completed|spent|consumed)?\s*[:=]?\s*((?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+))\s*(?:pts?|points?|sp)?\s*[\]\}]/i);
     if (cM) {
         var cv = parseFloat(cM[1]);
         if (!isNaN(cv) && cv >= 0) pCompleted = cv;
@@ -1959,7 +1959,53 @@ function s4tAttentionChecklistMap(cards, checklists) {
     return result;
 }
 
-function s4tAttentionIssues(card, checklists, requiredNames, boardLabels, now) {
+function s4tCommentHeadingName(value) {
+    return s4tAttentionNormalizeName(value).replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`]/g, '').replace(/[:：]$/, '').trim();
+}
+function s4tCommentHeadings(text) {
+    var headings = [], fence = null, lines = String(text || '').split(/\r?\n/);
+    lines.forEach(function (line, index) {
+        var code = line.match(/^ {0,3}(`{3,}|~{3,})/);
+        if (code) { if (!fence) fence = code[1]; else if (code[1][0] === fence[0] && code[1].length >= fence.length) fence = null; return; }
+        if (fence) return;
+        var heading = line.match(/^ {0,3}#{1,3}[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/);
+        if (heading) headings.push(s4tCommentHeadingName(heading[1]));
+        else if (/^ {0,3}(?:=+|-+)[ \t]*$/.test(line) && index && /\S/.test(lines[index-1]) && !/^\s*(?:>|#|`|~)/.test(lines[index-1])) headings.push(s4tCommentHeadingName(lines[index-1]));
+    });
+    return Array.from(new Set(headings));
+}
+async function s4tLoadAttentionComments(cards, fetchPage, valid, cache) {
+    var index = 0, stopped = false;
+    async function worker() {
+        while (index < cards.length && !stopped && valid()) {
+            var card = cards[index++], headings = new Set(), before, cursors = new Set();
+            if (card.closed || s4tIsCommonCard(card)) continue;
+            var revision = card.dateLastActivity && String(card.dateLastActivity) + ':' + (card.badges && card.badges.comments);
+            var cached = cache && cache.get(card.id);
+            if (revision && cached && cached.revision === revision) { card.s4tCommentHeadings = cached.headings; continue; }
+            if (card.badges && card.badges.comments === 0) { card.s4tCommentHeadings = []; continue; }
+            for (var page = 0; ; page++) {
+                if (stopped || !valid()) return;
+                if (page >= 100) throw new Error('Comment history incomplete');
+                var actions = await fetchPage(card.id, before);
+                if (stopped || !valid()) return;
+                if (!Array.isArray(actions)) throw new Error('Invalid comment history');
+                actions.forEach(function (action) { s4tCommentHeadings(action.data && action.data.text).forEach(function (name) { headings.add(name); }); });
+                if (actions.length < 1000) break;
+                before = actions[actions.length-1].id;
+                if (!before || cursors.has(before)) throw new Error('Comment history incomplete');
+                cursors.add(before);
+            }
+            card.s4tCommentHeadings = Array.from(headings);
+            if (cache && revision) cache.set(card.id, {revision:revision, headings:card.s4tCommentHeadings});
+        }
+    }
+    try { await Promise.all(Array.from({length:Math.min(4,cards.length)}, worker)); }
+    catch (error) { stopped = true; throw error; }
+}
+
+function s4tAttentionIssues(card, checklists, requiredNames, boardLabels, now, requiredComments) {
+    var points = parsePoints(card.name);
     var hotfix = (boardLabels || card.labels || []).some(function (label) {
         return /\bhot[\s-]*fix\b/i.test(label.name || '') &&
             ((card.idLabels || []).indexOf(label.id) !== -1 || (card.labels || []).some(function (value) { return value.id === label.id; }));
@@ -1978,7 +2024,11 @@ function s4tAttentionIssues(card, checklists, requiredNames, boardLabels, now) {
         scope: !(card.desc || '').trim(),
         estimate: (card.idMembers || []).length > 0 && parsePoints(card.name).assigned === null,
         unassigned: (card.idMembers || []).length === 0,
-        missingCompleted: parsePoints(card.name).completed === null,
+        missingCompleted: points.completed === null,
+        pointsMismatch: points.assigned !== null && points.completed !== null && points.completed !== points.assigned,
+        missingComments: Array.isArray(card.s4tCommentHeadings) && (requiredComments || []).some(function (name) {
+            return card.s4tCommentHeadings.indexOf(s4tCommentHeadingName(name)) === -1;
+        }),
         incomplete: items.some(function (item) { return item.state !== 'complete'; }),
         complete: items.length > 0 && items.every(function (item) { return item.state === 'complete'; }),
         missing: requiredNames.length ? requiredNames.some(function (name) {
@@ -2015,6 +2065,17 @@ function s4tAttentionMatches(card, issues, selected, excluded, members, labels, 
         includes(card.idMembers || [], members) && includes(card.idLabels || [], labels);
 }
 
+// Offer only lists containing eligible cards for the current member selection.
+// Ignore issue/label/list filters here so an excluded list can still be restored.
+function s4tAttentionMemberLists(data, members, matchAll) {
+    if (members.includes('__empty__')) return [];
+    var ids = new Set();
+    (data.cards || []).forEach(function (card) {
+        if (s4tAttentionMatches(card, {}, [], [], members, [], matchAll)) ids.add(card.idList);
+    });
+    return (data.lists || []).filter(function (list) { return !list.closed && ids.has(list.id); });
+}
+
 function s4tReadNativeFilters(query, boardData) {
     var result = { members: [], labels: [], unresolved: [], other: [], matchAll: false };
     var pattern = /([a-zA-Z]+):(?:"([^"]*)"|'([^']*)'|([^,]*?))(?=,\s*[a-zA-Z]+:|\s+[a-zA-Z]+:|$)/g;
@@ -2045,12 +2106,12 @@ function s4tCreateAttentionEvaluator() {
     var snapshot, issueKey, flags, resultKey, result;
     return function (boardData, options, now) {
         now = now || new Date();
-        var nextIssueKey = JSON.stringify([options.required, now.getFullYear(), now.getMonth(), now.getDate()]);
+        var nextIssueKey = JSON.stringify([options.required, options.requiredComments, now.getFullYear(), now.getMonth(), now.getDate()]);
         if (snapshot !== boardData || issueKey !== nextIssueKey) {
             snapshot = boardData; issueKey = nextIssueKey; resultKey = null;
             var lists = s4tAttentionChecklistMap(boardData.cards, boardData.checklists);
             var names = s4tAttentionNames(options.required);
-            flags = boardData.cards.map(function (card) { return s4tAttentionIssues(card, lists[card.id] || [], names, boardData.labels, now); });
+            flags = boardData.cards.map(function (card) { return s4tAttentionIssues(card, lists[card.id] || [], names, boardData.labels, now, s4tAttentionNames(options.requiredComments)); });
         }
         var key = JSON.stringify([options.selected, options.excluded, options.members, options.labels, options.matchAll]);
         if (resultKey === key) return result;
@@ -2086,13 +2147,14 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
 
 (function () {
     if (typeof document === 'undefined') return;
-    var board = null, data = null, selected = [], excluded = [], required = '';
+    var board = null, data = null, selected = [], excluded = [], required = '', requiredComments = 'Tech Design\nTest Cases\nBranch';
     var memberFilters = [], labelFilters = [], matchAll = false, switching = false, nativeBlocked = false, dataWaiters = [];
     var evaluateAttention = s4tCreateAttentionEvaluator(), wasCompacted = false;
     function attentionResult() {
-        return data ? evaluateAttention(data, { required: required, selected: selected, excluded: excluded, members: memberFilters, labels: labelFilters, matchAll: matchAll }) : { index: {}, ids: [], count: 0 };
+        return data ? evaluateAttention(data, { required: required, requiredComments: requiredComments, selected: selected.filter(function (key) { return key !== 'missingComments' || data.s4tCommentsLoaded; }), excluded: excluded, members: memberFilters, labels: labelFilters, matchAll: matchAll }) : { index: {}, ids: [], count: 0 };
     }
     var request = 0, loading = false, error = '', refreshed = '';
+    var commentLoading = false, commentRequest = 0, commentCache = new Map(), commentError = '';
     var panel, button, controls, cardsButton, clearButton, observerTimer, layoutKey = '', savedState = '';
 
     function active() { return selected.length > 0 || excluded.length > 0 || memberFilters.length > 0 || labelFilters.length > 0; }
@@ -2123,7 +2185,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         if (!current || current === board) return;
         board = current;
         dataWaiters.splice(0).forEach(function (callback) { callback(new Error('Board changed')); });
-        request++;
+        request++; commentRequest++; commentLoading = false; commentError = ''; commentCache.clear();
         data = null; selected = []; excluded = []; loading = false; error = ''; refreshed = '';
         memberFilters = []; labelFilters = [];
         matchAll = false;
@@ -2131,7 +2193,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         try {
             var stored = JSON.parse(localStorage.getItem('s4t-attention-filters-' + board) || '{}');
             selected = Array.isArray(stored.selected) ? stored.selected.filter(function (key) {
-                return ['scope', 'estimate', 'unassigned', 'missingCompleted', 'hotfixToday', 'hotfix', 'hotfixDue', 'incomplete', 'complete', 'missing'].indexOf(key) !== -1;
+                return ['scope', 'estimate', 'unassigned', 'missingCompleted', 'pointsMismatch', 'missingComments', 'hotfixToday', 'hotfix', 'hotfixDue', 'incomplete', 'complete', 'missing'].indexOf(key) !== -1;
             }) : [];
             excluded = Array.isArray(stored.excluded) ? stored.excluded.filter(function (id) { return typeof id === 'string'; }) : [];
             memberFilters = Array.isArray(stored.members) ? stored.members.filter(function (id) { return typeof id === 'string'; }) : [];
@@ -2139,6 +2201,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             matchAll = stored.matchAll === true;
         } catch (_) { /* Ignore malformed stored preferences. */ }
         try { required = localStorage.getItem(storageKey()) || ''; } catch (_) { required = ''; }
+        try { requiredComments = localStorage.getItem('s4t-attention-comment-names-' + board) ?? 'Tech Design\nTest Cases\nBranch'; } catch (_) { requiredComments = 'Tech Design\nTest Cases\nBranch'; }
         close();
         document.querySelectorAll('.s4t-attention-hidden').forEach(function (el) {
             el.classList.remove('s4t-attention-hidden');
@@ -2434,21 +2497,24 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             controls.toggleClass('s4t-attention-active', active());
         }
         if (panel) {
+            panel.find('.s4t-attention-comment-progress').prop('hidden', !commentLoading);
+            panel.find('.s4t-attention-comment-names').prop('hidden', selected.indexOf('missingComments') === -1);
             panel.find('.s4t-attention-required-names').prop('hidden', selected.indexOf('missing') === -1);
             panel.find('[data-attention-label]').each(function () { this.checked = !labelFilters.length || labelFilters.indexOf(this.getAttribute('data-attention-label')) !== -1; });
             panel.find('[data-attention-member]').each(function () { this.checked = !memberFilters.length || memberFilters.indexOf(this.getAttribute('data-attention-member')) !== -1; });
             panel.find('[data-attention-all-labels]').prop('checked', labelFilters.length === 0).prop('indeterminate', labelFilters.length > 0 && labelFilters.indexOf('__empty__') === -1);
             panel.find('[data-attention-all-members]').prop('checked', memberFilters.length === 0).prop('indeterminate', memberFilters.length > 0 && memberFilters.indexOf('__empty__') === -1);
             panel.find('[data-check]').each(function () { this.checked = selected.indexOf(this.getAttribute('data-check')) !== -1; });
+            renderLists();
             updateListGroups();
             var matchHint = matchAll ? 'Match every selected option (imported exact match).' : 'Match any selected option.';
-            var memberHint = memberFilters.indexOf('__empty__') !== -1 ? 'No members selected.' : memberFilters.length ? matchHint : 'All members and unassigned cards are included.';
-            var labelHint = labelFilters.indexOf('__empty__') !== -1 ? 'No labels selected.' : labelFilters.length ? matchHint : 'All labels and unlabeled cards are included.';
-            panel.find('.s4t-label-match-hint').each(function () { if (this.textContent !== labelHint) this.textContent = labelHint; });
-            panel.find('.s4t-member-match-hint').each(function () { if (this.textContent !== memberHint) this.textContent = memberHint; });
+            var memberHint = memberFilters.indexOf('__empty__') !== -1 ? 'NOTE: - No members selected.' : memberFilters.length ? matchHint : 'All members and unassigned cards are included.';
+            var labelHint = labelFilters.indexOf('__empty__') !== -1 ? 'NOTE: - No labels selected.' : labelFilters.length ? matchHint : 'All labels and unlabeled cards are included.';
+            panel.find('.s4t-label-match-hint').toggleClass('s4t-attention-note', labelFilters.indexOf('__empty__') !== -1).attr('role', 'status').each(function () { if (this.textContent !== labelHint) this.textContent = labelHint; });
+            panel.find('.s4t-member-match-hint').toggleClass('s4t-attention-note', memberFilters.indexOf('__empty__') !== -1).attr('role', 'status').each(function () { if (this.textContent !== memberHint) this.textContent = memberHint; });
             var paused = nativeActive || switching;
             var showPrompt = nativeActive && !switching;
-            var showSkeleton = switching || (!data && !error && !showPrompt);
+            var showSkeleton = switching || (loading && !showPrompt) || (!data && !error && !showPrompt);
             var columns = panel.find('.s4t-attention-columns');
             columns.toggleClass('s4t-loading-surface', showSkeleton).attr('aria-busy', String(showSkeleton)).attr('inert', showSkeleton ? '' : null);
             var focusWasInPrompt = panel.find('.s4t-attention-conflict')[0].contains(document.activeElement);
@@ -2458,7 +2524,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             columns.prop('hidden', showPrompt || (!data && !!error && !switching));
             panel.find('.s4t-attention-count').prop('hidden', paused || !data);
             if (!paused && focusWasInPrompt) panel.find('.s4t-attention-columns input:not(:disabled)').first().trigger('focus');
-            var status = error || '';
+            var status = error || commentError || (commentLoading ? 'Checking comment headings… Other filters are ready to use.' : '');
             var statusEl = panel.find('.s4t-attention-status');
             if (statusEl.text() !== status) statusEl.text(status);
             statusEl.prop('hidden', !status);
@@ -2481,10 +2547,30 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         });
     }
 
+    function loadComments() {
+        if (!data || commentLoading || data.s4tCommentsLoaded) return;
+        var snapshot = data, token = ++commentRequest, requestedBoard = board;
+        commentLoading = true; commentError = ''; apply();
+        s4tLoadAttentionComments(snapshot.cards, function (id, before) {
+            var params = {filter:'commentCard',limit:1000,fields:'id,data',memberCreator:false};
+            if (before) params.before = before;
+            return $.ajax({url:'/1/cards/' + encodeURIComponent(id) + '/actions',data:params,dataType:'json',timeout:20000,cache:false,xhrFields:{withCredentials:true}});
+        }, function () { return token === commentRequest && data === snapshot && currentBoard() === requestedBoard; }, commentCache)
+        .then(function () {
+            if (token !== commentRequest || data !== snapshot) return;
+            data = Object.assign({}, snapshot, {s4tCommentsLoaded:true});
+        }, function () {
+            if (token === commentRequest) commentError = 'Could not load comments. Comment checking is paused; try Refresh.';
+        }).finally(function () {
+            if (token !== commentRequest) return;
+            commentLoading = false; apply();
+        });
+    }
+
     function fetchData() {
         if (!board || loading) return;
         var token = ++request, requestedBoard = board;
-        loading = true; error = ''; apply();
+        loading = true; error = ''; commentError = ''; commentRequest++; commentLoading = false; apply();
         function finish(result) {
             if (token !== request || currentBoard() !== requestedBoard) return;
             loading = false;
@@ -2496,6 +2582,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                     (data ? 'Previous results remain active. ' : 'No cards have been hidden. ') + 'Try Refresh.';
             }
             renderLists(); renderPeopleAndLabels(); apply();
+            if (data && selected.includes('missingComments')) loadComments();
             dataWaiters.splice(0).forEach(function (callback) { callback(error ? new Error(error) : null, error ? null : data); });
         }
         function fallback() {
@@ -2507,7 +2594,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         $.ajax({
             url: '/1/boards/' + requestedBoard,
             data: {
-                cards: 'open', card_fields: 'name,desc,idList,idMembers,idLabels,idChecklists,shortLink,closed,due,dueComplete',
+                cards: 'open', card_fields: 'name,desc,idList,idMembers,idLabels,idChecklists,shortLink,closed,due,dueComplete,badges,dateLastActivity',
                 members: 'all', member_fields: 'fullName,username,initials', labels: 'all', label_fields: 'name,color',
                 lists: 'open', list_fields: 'name,closed', checklists: 'all', fields: 'name'
             },
@@ -2517,7 +2604,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
 
     function groupLists(group) {
         var pattern = group === 'todo' ? /\bto[\s-]*do\b/i : /\bnot[\s-]+sure\b/i;
-        return data ? data.lists.filter(function (list) { return !list.closed && pattern.test(list.name); }) : [];
+        return data ? s4tAttentionMemberLists(data, memberFilters, matchAll).filter(function (list) { return pattern.test(list.name); }) : [];
     }
 
     function updateListGroups() {
@@ -2534,7 +2621,9 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     function renderLists() {
         if (!panel) return;
         var container = panel.find('.s4t-attention-lists');
-        var signature = data ? JSON.stringify(data.lists) : 'loading';
+        var availableLists = data ? s4tAttentionMemberLists(data, memberFilters, matchAll) : [];
+        var noMembers = memberFilters.indexOf('__empty__') !== -1;
+        var signature = data ? JSON.stringify([availableLists, noMembers]) : 'loading';
         if (container.data('choices') === signature) return;
         container.data('choices', signature);
         var scroll = container.parent()[0].scrollTop;
@@ -2558,7 +2647,9 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                 .on('mouseleave focusout', function () { $(this).removeClass('s4t-tooltip-dismissed'); })
                 .appendTo(groups);
         });
-        data.lists.filter(function (list) { return !list.closed; }).forEach(function (list) {
+        if (noMembers) container.append($('<p class="s4t-attention-list-message s4t-attention-note" role="status">').text('NOTE: - No members selected. Select a member to see available lists.'));
+        else if (!availableLists.length) container.append($('<p class="s4t-attention-list-message s4t-attention-note" role="status">').text('No lists found for the selected members.'));
+        availableLists.forEach(function (list) {
             var input = $('<input type="checkbox">').attr('data-exclude-list', list.id).prop('checked', excluded.indexOf(list.id) !== -1);
             input.on('change', function () {
                 excluded = excluded.filter(function (id) { return id !== list.id; });
@@ -2670,6 +2761,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                     labelFilters = labelFilters.filter(function (id) { return linkedIds.indexOf(id) === -1; });
                 }
                 apply();
+                if (key === 'missingComments' && this.checked) { if (data) loadComments(); else fetchData(); }
             });
             var row = $('<label class="s4t-attention-option">').append(input, $('<span>').text(label));
             if (tooltip) row.append($('<span class="s4t-attention-info" tabindex="0" aria-label="Completion filter details">').attr('data-tooltip', tooltip).text('ⓘ'));
@@ -2678,6 +2770,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         option('scope', 'Missing Scope', 'description is missing');
         option('estimate', 'Missing Assigned Points', 'assigned points missing');
         option('missingCompleted', 'Missing Completed Points', 'completed points missing');
+        option('pointsMismatch', 'Points mismatch', 'Assigned and completed points differ. Excludes cards missing either or both values. Zero(0) counts as a value.');
         // option('unassigned', 'Unassigned — no member'); // we already have this in members selection
         checks.append($('<h4>').text('Hotfix'));
         option('hotfixToday', "Today's Hotfix", 'due date/time is of today');
@@ -2696,13 +2789,25 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         }));
         requiredFields.append($('<p>').text('Shows cards missing at least one name. Case and extra spaces are ignored. Leave blank for cards with no checklists.'));
         checks.append(requiredFields);
+        checks.append($('<h4>').text('Comments'));
+        option('missingComments', 'Missing required comments', 'Missing at least one required H1, H2 or H3 comment heading. Case-insensitive; comments only.');
+        var commentFields = $('<div class="s4t-attention-comment-names" hidden>');
+        commentFields.append($('<div class="s4t-attention-comment-progress" aria-hidden="true" hidden>'));
+        commentFields.append($('<label for="s4t-attention-comment-names">').text('Required comment headings (new lines or commas)'));
+        commentFields.append($('<textarea id="s4t-attention-comment-names" rows="3" placeholder="Tech Design, Test Cases, Branch">').val(requiredComments).on('input', function () {
+            requiredComments = this.value;
+            try { localStorage.setItem('s4t-attention-comment-names-' + board, requiredComments); } catch (_) {}
+            apply();
+        }));
+        commentFields.append($('<p>').text('Shows cards missing any listed heading across their comments. H1–H3 only; case and extra spaces ignored. Enter at least one name.'));
+        checks.append(commentFields);
         var lists = $('<div>').append(
             $('<div class="s4t-attention-column-heading">').append($('<h3>').text('Exclude lists'), $('<div class="s4t-attention-list-groups">')),
             $('<p>').text('Cards in checked lists are hidden, regardless of the selected checks.'),
             $('<div class="s4t-attention-lists">'));
         var membersColumn = $('<div>').append($('<div class="s4t-attention-column-heading">').append($('<h3>').text('Members'), $('<div class="s4t-attention-list-groups s4t-attention-member-group">')), $('<p class="s4t-member-match-hint">').text('Match any selected member.'), $('<div class="s4t-attention-members">'));
         var labelsColumn = $('<div>').append($('<div class="s4t-attention-column-heading">').append($('<h3>').text('Labels'), $('<div class="s4t-attention-list-groups s4t-attention-label-group">')), $('<p class="s4t-label-match-hint">').text('Match any selected label.'), $('<div class="s4t-attention-labels">'));
-        columns.append(checks, lists, membersColumn, labelsColumn); panel.append(columns);
+        columns.append(checks, membersColumn, lists, labelsColumn); panel.append(columns);
         $('body').append(panel);
         button.attr('aria-expanded', 'true');
         renderLists(); renderPeopleAndLabels(); apply(); fetchData();
@@ -2874,9 +2979,10 @@ var s4tOpenCardsList = (function () {
         if (!boardData) return [];
         var selection = state.selection || { ids: [] };
         var cached = state.candidateCache;
-        if (cached && cached.board === boardData && cached.selection === selection && cached.search === state.search) return cached.cards;
+        if (cached && cached.board === boardData && cached.selection === selection && cached.search === state.search && cached.excludeNotSure === state.excludeNotSure) return cached.cards;
         var search = (state.search || '').toLowerCase();
         var allowed = new Set(selection.ids);
+        var excludedLists = new Set(state.excludeNotSure ? boardData.lists.filter(function (list) { return /\bnot[\s_-]*sure\b/i.test(list.name); }).map(function (list) { return list.id; }) : []);
         var memberIds = boardData.members.map(function (member) { return member.id; });
         var cards = boardData.cards.filter(function (card) {
             // These shared housekeeping cards stay excluded even as board membership changes.
@@ -2884,10 +2990,10 @@ var s4tOpenCardsList = (function () {
             var assignedToEveryone = memberIds.length > 0 && memberIds.every(function (id) {
                 return (card.idMembers || []).indexOf(id) !== -1;
             });
-            return !card.closed && !assignedToEveryone && allowed.has(card.id) &&
+            return !card.closed && !assignedToEveryone && allowed.has(card.id) && !excludedLists.has(card.idList) &&
                 (!search || card.name.toLowerCase().includes(search));
         });
-        state.candidateCache = { board: boardData, selection: selection, search: state.search, cards: cards };
+        state.candidateCache = { board: boardData, selection: selection, search: state.search, excludeNotSure: state.excludeNotSure, cards: cards };
         return cards;
     }
     function generateMissingEstimatesSlackText() {
@@ -2944,7 +3050,7 @@ var s4tOpenCardsList = (function () {
         });
         overlay.find('.s4t-cards-toolbar').attr('inert', value ? '' : null);
         overlay.find('[data-cards-resync]').prop('disabled', value).toggleClass('s4t-refreshing', value).attr('aria-busy', String(value));
-        overlay.find('[data-cards-copy], select[data-preview-only], [data-cards-group], [data-add-developers] input, [data-mention-developers] input').prop('disabled', value);
+        overlay.find('[data-cards-copy], select[data-preview-only], [data-cards-group], [data-add-developers] input, [data-mention-developers] input, [data-cards-exclude-not-sure] input').prop('disabled', value);
         if (value) hideSlackMentionAutocomplete();
     }
     function load() {
@@ -2955,7 +3061,14 @@ var s4tOpenCardsList = (function () {
             try {
                 if (err || !result) { showSheetSuccessToast('Could not refresh cards. Try again.'); return; }
                 boardData = result;
-                state.selection = context.selection();
+                var nextSelection = context.selection();
+                var selectionKey = JSON.stringify(nextSelection.ids.slice().sort());
+                if (state.selectionKey && state.selectionKey !== selectionKey) {
+                    state.search = ''; state.excludedCardIds.clear();
+                    overlay.find('.s4t-cards-toolbar input[type="search"]').val('');
+                }
+                state.selectionKey = selectionKey;
+                state.selection = nextSelection;
 
                 if (state.selection.limited) showSheetSuccessToast('Using loaded cards. Scroll the board and refresh to include more.');
                 state.developers = result.members.map(function (m) { return { name: m.fullName || m.username }; });
@@ -3013,7 +3126,7 @@ var s4tOpenCardsList = (function () {
         if (overlay && state.board === options.board) { context = options; overlay.prop('hidden', false); overlay.find('button').first().focus(); load(); return; }
         if (overlay) overlay.remove();
         context = options; boardData = null; loadToken++;
-        state = { board: options.board, tab: 'cards', groupBy: 'dev', includeDevelopers: false, mentionDevelopers: false, excludedCardIds: new Set(), search: '', format: 'both', hasUserEditedPreview: false, developers: [], devCardsMap: {} };
+        state = { board: options.board, tab: 'cards', groupBy: 'dev', excludeNotSure: false, includeDevelopers: false, mentionDevelopers: false, excludedCardIds: new Set(), search: '', format: 'both', hasUserEditedPreview: false, developers: [], devCardsMap: {} };
         overlay = $('<div id="s4t-cards-overlay">');
         var dialog = $('<section id="s4t-cards-dialog" role="dialog" aria-modal="true" aria-label="Cards List and Slack preview">');
         var header = $('<header>').append($('<div class="s4t-feature-title">').append($('<h2>').text('Cards List'), s4tFeatureHelp('Cards List', 'Share selected Trello tasks in Slack.', 'Developer, label or list grouping; title/link formats and an editable Slack preview.', 'Build one message without copying card links individually.', 'Filter the board with Trello or Attention, select cards, edit the preview, then copy and paste into Slack.')), $('<span class="s4t-cards-count">').text('— selected / — cards'),
@@ -3049,6 +3162,7 @@ var s4tOpenCardsList = (function () {
         ).on('change', function () {
             if (state.hasUserEditedPreview && !window.confirm('Replace your edited draft with cards grouped this way?')) { this.value = state.groupBy; return; }
             state.groupBy = this.value;
+            renderCards();
             overlay.find('[data-add-developers]').prop('hidden', state.groupBy !== 'labels');
             overlay.find('[data-mention-developers]').prop('hidden', state.groupBy !== 'labels' || !state.includeDevelopers);
             rebuildPreview();
@@ -3082,6 +3196,14 @@ var s4tOpenCardsList = (function () {
         }));
         previewTools.append(developerOption, mentionOption, button('', copyMessage, {'data-cards-copy':'', 'aria-label':'Copy for Slack', 'data-tooltip':'Copy for Slack', 'class':'s4t-cards-icon-button'}).html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>'));
         var editorFrame = $('<div class="s4t-cards-editor-frame">').append(previewTools, $('<div class="s4t-cards-copy-toast" role="status" hidden>'), editor);
+        var excludeNotSureOption = $('<label data-cards-exclude-not-sure data-tooltip="Exclude Not Sure list cards from the card list and preview in every grouping">').append(
+            $('<input type="checkbox">').on('change', function () {
+                if (state.hasUserEditedPreview && !window.confirm('Replace your edited draft with this list selection?')) { this.checked = state.excludeNotSure; return; }
+                state.excludeNotSure = this.checked;
+                state.hasUserEditedPreview = false;
+                changedSelection();
+            }), document.createTextNode('Exclude Not Sure list'));
+        tabs.after(excludeNotSureOption);
         preview.append(editorFrame, $('<textarea id="missing-slack-preview" hidden>'), $('<div id="slack-mention-autocomplete" class="hidden" role="listbox">'));
         var footer = $('<footer class="s4t-cards-footer">').append(
             $('<p class="s4t-cards-help">').text('Edit your message · Type @ for suggestions.')

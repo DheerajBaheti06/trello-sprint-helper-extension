@@ -49,7 +49,7 @@ Point edits and **Check All** modify Trello cards. Cards assigned to everyone ar
 
 ### EOW behavior
 
-The report uses the current board independently of Attention/native filters. It starts with the signed-in member when available. Week matching uses due date, or last activity when no due date exists, plus card creation date; these dates do not prove who performed the work.
+The report uses the current board independently of Attention/native filters. It starts with the signed-in member when available. Week matching checks due date, last activity, card creation and dated comments independently; these dates do not prove who performed the work.
 
 Default categories are Stabilization (UI/UX), Hotfix, Features (Client Requests/Critical labels), Dev-Ops (title suffix), and Release Tasks (everything else). Priority is Hotfix, Dev-Ops, Stabilization, then Features. Saved drafts retain edits; Reset rebuilds from board data.
 

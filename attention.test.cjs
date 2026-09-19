@@ -506,3 +506,73 @@ test('Not Sure card counts include completed and unestimated cards', () => {
     assert.equal(result.team.cardsTotal,3);
     assert.equal(result.team.cardsCompleted,2);
 });
+
+test('list choices depend on assigned cards, never list names', () => {
+    const board = {lists:[{id:'personal',name:'Alex Todo'},{id:'shared',name:'done-closed'},
+        {id:'empty',name:'Alex Not Sure'},{id:'archived',name:'Archived',closed:true}], cards:[
+        card({idList:'personal',idMembers:['b']}), card({idList:'shared',idMembers:['a']}),
+        card({idList:'empty',idMembers:['a'],closed:true}), card({idList:'archived',idMembers:['a']})]};
+    const ids = (members, all=false) => Array.from(context.s4tAttentionMemberLists(board,members,all), list=>list.id);
+    assert.deepEqual(ids(['a']), ['shared']);
+    assert.deepEqual(ids(['b']), ['personal']);
+    assert.deepEqual(ids(['a','b']), ['personal','shared']);
+    assert.deepEqual(ids(['a','b'],true), []);
+    assert.deepEqual(ids(['__empty__']), []);
+    assert.deepEqual(ids(['__none__']), []);
+    assert.deepEqual(ids([]), ['personal','shared']);
+    board.cards.push(card({idList:'empty',idMembers:[]}));
+    assert.deepEqual(ids(['__none__']), ['empty']);
+    board.cards.push(card({idList:'shared',idMembers:['a','b']}));
+    assert.deepEqual(ids(['a','b'],true), ['shared']);
+});
+
+test('points mismatch requires both values and matches either direction', () => {
+    for (const name of ['(4/3) Task','(1/3) Task','(0) [0.5] Task','(2.5) {3} Task','(4.4) When Access rights are saved it gets saved but its giving an error messaged - Site Admin [4]','(1) [0] Task']) assert.equal(issues({name}).pointsMismatch,true,name);
+    for (const name of ['(3/3) Task','(0) [0] Task','[3] Task','(3) Task','Task','(?) [4] Task']) assert.equal(issues({name}).pointsMismatch,false,name);
+});
+test('required comments match H1-H3 headings, not prose, code, or H4', () => {
+    const headings = context.s4tCommentHeadings('# TECH Design\n## **Test Cases:**\n### Branch ###\n#### Other\nTech Design in prose\n```md\n# Fake\n```\n> # Quoted');
+    assert.deepEqual(Array.from(headings), ['tech design','test cases','branch']);
+    const c = card({s4tCommentHeadings:headings});
+    const check = names => context.s4tAttentionIssues(c,[],[],[],new Date(),names).missingComments;
+    assert.equal(check(['tech design','TEST CASES','Branch']),false);
+    assert.equal(check(['Tech Design','Other']),true);
+    assert.equal(check([]),false);
+    assert.equal(context.s4tAttentionIssues(card(),[],[],[],new Date(),['Branch']).missingComments,false);
+});
+test('comment loader paginates and merges headings from separate comments', async () => {
+    const cards = [card({id:'a'})], calls=[];
+    await context.s4tLoadAttentionComments(cards, async (id,before) => {
+        calls.push([id,before]);
+        return before ? [{id:'old',data:{text:'### Branch'}}] : Array.from({length:1000},(_,i)=>({id:'p'+i,data:{text:i===0?'# Tech Design\n## Test Cases':'ordinary comment'}}));
+    },()=>true);
+    assert.deepEqual(calls,[['a',undefined],['a','p999']]);
+    assert.deepEqual(Array.from(cards[0].s4tCommentHeadings),['tech design','test cases','branch']);
+});
+test('comment failures and cancelled requests are never treated as loaded empty comments', async () => {
+    const cards=[card({id:'a'})];
+    await assert.rejects(context.s4tLoadAttentionComments(cards,async()=>({}),()=>true),/Invalid comment/);
+    assert.equal(cards[0].s4tCommentHeadings,undefined);
+    await context.s4tLoadAttentionComments(cards,async()=>{throw Error('must not fetch')},()=>false);
+    assert.equal(cards[0].s4tCommentHeadings,undefined);
+});
+
+test('points mismatch understands leading-decimal values used by card badges', () => {
+    for (const name of ['(.5) [.75] Task','(.75) [.5] Task','(.25/.1) Task','(0) {.5} Task']) assert.equal(issues({name}).pointsMismatch,true,name);
+    for (const name of ['(.5) [.5] Task']) assert.equal(issues({name}).pointsMismatch,false,name);
+});
+test('comment cache skips empty and unchanged cards and reloads edited cards', async () => {
+    const cache = new Map(), cards = [card({id:'a',dateLastActivity:'v1',badges:{comments:1}}),card({id:'b',badges:{comments:0}})];
+    let calls=0;
+    const fetch = async()=>{calls++;return [{id:'comment',data:{text:'# Branch'}}]};
+    await context.s4tLoadAttentionComments(cards,fetch,()=>true,cache);
+    assert.equal(calls,1);
+    assert.deepEqual(Array.from(cards[1].s4tCommentHeadings),[]);
+    const fresh=cards.map(c=>({...c,s4tCommentHeadings:undefined}));
+    await context.s4tLoadAttentionComments(fresh,fetch,()=>true,cache);
+    assert.equal(calls,1);
+    assert.deepEqual(Array.from(fresh[0].s4tCommentHeadings),['branch']);
+    fresh[0].dateLastActivity='v2';
+    await context.s4tLoadAttentionComments(fresh,fetch,()=>true,cache);
+    assert.equal(calls,2);
+});

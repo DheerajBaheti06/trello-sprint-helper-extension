@@ -80,3 +80,37 @@ test('week selection allows only current and previous weeks across month boundar
  assert.equal(ctx.s4tEowWeekAllowed('2026-08-30','2026-09-13'),false);
  assert.equal(ctx.s4tEowWeekAllowed('2026-09-14','2026-09-13'),false);
 });
+
+test('current-week activity matches even with an earlier or later due date',()=>{
+ const w=ctx.s4tEowWeek('2026-09-16');
+ const cards=[card({id:'later',due:'2026-09-30T12:00:00',dateLastActivity:'2026-09-16T12:00:00'}),card({id:'earlier',due:'2026-09-01T12:00:00',dateLastActivity:'2026-09-15T12:00:00'}),card({id:'outside',due:'2026-09-30T12:00:00',dateLastActivity:'2026-09-13T12:00:00'}),card({id:'boundary',dateLastActivity:'2026-09-21T00:00:00'})];
+ const result=ctx.s4tEowCategories({...board,cards},'a',w,[]);
+ assert.equal(result.categories.flatMap(c=>c.cards).length,2);
+});
+test('refresh rebuilds only default empty auto drafts, preserving edited drafts',()=>{
+ const draft={heading:'EOW Update',dateRange:week.label,categories:['STABILIZATION','HOTFIX','FEATURES','DEV-OPS','RELEASE TASKS'].map(name=>({name,cards:[]}))};
+ assert.equal(ctx.s4tEowEmptyAutoDraft(draft,week),true);
+ assert.equal(ctx.s4tEowEmptyAutoDraft({...draft,userEdited:true},week),false);
+ assert.equal(ctx.s4tEowEmptyAutoDraft({...draft,manual:true},week),false);
+ assert.equal(ctx.s4tEowEmptyAutoDraft({...draft,heading:'My update'},week),false);
+ draft.categories[0].cards.push({title:'My task'});
+ assert.equal(ctx.s4tEowEmptyAutoDraft(draft,week),false);
+});
+
+test('comments in the selected week include cards with older due and activity dates',()=>{
+ const w=ctx.s4tEowWeek('2026-09-16');
+ const commented=card({due:'2026-09-09',dateLastActivity:'2026-09-09',s4tCommentDates:[+new Date('2026-09-15T12:00:00')]});
+ assert.equal(ctx.s4tEowCategories({...board,cards:[commented]},'a',w,[]).categories.flatMap(c=>c.cards).length,1);
+ assert.equal(ctx.s4tEowCategories({...board,cards:[commented]},'b',w,[]).categories.flatMap(c=>c.cards).length,0);
+ assert.equal(ctx.s4tEowCategories({...board,cards:[commented]},'a',w,['todo']).categories.flatMap(c=>c.cards).length,0);
+});
+test('comment history paginates and retains only dates, scoped to the requested interval',async()=>{
+ let calls=[];const start=new Date('2026-09-07'),end=new Date('2026-09-21');
+ const page=Array.from({length:1000},(_,i)=>({id:'action'+i,date:'2026-09-15',data:{card:{id:'a'},text:'not retained'}}));
+ const dates=await ctx.s4tEowCommentDates(async params=>{calls.push(params);return calls.length===1?page:[{id:'older',date:'2026-09-08',data:{card:{id:'b'}}},{id:'outside',date:'2026-09-01',data:{card:{id:'c'}}}];},start,end,()=>true);
+ assert.equal(calls.length,2);assert.equal(calls[1].before,'action999');assert.equal(dates.a.length,1000);assert.equal(dates.b.length,1);assert.equal(dates.c,undefined);assert.ok(!JSON.stringify(dates).includes('not retained'));
+});
+test('comment history stops on stale requests and reports invalid pages',async()=>{
+ assert.equal(await ctx.s4tEowCommentDates(()=>{throw Error('should not fetch')},week.start,week.end,()=>false),null);
+ await assert.rejects(()=>ctx.s4tEowCommentDates(async()=>({}),week.start,week.end,()=>true),/Invalid comment history/);
+});

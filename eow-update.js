@@ -62,6 +62,29 @@ function s4tEowPreviousReleases(current, boards, week) {
     }
     return {releases:releases,error:''};
 }
+// Fetch dated comment actions for the two selectable weeks; never retain comment text.
+async function s4tEowCommentDates(fetchPage, since, before, valid) {
+    var dates = {}, cursor = before.toISOString(), cursors = new Set();
+    for (var page = 0; page < 30; page++) {
+        if (!valid()) return null;
+        var actions = await fetchPage({filter:'commentCard', since:since.toISOString(), before:cursor, limit:1000, fields:'id,date,data', memberCreator:false});
+        if (!valid()) return null;
+        if (!Array.isArray(actions)) throw new Error('Invalid comment history');
+        actions.forEach(function (action) {
+            var id = action.data && action.data.card && action.data.card.id, time = new Date(action.date).getTime();
+            if (id && time >= since.getTime() && time < before.getTime()) {
+                if (!dates[id]) dates[id] = [];
+                dates[id].push(time);
+            }
+        });
+        if (actions.length < 1000) return dates;
+        var last = actions[actions.length - 1];
+        if (new Date(last.date) < since) return dates;
+        if (!last.id || cursors.has(last.id)) throw new Error('Incomplete comment history');
+        cursor = last.id; cursors.add(cursor);
+    }
+    throw new Error('Comment history exceeds page limit');
+}
 function s4tEowCategories(board, member, week, excluded) {
     var categories = ['STABILIZATION', 'HOTFIX', 'FEATURES', 'DEV-OPS', 'RELEASE TASKS'].map(function(name) { return {name:name,cards:[]}; });
     var lists = new Map((board.lists || []).map(function(list) { return [list.id, list.categoryName || list.name]; }));
@@ -71,11 +94,12 @@ function s4tEowCategories(board, member, week, excluded) {
             !(!board.multiBoard && members.length && members.every(function(id) { return (card.idMembers || []).includes(id); })) && !excluded.includes(card.idList);
     });
     var matches = cards.filter(function(card) {
-        // Match the website: due date takes precedence over last activity, or creation within the week.
-        var activity = new Date(card.due || card.dateLastActivity).getTime();
-        var lastActivity = board.multiBoard ? new Date(card.dateLastActivity).getTime() : NaN;
+        // A due date outside the week must not hide work updated during the week.
+        var activity = new Date(card.due).getTime();
+        var lastActivity = new Date(card.dateLastActivity).getTime();
         var created = /^[a-f\d]{24}$/i.test(card.id || '') ? parseInt(card.id.slice(0, 8), 16) * 1000 : NaN;
-        return (activity >= week.start && activity < week.end) || (lastActivity >= week.start && lastActivity < week.end) || (created >= week.start && created < week.end);
+        return (activity >= week.start && activity < week.end) || (lastActivity >= week.start && lastActivity < week.end) || (created >= week.start && created < week.end) ||
+            (card.s4tCommentDates || []).some(function (time) { return time >= week.start && time < week.end; });
     });
     (board.allDates ? cards : matches).forEach(function(card) {
         var list = String(lists.get(card.idList) || '').toLowerCase();
@@ -104,10 +128,28 @@ function s4tEowText(draft) {
     });
     return lines.join('\n').trim();
 }
+function s4tEowEmptyAutoDraft(draft, week) {
+    var names = ['STABILIZATION', 'HOTFIX', 'FEATURES', 'DEV-OPS', 'RELEASE TASKS'];
+    return !draft.manual && !draft.userEdited && draft.heading === 'EOW Update' && draft.dateRange === week.label &&
+        draft.categories.length === names.length && draft.categories.every(function (category, index) {
+            return category.name === names[index] && category.cards.length === 0;
+        });
+}
 var s4tOpenEow = (function() {
     if (typeof document === 'undefined') return function() {};
     var overlay, board, boardId, member, week, draft, busy = false, request = 0, drag = null, hoverTimer, sources, releaseBoards, currentRelease, releaseLoading=false, releaseError='';
-    function status(message) { overlay.find('.s4t-eow-status').text(message); }
+    var statusTimer;
+    function status(message) {
+        if (!overlay) return;
+        if (!message || message === 'Current board loaded. Draft saved locally.') {
+            overlay.find('.s4t-eow-status').text(message ? 'NOTE: Current board loaded. Draft saved locally.' : '');
+            return;
+        }
+        var current = overlay;
+        current.find('[data-eow-toast]').text(message).prop('hidden',false);
+        clearTimeout(statusTimer);
+        statusTimer = setTimeout(function () { current.find('[data-eow-toast]').prop('hidden',true); },3500);
+    }
     function key() { return 's4t-eow-v1:' + (sources.length === 1 && sources[0].id === boardId ? boardId : sources.map(function(source) { return source.id; }).sort().join('+')) + ':' + member + ':' + week.iso; }
     function save() {
         if (!draft || !member) return;
@@ -130,10 +172,9 @@ var s4tOpenEow = (function() {
     function preview() {
         if (!draft.manual) draft.preview = s4tEowText(draft);
         overlay.find('[data-eow-preview]').val(draft.preview);
-        overlay.find('[data-eow-preview-note]').text(draft.manual ? 'Edited preview · Category edits update this text.' : 'Edit and copy to Slack.');
         save();
     }
-    function edit() { draft.manual=false; preview(); }
+    function edit(contentChanged) { if (contentChanged !== false) draft.userEdited=true; draft.manual=false; preview(); }
     function move(array, index, delta) {
         var target = index + delta;
         if (target < 0 || target >= array.length) return;
@@ -182,11 +223,11 @@ var s4tOpenEow = (function() {
             });
             button('+ Task','Add task',function() { category.cards.push({title:'',points:0}); renderCategories(); edit(); }).addClass('s4t-eow-add-task').appendTo(section);
         });
-        button('+ Category','Add category',function() { draft.categories.push({name:'New category',cards:[]}); renderCategories(); edit(); }).attr('data-eow-add-category','').appendTo(overlay.find('.s4t-eow-left-actions').empty());
+        button('+ Category','Add category',function() { draft.categories.push({name:'New category',cards:[]}); renderCategories(); edit(); }).attr('data-eow-add-category','').appendTo(overlay.find('[data-eow-category-actions]').empty());
     }
     function generate() {
         var generated = s4tEowCategories(board, member, week, draft.excluded);
-        draft.categories=generated.categories; draft.fallback=false; draft.manual=false;
+        draft.categories=generated.categories; draft.fallback=false; draft.manual=false; draft.userEdited=false;
     }
     function render() {
         overlay.find('[data-eow-heading]').val(draft.heading);
@@ -202,12 +243,11 @@ var s4tOpenEow = (function() {
             }).appendTo(label);
             $('<span>').text(list.name).appendTo(label);
         });
-        overlay.find('[data-eow-fallback]').text('Only cards matching the selected week are included. Choose the current or previous week.');
         renderCategories(); preview(); renderReleaseWarning();
     }
     function selectDraft() {
         draft=loadDraft();
-        if (draft && draft.fallback) { generate(); }
+        if (draft && (draft.fallback || (!draft.manual && draft.userEdited === false) || s4tEowEmptyAutoDraft(draft, week))) { generate(); }
         if (!draft) { draft={heading:'EOW Update',dateRange:week.label,mode:'category_sum',excluded:[],categories:[],manual:false}; generate(); }
         render();
     }
@@ -223,7 +263,7 @@ var s4tOpenEow = (function() {
     function fetchData() {
         if (busy) return;
         var requested = [{id:boardId,name:'Current board'}];
-        var token=++request, results=new Array(requested.length), remaining=requested.length+1, failed=false, loggedMemberId=null;
+        var token=++request, results=new Array(requested.length), remaining=requested.length+2, failed=false, loggedMemberId=null, commentDates={}, commentError=false;
         loading(true); status('');
         function fail() {
             if(token!==request || failed)return;
@@ -234,6 +274,7 @@ var s4tOpenEow = (function() {
                 save();
                 sources=requested.map(function(source,i){return {id:source.id,name:results[i].name};});
                 board=s4tEowMergeBoards(results);
+                board.cards.forEach(function (card) { card.s4tCommentDates = commentDates[card.id] || []; });
                 currentRelease=results[0];
                 try { localStorage.setItem('s4t-eow-sources:'+boardId,JSON.stringify(sources)); } catch(_) {}
                 var dropdown=overlay.find('[data-eow-member]').empty();
@@ -244,10 +285,11 @@ var s4tOpenEow = (function() {
                 if(member) selectDraft(); else { draft=null; status('No members found on the selected boards.'); }
                 loading(false);
                 if(member)status('Current board loaded. Draft saved locally.');
+                if(commentError)status('Comment history could not be loaded. Some recently commented cards may be missing; try Refresh.');
                 discoverReleases();
         }
         requested.forEach(function(source,index) {
-            $.ajax({url:'/1/boards/'+encodeURIComponent(source.id),type:'GET',dataType:'json',xhrFields:{withCredentials:true},timeout:20000,
+            $.ajax({url:'/1/boards/'+encodeURIComponent(source.id),type:'GET',dataType:'json',cache:false,xhrFields:{withCredentials:true},timeout:20000,
                 data:{fields:'name,shortLink,idOrganization,closed',cards:requested.length>1?'all':'open',card_fields:'name,idList,idMembers,labels,due,dateLastActivity,closed',lists:'all',list_fields:'name',members:'all',member_fields:'fullName,username'}})
             .done(function(result) {
                 if(token!==request || failed)return;
@@ -256,6 +298,12 @@ var s4tOpenEow = (function() {
                 finish();
             }).fail(fail);
         });
+        var currentWeek = s4tEowWeek(), historyStart = new Date(currentWeek.start);
+        historyStart.setDate(historyStart.getDate() - 7);
+        s4tEowCommentDates(function (params) {
+            return $.ajax({url:'/1/boards/'+encodeURIComponent(boardId)+'/actions', data:params, type:'GET', dataType:'json', xhrFields:{withCredentials:true}, timeout:20000, cache:false});
+        }, historyStart, currentWeek.end, function () { return token===request && !failed && !!overlay; })
+        .then(function (dates) { if (dates) commentDates=dates; }, function () { commentError=true; }).finally(finish);
         $.ajax({url:'/1/members/me',data:{fields:'id'},type:'GET',dataType:'json',xhrFields:{withCredentials:true},timeout:10000})
             .done(function(result){if(token===request && result)loggedMemberId=result.id;})
             .always(finish);
@@ -286,7 +334,7 @@ var s4tOpenEow = (function() {
         });
     }
     function close() {
-        save(); clearTimeout(hoverTimer); drag=null; ++request; busy=false; overlay.remove(); overlay=null;
+        save(); clearTimeout(hoverTimer); clearTimeout(statusTimer); drag=null; ++request; busy=false; overlay.remove(); overlay=null;
         $(document).off('.s4tEow'); document.getElementById('s4t-eow-launch')?.focus();
     }
     return function() {
@@ -294,10 +342,9 @@ var s4tOpenEow = (function() {
         boardId=getBoardShortLink(); if(!boardId) return;
         board=null; draft=null; member=null; week=s4tEowWeek(); sources=[{id:boardId,name:'Current board'}];
         releaseBoards=null;currentRelease=null;releaseLoading=false;releaseError='';
-        overlay=$('<div id="s4t-eow-overlay"><div id="s4t-eow-dialog" role="dialog" aria-modal="true" aria-label="EOW Update"><header><div class="s4t-feature-title"><h2>EOW Update</h2></div><span class="s4t-eow-spacer"></span><select data-eow-member aria-label="Member"></select></header><div class="s4t-eow-content"><div class="s4t-eow-config"><label class="s4t-eow-field-label">Title: <input data-eow-heading aria-label="Update heading"></label><label class="s4t-eow-field-label">Date: <span class="s4t-eow-date-field"><input data-eow-date-range aria-label="Date range heading" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span><input type="hidden" data-eow-week></label><select data-eow-mode aria-label="Points display"><option value="category_sum">Category points</option><option value="title_only">Task points</option><option value="both">Both</option><option value="none">No points</option></select><div class="s4t-eow-exclude"><button type="button" data-eow-exclude-toggle aria-expanded="false" aria-controls="s4t-eow-list-options">Exclude lists</button><div data-eow-lists id="s4t-eow-list-options" hidden></div></div></div><p data-eow-fallback></p><div class="s4t-eow-panes"><div class="s4t-eow-left"><div class="s4t-eow-pane-heading"><strong>Tasks</strong></div><div data-eow-categories></div><div class="s4t-eow-left-actions"></div></div><div class="s4t-eow-preview-pane"><div class="s4t-eow-row"><strong>Slack preview</strong></div><textarea data-eow-preview aria-label="Editable Slack preview" spellcheck="true"></textarea><small data-eow-preview-note></small></div></div></div><footer class="s4t-eow-status" role="status"></footer></div></div>').appendTo('body');
+        overlay=$('<div id="s4t-eow-overlay"><div id="s4t-eow-dialog" role="dialog" aria-modal="true" aria-label="EOW Update"><header><div class="s4t-feature-title"><h2>EOW Update</h2></div><span class="s4t-eow-spacer"></span><select data-eow-member aria-label="Member"></select></header><div class="s4t-eow-content"><div class="s4t-eow-config"><label class="s4t-eow-field-label">Title: <input data-eow-heading aria-label="Update heading"></label><label class="s4t-eow-field-label">Date: <span class="s4t-eow-date-field"><input data-eow-date-range aria-label="Date range heading" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span><input type="hidden" data-eow-week></label><select data-eow-mode aria-label="Points display"><option value="category_sum">Category points</option><option value="title_only">Task points</option><option value="both">Both</option><option value="none">No points</option></select><div class="s4t-eow-exclude"><button type="button" data-eow-exclude-toggle aria-expanded="false" aria-controls="s4t-eow-list-options">Exclude lists</button><div data-eow-lists id="s4t-eow-list-options" hidden></div></div></div><div class="s4t-eow-panes"><div class="s4t-eow-left"><div class="s4t-eow-pane-heading"><strong>Tasks</strong><span data-eow-category-actions></span></div><div data-eow-categories></div></div><div class="s4t-eow-preview-pane"><div class="s4t-eow-row"><strong>Slack preview <span class="s4t-eow-editable">Editable</span></strong></div><textarea data-eow-preview aria-label="Editable Slack preview" spellcheck="true"></textarea></div></div></div><footer class="s4t-eow-status" role="status"></footer><div data-eow-toast role="status" hidden></div></div></div>').appendTo('body');
         var header=overlay.find('header');
         header.find('.s4t-feature-title').append(s4tFeatureHelp('EOW Update', 'Prepare a member’s weekly task report.', 'Current or previous week, categories, list exclusions, task ordering and editable preview.', 'Group board tasks into a draft instead of writing the update from scratch.', 'Choose a member and week, review categories and tasks, edit the preview, then copy to Slack.'));
-        $('<div data-eow-release-warning>').prependTo(overlay.find('.s4t-eow-content'));
         $('<span data-eow-sources>').text(sources.map(function(source){return source.name;}).join(' + ')).insertAfter(header.find('.s4t-feature-title'));
         button('','Refresh board data',fetchData).attr('data-eow-refresh','').html(s4tRefreshIcon()).appendTo(header);
         button('Reset','Reset draft from board cards',function() { if(!draft || !window.confirm('Replace this draft with the board cards?'))return; generate(); render(); }).attr('data-eow-reset','').appendTo(header);
@@ -319,10 +366,10 @@ var s4tOpenEow = (function() {
         exclude.on('keydown',function(event){if(event.key==='Escape' && trigger.attr('aria-expanded')==='true'){event.stopPropagation();openLists(false);trigger.focus();openLists(false);}});
         overlay.find('[data-eow-week]').val(week.iso).on('change',function() { if(!this.value || !s4tEowWeekAllowed(this.value)){this.value=week.iso;status('Choose the current or previous week.');return;} save(); week=s4tEowWeek(this.value); this.value=week.iso; selectDraft(); });
         overlay.find('[data-eow-member]').on('change',function() { save(); member=this.value; selectDraft(); });
-        overlay.find('[data-eow-heading]').on('input',function() { draft.heading=this.value; edit(); });
-        overlay.find('[data-eow-date-range]').on('input',function() { draft.dateRange=this.value; edit(); });
-        overlay.find('[data-eow-mode]').on('change',function() { draft.mode=this.value; edit(); });
-        overlay.find('[data-eow-preview]').on('input',function() { draft.preview=this.value; draft.manual=true; preview(); });
+        overlay.find('[data-eow-heading]').on('input',function() { draft.heading=this.value; edit(false); });
+        overlay.find('[data-eow-date-range]').on('input',function() { draft.dateRange=this.value; edit(false); });
+        overlay.find('[data-eow-mode]').on('change',function() { draft.mode=this.value; edit(false); });
+        overlay.find('[data-eow-preview]').on('input',function() { draft.preview=this.value; draft.manual=true; draft.userEdited=true; preview(); });
         overlay.on('click',function(event) { if(event.target===overlay[0])close(); });
         $(document).on('keydown.s4tEow',function(event) {
             if(event.key==='Escape') { event.preventDefault(); close(); return; }
