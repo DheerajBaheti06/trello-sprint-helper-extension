@@ -1314,7 +1314,7 @@ function computeTotal() {
 
         for (var i in _pointsAttr) {
             var score = 0,
-                attr = _pointsAttr[i];
+                attr = ['points', 'cpoints'][i];
             $('#board .list-total .' + attr).each(function () {
                 score += parseFloat(this.textContent) || 0;
             });
@@ -1368,7 +1368,7 @@ function List(el) {
     var self = this;
     this.calc = debounce(function () {
         self._calcInner();
-    }, 500, true); // executes right away unless over its 500ms threshold since the last execution
+    }, 150, false); // Always run the final calculation after visibility changes settle.
     this._calcInner = function (e) { // don't call this directly. Call calc() instead.
         //if(e&&e.target&&!$(e.target).hasClass('list-card')) return; // TODO: REMOVE - What was this? We never pass a param into this function.
         clearTimeout(to);
@@ -1387,9 +1387,9 @@ function List(el) {
             var hasPoints = false;
             for (var i in _pointsAttr) {
                 var score = 0,
-                    attr = _pointsAttr[i];
+                    attr = ['points', 'cpoints'][i];
                 $list.find(S4T_CARD_SEL).each(function () {
-                    if (!this.listCard || s4tIsCommonCardElement(this)) return;
+                    if (!this.listCard || this.closest('.s4t-attention-hidden') || s4tIsCommonCardElement(this)) return;
                     if (!isNaN(Number(this.listCard[attr].points))) {
                         // Performance note: calling :visible in the selector above leads to noticible CPU usage.
                         if (jQuery.expr.filters.visible(this)) {
@@ -1400,7 +1400,7 @@ function List(el) {
                 var scoreTruncated = round(score);
                 if (scoreTruncated > 0) {
                     hasPoints = true;
-                    var scoreSpan = $('<span/>', { class: attr }).text(scoreTruncated);
+                    var scoreSpan = $('<span/>', { class: attr, 'data-tooltip': attr === 'points' ? 'Assigned points' : 'Completed points' }).text(scoreTruncated);
                     $total.append(scoreSpan);
                 }
             }
@@ -1960,7 +1960,14 @@ function s4tAttentionChecklistMap(cards, checklists) {
 }
 
 function s4tCommentHeadingName(value) {
-    return s4tAttentionNormalizeName(value).replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`]/g, '').replace(/[:：]$/, '').trim();
+    return s4tAttentionNormalizeName(value).replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`]/g, '').replace(/[\s:：\-–—]+$/, '').trim();
+}
+function s4tCommentHeadingKey(value) {
+    var name = s4tCommentHeadingName(value);
+    if (/^test[\s-]*cases?$/.test(name)) return 'test cases';
+    if (/^branch(?:es)?$/.test(name)) return 'branch';
+    if (/^(?:tech|technical)[\s-]*design$/.test(name)) return 'tech design';
+    return name;
 }
 function s4tCommentHeadings(text) {
     var headings = [], fence = null, lines = String(text || '').split(/\r?\n/);
@@ -1968,13 +1975,13 @@ function s4tCommentHeadings(text) {
         var code = line.match(/^ {0,3}(`{3,}|~{3,})/);
         if (code) { if (!fence) fence = code[1]; else if (code[1][0] === fence[0] && code[1].length >= fence.length) fence = null; return; }
         if (fence) return;
-        var heading = line.match(/^ {0,3}#{1,3}[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/);
+        var heading = line.match(/^ {0,3}#{1,3}[ \t\u00a0]+(.+?)(?:[ \t\u00a0]+#+)?[ \t\u00a0]*$/);
         if (heading) headings.push(s4tCommentHeadingName(heading[1]));
         else if (/^ {0,3}(?:=+|-+)[ \t]*$/.test(line) && index && /\S/.test(lines[index-1]) && !/^\s*(?:>|#|`|~)/.test(lines[index-1])) headings.push(s4tCommentHeadingName(lines[index-1]));
     });
     return Array.from(new Set(headings));
 }
-async function s4tLoadAttentionComments(cards, fetchPage, valid, cache) {
+async function s4tLoadAttentionComments(cards, fetchPage, valid, cache, force) {
     var index = 0, stopped = false;
     async function worker() {
         while (index < cards.length && !stopped && valid()) {
@@ -1982,8 +1989,8 @@ async function s4tLoadAttentionComments(cards, fetchPage, valid, cache) {
             if (card.closed || s4tIsCommonCard(card)) continue;
             var revision = card.dateLastActivity && String(card.dateLastActivity) + ':' + (card.badges && card.badges.comments);
             var cached = cache && cache.get(card.id);
-            if (revision && cached && cached.revision === revision) { card.s4tCommentHeadings = cached.headings; continue; }
-            if (card.badges && card.badges.comments === 0) { card.s4tCommentHeadings = []; continue; }
+            if (!force && revision && cached && cached.revision === revision) { card.s4tCommentHeadings = cached.headings; continue; }
+            if (!force && card.badges && card.badges.comments === 0) { card.s4tCommentHeadings = []; continue; }
             for (var page = 0; ; page++) {
                 if (stopped || !valid()) return;
                 if (page >= 100) throw new Error('Comment history incomplete');
@@ -2027,7 +2034,7 @@ function s4tAttentionIssues(card, checklists, requiredNames, boardLabels, now, r
         missingCompleted: points.completed === null,
         pointsMismatch: points.assigned !== null && points.completed !== null && points.completed !== points.assigned,
         missingComments: Array.isArray(card.s4tCommentHeadings) && (requiredComments || []).some(function (name) {
-            return card.s4tCommentHeadings.indexOf(s4tCommentHeadingName(name)) === -1;
+            return !card.s4tCommentHeadings.some(function (heading) { return s4tCommentHeadingKey(heading) === s4tCommentHeadingKey(name); });
         }),
         incomplete: items.some(function (item) { return item.state !== 'complete'; }),
         complete: items.length > 0 && items.every(function (item) { return item.state === 'complete'; }),
@@ -2151,7 +2158,34 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     var memberFilters = [], labelFilters = [], matchAll = false, switching = false, nativeBlocked = false, dataWaiters = [];
     var evaluateAttention = s4tCreateAttentionEvaluator(), wasCompacted = false;
     function attentionResult() {
-        return data ? evaluateAttention(data, { required: required, requiredComments: requiredComments, selected: selected.filter(function (key) { return key !== 'missingComments' || data.s4tCommentsLoaded; }), excluded: excluded, members: memberFilters, labels: labelFilters, matchAll: matchAll }) : { index: {}, ids: [], count: 0 };
+        if (!data) return {index:{},ids:[],count:0};
+        var result = evaluateAttention(data, { required: required, requiredComments: requiredComments, selected: selected.filter(function (key) { return key !== 'missingComments' || data.s4tCommentsLoaded; }), excluded: excluded, members: memberFilters, labels: labelFilters, matchAll: matchAll });
+        if (!excluded.length) return result;
+        // A new/moved card can be absent from the snapshot while its current list is known.
+        // Apply list exclusions to that live position without changing the cached evaluator.
+        var hidden = new Set(), index = Object.assign({}, result.index);
+        document.querySelectorAll(S4T_LIST_SEL).forEach(function (listNode) {
+            var id = listNode.getAttribute('data-list-id') || listNode.getAttribute('data-id');
+            if (!data.lists.some(function (list) { return list.id === id; })) {
+                var title = listNode.querySelector('[data-testid="list-name"], [data-testid="list-title"], textarea[data-testid="list-name-textarea"], .list-header-name-assist, .js-list-name-assist, .list-header-target-name, textarea.list-header-name');
+                if (!title) return;
+                var clone = title.cloneNode(true);
+                clone.querySelectorAll('.list-total').forEach(function (node) { node.remove(); });
+                var name = s4tAttentionNormalizeName(title.value || clone.textContent);
+                var matches = data.lists.filter(function (list) { return s4tAttentionNormalizeName(list.name) === name; });
+                if (matches.length !== 1) return; // Never infer ownership from duplicate titles.
+                id = matches[0].id;
+            }
+            if (!excluded.includes(id)) return;
+            listNode.querySelectorAll(S4T_CARD_SEL).forEach(function (card) {
+                var link = card.matches('a[href*="/c/"]') ? card : card.querySelector('a[href*="/c/"]');
+                var match = link && (link.getAttribute('href') || '').match(/\/c\/([A-Za-z0-9]+)/);
+                if (match) { index[match[1]] = false; hidden.add(match[1]); }
+            });
+        });
+        var hiddenIds = new Set(data.cards.filter(function (card) { return hidden.has(card.shortLink); }).map(function (card) { return card.id; }));
+        var ids = result.ids.filter(function (id) { return !hiddenIds.has(id); });
+        return {index:index, ids:ids, count:ids.length};
     }
     var request = 0, loading = false, error = '', refreshed = '';
     var commentLoading = false, commentRequest = 0, commentCache = new Map(), commentError = '';
@@ -2506,6 +2540,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             panel.find('[data-attention-all-members]').prop('checked', memberFilters.length === 0).prop('indeterminate', memberFilters.length > 0 && memberFilters.indexOf('__empty__') === -1);
             panel.find('[data-check]').each(function () { this.checked = selected.indexOf(this.getAttribute('data-check')) !== -1; });
             renderLists();
+            panel.find('[data-exclude-list]').each(function () { this.checked = excluded.includes(this.getAttribute('data-exclude-list')); });
             updateListGroups();
             var matchHint = matchAll ? 'Match every selected option (imported exact match).' : 'Match any selected option.';
             var memberHint = memberFilters.indexOf('__empty__') !== -1 ? 'NOTE: - No members selected.' : memberFilters.length ? matchHint : 'All members and unassigned cards are included.';
@@ -2552,10 +2587,10 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         var snapshot = data, token = ++commentRequest, requestedBoard = board;
         commentLoading = true; commentError = ''; apply();
         s4tLoadAttentionComments(snapshot.cards, function (id, before) {
-            var params = {filter:'commentCard',limit:1000,fields:'id,data',memberCreator:false};
+            var params = {filter:'commentCard,copyCommentCard',limit:1000,fields:'id,data',memberCreator:false};
             if (before) params.before = before;
             return $.ajax({url:'/1/cards/' + encodeURIComponent(id) + '/actions',data:params,dataType:'json',timeout:20000,cache:false,xhrFields:{withCredentials:true}});
-        }, function () { return token === commentRequest && data === snapshot && currentBoard() === requestedBoard; }, commentCache)
+        }, function () { return token === commentRequest && data === snapshot && currentBoard() === requestedBoard; }, commentCache, snapshot.s4tForceCommentRead === true)
         .then(function () {
             if (token !== commentRequest || data !== snapshot) return;
             data = Object.assign({}, snapshot, {s4tCommentsLoaded:true});
@@ -2567,14 +2602,16 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         });
     }
 
-    function fetchData() {
+    function fetchData(forceComments) {
         if (!board || loading) return;
+        if (forceComments === true) commentCache.clear();
         var token = ++request, requestedBoard = board;
         loading = true; error = ''; commentError = ''; commentRequest++; commentLoading = false; apply();
         function finish(result) {
             if (token !== request || currentBoard() !== requestedBoard) return;
             loading = false;
             if (validate(result)) {
+                result.s4tForceCommentRead = forceComments === true;
                 data = result;
                 refreshed = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             } else {
@@ -2587,12 +2624,12 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         }
         function fallback() {
             $.ajax({
-                url: '/b/' + requestedBoard + '.json', dataType: 'json', timeout: 20000,
+                url: '/b/' + requestedBoard + '.json', dataType: 'json', timeout: 20000, cache:false,
                 xhrFields: { withCredentials: true }
             }).done(finish).fail(function () { finish(null); });
         }
         $.ajax({
-            url: '/1/boards/' + requestedBoard,
+            url: '/1/boards/' + requestedBoard, cache:false,
             data: {
                 cards: 'open', card_fields: 'name,desc,idList,idMembers,idLabels,idChecklists,shortLink,closed,due,dueComplete,badges,dateLastActivity',
                 members: 'all', member_fields: 'fullName,username,initials', labels: 'all', label_fields: 'name,color',
@@ -2733,7 +2770,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         );
         var header = $('<div class="s4t-attention-header">').append(heading);
         var headerActions = $('<div class="s4t-attention-header-actions">');
-        headerActions.append($('<button type="button" data-refresh aria-label="Refresh Attention" data-tooltip="Refresh">').html(s4tRefreshIcon()).on('click', fetchData));
+        headerActions.append($('<button type="button" data-refresh aria-label="Refresh Attention" data-tooltip="Refresh">').html(s4tRefreshIcon()).on('click', function () { fetchData(true); }));
         headerActions.append($('<button type="button">').text('Clear filters').on('click', clearFilters));
         headerActions.append($('<button type="button" aria-label="Close attention panel" data-tooltip="Close">').text('✕').on('click', close));
         header.append(headerActions);
@@ -2799,7 +2836,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             try { localStorage.setItem('s4t-attention-comment-names-' + board, requiredComments); } catch (_) {}
             apply();
         }));
-        commentFields.append($('<p>').text('Shows cards missing any listed heading across their comments. H1–H3 only; case and extra spaces ignored. Enter at least one name.'));
+        commentFields.append($('<p>').text('Shows cards missing any listed heading across their comments. H1–H3 only; case and extra spaces ignored. Test Cases/Testcases, Branch/Branches and Tech/Technical Design match. Enter at least one name.'));
         checks.append(commentFields);
         var lists = $('<div>').append(
             $('<div class="s4t-attention-column-heading">').append($('<h3>').text('Exclude lists'), $('<div class="s4t-attention-list-groups">')),
@@ -2864,6 +2901,52 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         apply();
         if (active() && !data && !loading && !error) fetchData();
     }
+    // Observe saved/rendered comment text, not keystrokes inside Trello's editor.
+    var commentEditTimer, dirtyCommentCards = new Set();
+    var savedCommentSelector = '.comment-container, .phenom-comment, .current-comment, .action-comment, [data-testid="action-comment"], [data-testid="card-back-comment"], [data-testid="card-back-action-comment"], [data-testid="comment-content"], [data-testid="comment-text"], [data-testid*="comment"] .ak-renderer-document';
+    function refreshEditedComments() {
+        commentEditTimer = null;
+        if (!data || !selected.includes('missingComments')) { dirtyCommentCards.clear(); return; }
+        if (loading || commentLoading) { commentEditTimer = setTimeout(refreshEditedComments, 400); return; }
+        var ids = Array.from(dirtyCommentCards); dirtyCommentCards.clear();
+        var cards = data.cards.filter(function (card) { return ids.includes(card.shortLink); }).map(function (card) { return Object.assign({}, card); });
+        if (!cards.length) return;
+        var snapshot = data, token = ++commentRequest;
+        cards.forEach(function (card) { commentCache.delete(card.id); });
+        commentLoading = true; commentError = ''; apply();
+        s4tLoadAttentionComments(cards, function (id, before) {
+            var params = {filter:'commentCard,copyCommentCard',limit:1000,fields:'id,data',memberCreator:false};
+            if (before) params.before = before;
+            return $.ajax({url:'/1/cards/' + encodeURIComponent(id) + '/actions',data:params,dataType:'json',timeout:20000,cache:false,xhrFields:{withCredentials:true}});
+        }, function () { return token === commentRequest && data === snapshot; }, commentCache, true)
+        .then(function () {
+            if (token !== commentRequest || data !== snapshot) return;
+            var updates = new Map(cards.map(function (card) { return [card.id, card]; }));
+            data = Object.assign({}, snapshot, {cards:snapshot.cards.map(function (card) { return updates.get(card.id) || card; })});
+        }, function () {
+            if (token === commentRequest) commentError = 'Could not refresh edited comments. Try Refresh.';
+        }).finally(function () {
+            if (token !== commentRequest) return;
+            commentLoading = false; apply(); calcListPoints();
+        });
+    }
+    new MutationObserver(function (mutations) {
+        if (!data || !selected.includes('missingComments')) return;
+        var route = window.location.pathname.match(/^\/c\/([A-Za-z0-9]+)/);
+        if (!route) return;
+        var changed = mutations.some(function (mutation) {
+            var node = mutation.target.nodeType === 1 ? mutation.target : mutation.target.parentElement;
+            if (!node || node.closest('[contenteditable="true"], textarea, [id^="s4t-"], .s4t-comment-navigator')) return false;
+            if (node.closest(savedCommentSelector)) return true;
+            return Array.from(mutation.addedNodes).concat(Array.from(mutation.removedNodes)).some(function (child) {
+                return child.nodeType === 1 && !child.matches('[contenteditable="true"]') && (child.matches(savedCommentSelector) || child.querySelector(savedCommentSelector));
+            });
+        });
+        if (changed) {
+            dirtyCommentCards.add(route[1]); clearTimeout(commentEditTimer);
+            commentEditTimer = setTimeout(refreshEditedComments, 400);
+        }
+    }).observe(document.body, {childList:true, subtree:true, characterData:true});
     document.addEventListener('s4t-checklist-updated', function () { if (data) fetchData(); });
     window.addEventListener('popstate', sync);
     // Trello's keyboard shortcuts can change native filters without clicking its popover.
@@ -2880,7 +2963,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     }, 500);
     new MutationObserver(function (mutations) {
         if (active() && !nativeBlocked && data && currentBoard() === board) {
-            var index = attentionResult().index;
+            var index = attentionResult().index, visibilityChanged = false;
             mutations.forEach(function (mutation) {
                 var roots = mutation.type === 'attributes' ? [mutation.target] : Array.from(mutation.addedNodes);
                 roots.forEach(function (root) {
@@ -2893,11 +2976,12 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                         var link = card.matches('a[href*="/c/"]') ? card : card.querySelector('a[href*="/c/"]');
                         var match = link && (link.getAttribute('href') || '').match(/\/c\/([A-Za-z0-9]+)/);
                         var hidden = !!(match && index[match[1]] === false);
-                        if (card.classList.contains('s4t-attention-hidden') !== hidden) card.classList.toggle('s4t-attention-hidden', hidden);
+                        if (card.classList.contains('s4t-attention-hidden') !== hidden) { card.classList.toggle('s4t-attention-hidden', hidden); visibilityChanged = true; }
                     });
                 });
             });
         }
+        if (visibilityChanged) calcListPoints();
         if (mutations.every(function (mutation) { return mutation.type === 'attributes'; })) return;
         if (mutations.every(function (mutation) {
             return $(mutation.target).closest('.s4t-comment-navigator, #s4t-attention-panel, #s4t-board-tools, #s4t-cards-overlay, #s4t-modal-overlay, #s4t-icon-tooltip, #s4t-attention-notice, [role="dialog"], .window, .card-detail-window, [data-testid="card-back"], [data-testid="card-back-container"]').length > 0;

@@ -576,3 +576,44 @@ test('comment cache skips empty and unchanged cards and reloads edited cards', a
     await context.s4tLoadAttentionComments(fresh,fetch,()=>true,cache);
     assert.equal(calls,2);
 });
+
+test('comment requirements recognize standard heading variants without matching prose or partial names', () => {
+    const headings=context.s4tCommentHeadings('### **TECHNICAL DESIGN:**\n###\u00a0Testcases\n### Branches\n### API Review');
+    const c=card({s4tCommentHeadings:headings});
+    const missing=names=>context.s4tAttentionIssues(c,[],[],[],new Date(),names).missingComments;
+    assert.equal(missing(['Tech Design','Test Cases','Branch','API Review']),false);
+    assert.equal(missing(['API']),true);
+    assert.equal(missing(['Branch','Security Review']),true);
+    assert.equal(context.s4tCommentHeadingKey('Test-case'),'test cases');
+    assert.equal(context.s4tCommentHeadingKey('Bra\u200bnch'),'branch');
+});
+
+test('TESTCASES requirement accepts every reported H3 casing', () => {
+    for (const text of ['testcases','TESTCASES','TestCases','Testcases']) {
+        const c=card({s4tCommentHeadings:context.s4tCommentHeadings('### **'+text+'**')});
+        assert.equal(context.s4tAttentionIssues(c,[],[],[],new Date(),['TESTCASES']).missingComments,false,text);
+    }
+});
+test('forced comment refresh bypasses stale counts and cached headings', async () => {
+    const c=card({id:'a',dateLastActivity:'unchanged',badges:{comments:0}});
+    const cache=new Map([['a',{revision:'unchanged:0',headings:[]}]]);
+    let calls=0;
+    await context.s4tLoadAttentionComments([c],async()=>{calls++;return [{id:'copied',type:'copyCommentCard',data:{text:'### TestCases'}}]},()=>true,cache,true);
+    assert.equal(calls,1);
+    assert.equal(context.s4tAttentionIssues(c,[],[],[],new Date(),['TESTCASES']).missingComments,false);
+});
+
+test('required headings ignore trailing separators, including bold TESTCASES -', () => {
+    for (const level of ['#','##','###']) {
+        for (const suffix of [' -',' –',' —',':',' :-',' -  ']) {
+            const c=card({s4tCommentHeadings:context.s4tCommentHeadings(level+' **TESTCASES'+suffix+'**')});
+            assert.equal(context.s4tAttentionIssues(c,[],[],[],new Date(),['TESTCASES']).missingComments,false,level+suffix);
+        }
+    }
+    const c=card({s4tCommentHeadings:context.s4tCommentHeadings('### TESTCASES -')});
+    assert.equal(context.s4tAttentionIssues(c,[],[],[],new Date(),['TESTCASES -']).missingComments,false);
+    for (const text of ['**TESTCASES -**','#### TESTCASES -','### TESTCASES - pending']) {
+        const c=card({s4tCommentHeadings:context.s4tCommentHeadings(text)});
+        assert.equal(context.s4tAttentionIssues(c,[],[],[],new Date(),['TESTCASES']).missingComments,true,text);
+    }
+});
