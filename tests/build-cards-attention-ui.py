@@ -22,6 +22,11 @@ check(s4tAttentionMemberLists(scopedBoard,['a'],false).map(l=>l.id).join(',')===
 check(s4tAttentionMemberLists(scopedBoard,[],false).length===2,'all members show populated lists');
 check(s4tAttentionMemberLists(scopedBoard,['__empty__'],false).length===0,'no members show no lists');
 el('[data-attention-all-members]').click();check(el('.s4t-attention-list-message').textContent.includes('No members selected'),'no-member explanation');el('[data-attention-all-members]').click();
+check(el('.s4t-attention-count').classList.contains('s4t-metric-badge'),'card count is a badge');
+el('.s4t-attention-count').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));await wait(10);check(copiedText==='3','double-click copies count only');
+el('.s4t-attention-assigned').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));await wait(10);check(copiedText==='0','double-click copies assigned total');
+const membersFixture=document.createElement('div');membersFixture.id='s4t-members-modal';membersFixture.innerHTML=renderMembersHtml([{name:'Alex',assigned:10,completed:4,remaining:6,completionPercentage:40,cardsTotal:2,cardsCompleted:1,cardsPending:1,notSureAssigned:2,notSureCompleted:1,notSureCardsTotal:1,notSureCardsCompleted:0}],true);document.body.append(membersFixture);s4tBindMetricCopy($(membersFixture));
+membersFixture.querySelector('.s4t-pill-assigned').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));await wait(10);check(copiedText==='8','member copy uses filtered points');membersFixture.querySelector('.s4t-pill-done').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));await wait(10);check(copiedText==='3','keyboard copies completed points');membersFixture.remove();
 check(commentRequests===0,'comments loaded lazily');
 el('[data-check="missingComments"]').click();check(el('.s4t-attention-columns').getAttribute('aria-busy')==='false','comments do not block popup');check(!el('.s4t-attention-comment-progress').hidden,'inline comment progress visible');await wait(120);
 check(commentRequests===3,'comments requested per eligible card');check(!el('.s4t-attention-comment-names').hidden,'required headings input visible');

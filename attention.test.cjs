@@ -617,3 +617,10 @@ test('required headings ignore trailing separators, including bold TESTCASES -',
         assert.equal(context.s4tAttentionIssues(c,[],[],[],new Date(),['TESTCASES']).missingComments,true,text);
     }
 });
+
+test('Attention point totals count matching cards once and preserve explicit completed points', () => {
+    const cards=[card({id:'a',name:'(4.4) Task [4]'}),card({id:'b',name:'(.5) Other {.25}'}),card({id:'c',name:'(99) Excluded [90]'}),card({id:'d',name:'No points'}),card({id:'a',name:'(4.4) Task [4]'})];
+    const totals=context.s4tAttentionPointTotals(cards,['a','b','d']);
+    assert.equal(totals.assigned,4.9);assert.equal(totals.completed,4.25);
+    assert.equal(context.s4tAttentionPointTotals(cards,[]).assigned,0);
+});

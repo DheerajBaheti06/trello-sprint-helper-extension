@@ -515,9 +515,9 @@ function updateModalContent(data) {
     }
     if (data.team) {
         var summary = s4tSprintSummary(data.team);
-        $('#s4t-sum-assigned').text(summary.total + ' total sprint hours');
-        $('#s4t-sum-completed').text(summary.completed + ' hrs');
-        $('#s4t-sum-remaining').text(summary.remaining + ' hrs');
+        $('#s4t-sum-assigned').attr('data-copy-value', summary.total).text(summary.total + ' total sprint hours');
+        $('#s4t-sum-completed').attr('data-copy-value', summary.completed).text(summary.completed + ' / ' + summary.total + ' hrs');
+        $('#s4t-sum-remaining').attr('data-copy-value', summary.remaining).text(summary.remaining + ' hrs');
         $('#s4t-sum-cards').text(summary.cards);
         $('#s4t-sum-card-rate').text(summary.cardRate + '% completion rate');
         $('#s4t-sum-pct-text').text(summary.progress + '%');
@@ -532,23 +532,23 @@ function updateModalContent(data) {
 function s4tSetSkeleton(element, loading) {
     if (!element) return;
     if (loading && !element._s4tSkeleton) {
-        element._s4tSkeleton = {inert: element.hasAttribute('inert'), scroll: element.scrollTop};
+        element._s4tSkeleton = { inert: element.hasAttribute('inert'), scroll: element.scrollTop };
         element.setAttribute('inert', '');
         element.classList.add('s4t-loading-surface');
         element.setAttribute('aria-busy', 'true');
         element.scrollTop = 0;
         if (element.matches('.s4t-eow-content, #s4t-members-modal .s4t-modal-body')) {
-            var skeleton=document.createElement('div');skeleton.className='s4t-panel-skeleton';skeleton.setAttribute('aria-hidden','true');
-            var members=element.matches('#s4t-members-modal .s4t-modal-body');
-            skeleton.innerHTML=members
-                ? '<div class="s4t-skeleton-summary">'+Array(4).fill('<div class="s4t-skeleton-tile"><i></i><b></b><i></i></div>').join('')+'</div><div class="s4t-skeleton-rows"></div>'
+            var skeleton = document.createElement('div'); skeleton.className = 's4t-panel-skeleton'; skeleton.setAttribute('aria-hidden', 'true');
+            var members = element.matches('#s4t-members-modal .s4t-modal-body');
+            skeleton.innerHTML = members
+                ? '<div class="s4t-skeleton-summary">' + Array(4).fill('<div class="s4t-skeleton-tile"><i></i><b></b><i></i></div>').join('') + '</div><div class="s4t-skeleton-rows"></div>'
                 : '<div class="s4t-skeleton-toolbar"><i></i><i></i></div><div class="s4t-skeleton-columns"><div class="s4t-skeleton-rows"></div><div class="s4t-skeleton-rows"></div></div>';
             element.appendChild(skeleton);
         }
     } else if (!loading && element._s4tSkeleton) {
         var previous = element._s4tSkeleton;
         delete element._s4tSkeleton;
-        var skeleton=element.querySelector(':scope > .s4t-panel-skeleton');if(skeleton)skeleton.remove();
+        var skeleton = element.querySelector(':scope > .s4t-panel-skeleton'); if (skeleton) skeleton.remove();
         element.classList.remove('s4t-loading-surface');
         element.setAttribute('aria-busy', 'false');
         if (!previous.inert) element.removeAttribute('inert');
@@ -561,7 +561,7 @@ function s4tLoadMembers(force) {
     if (!modal || modal.getAttribute('aria-busy') === 'true') return;
     modal.setAttribute('aria-busy', 'true');
     var surfaces = modal.querySelectorAll('.s4t-modal-body');
-    surfaces.forEach(function(element) { s4tSetSkeleton(element, true); });
+    surfaces.forEach(function (element) { s4tSetSkeleton(element, true); });
     var refresh = $(modal).find('#s4t-refresh-action').addClass('s4t-refreshing').attr('aria-busy', 'true').prop('disabled', true);
     function finish(err, boardData) {
         if (!modal.isConnected || document.getElementById('s4t-members-modal') !== modal) return;
@@ -573,7 +573,7 @@ function s4tLoadMembers(force) {
         } catch (_) {
             // Keep the last rendered totals if fresh data cannot be processed.
         } finally {
-            surfaces.forEach(function(element) { s4tSetSkeleton(element, false); });
+            surfaces.forEach(function (element) { s4tSetSkeleton(element, false); });
             modal.setAttribute('aria-busy', 'false');
             refresh.removeClass('s4t-refreshing').attr('aria-busy', 'false').prop('disabled', false);
         }
@@ -985,14 +985,52 @@ function renderMembersHtml(members, excludeNotSure) {
             '</div>',
             '</div>',
             '<div class="s4t-member-pills">',
-            '<span class="s4t-pill s4t-pill-assigned" title="Assigned Points (from parentheses)">' + assigned + ' assigned</span>',
-            '<span class="s4t-pill s4t-pill-done" title="Completed Points (from braces/brackets)">✓ ' + completed + ' done</span>',
-            '<span class="s4t-pill s4t-pill-pending" title="Remaining Points (assigned - completed)">' + remaining + ' remaining</span>',
+            '<span class="s4t-pill s4t-pill-assigned" role="button" tabindex="0" data-tooltip="Double-click to copy assigned points" data-copy-value="' + assigned + '">' + assigned + ' assigned</span>',
+            '<span class="s4t-pill s4t-pill-done" role="button" tabindex="0" data-tooltip="Double-click to copy completed points" data-copy-value="' + completed + '">✓ ' + completed + ' done</span>',
+            '<span class="s4t-pill s4t-pill-pending" role="button" tabindex="0" data-tooltip="Double-click to copy remaining points" data-copy-value="' + remaining + '">' + remaining + ' remaining</span>',
             '</div>',
             '</div>'
         ].join('');
     });
     return html;
+}
+
+function s4tBindMetricCopy(root) {
+    var timer;
+    root.on('dblclick.s4tMetricCopy keydown.s4tMetricCopy', '[data-copy-value]', async function (event) {
+        if (event.type === 'keydown' && !['Enter', ' '].includes(event.key)) return;
+        event.preventDefault(); event.stopPropagation();
+        if (this.closest('[inert], .s4t-loading-surface')) return;
+        var value = this.getAttribute('data-copy-value'), ok = false;
+        try { await navigator.clipboard.writeText(value); ok = true; } catch (_) {
+            var field = document.createElement('textarea'), focused = document.activeElement;
+            field.value = value; field.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+            root[0].appendChild(field); field.select();
+            try { ok = document.execCommand('copy'); } catch (_) { }
+            field.remove(); if (focused && focused.isConnected) focused.focus({ preventScroll: true });
+        }
+        if (!root[0].isConnected) return;
+        document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
+        if (ok && this.isConnected) {
+            var metric = this;
+            clearTimeout(metric._s4tCopyTimer);
+            if (!metric.classList.contains('s4t-metric-copied')) metric._s4tCopyTooltip = metric.getAttribute('data-tooltip');
+            metric.removeAttribute('data-tooltip');
+            metric.classList.remove('s4t-metric-copied');
+            void metric.offsetWidth; // Restart the success animation on repeated copies.
+            metric.classList.add('s4t-metric-copied');
+            metric._s4tCopyTimer = setTimeout(function () {
+                metric.classList.remove('s4t-metric-copied');
+                if (metric._s4tCopyTooltip) metric.setAttribute('data-tooltip', metric._s4tCopyTooltip);
+            }, 1400);
+        }
+        var toast = root.find('.s4t-metric-toast');
+        if (!toast.length) toast = $('<div class="s4t-metric-toast" role="status">').appendTo(root);
+        toast.removeClass('s4t-metric-toast-success');
+        toast.text(ok ? 'Copied ' + value : 'Could not copy. Try again.').prop('hidden', false);
+        if (ok) { void toast[0].offsetWidth; toast.addClass('s4t-metric-toast-success'); }
+        clearTimeout(timer); timer = setTimeout(function () { toast.prop('hidden', true); }, 1600);
+    });
 }
 
 function s4tSprintSummary(team) {
@@ -1006,7 +1044,7 @@ function s4tSprintSummary(team) {
         cards: cardsDone + ' / ' + cardsTotal,
         cardRate: format(cardsTotal ? cardsDone / cardsTotal * 100 : 0, 2),
         progress: format(progress, 1),
-        date: new Date().toLocaleDateString('en-GB', {day: 'numeric', month: 'long', year: 'numeric'})
+        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     };
 }
 
@@ -1016,15 +1054,17 @@ function s4tRefreshIcon() {
 
 function s4tFeatureHelp(name, purpose, features, benefit, usage) {
     return $('<button type="button" class="s4t-feature-help">')
-        .attr({'aria-label': 'About ' + name, 'aria-expanded': 'false', 'data-tooltip': name,
+        .attr({
+            'aria-label': 'About ' + name, 'aria-expanded': 'false', 'data-tooltip': name,
             'data-feature-purpose': purpose, 'data-feature-options': features,
-            'data-feature-benefit': benefit, 'data-feature-usage': usage})
+            'data-feature-benefit': benefit, 'data-feature-usage': usage
+        })
         .html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7" r=".8" fill="currentColor" stroke="none"/></svg>');
 }
 
 function renderMembersBurndownModal(data) {
-    // Add your deployed website URL here to enable View Full Dashboard.
-    var fullDashboardUrl = '';
+    // Companion Sprint Helper dashboard.
+    var fullDashboardUrl = 'https://trellosprinthelper.wasmer.app/';
     $('#s4t-modal-overlay').remove();
 
     var membersHtml = renderMembersHtml(data.members, true);
@@ -1050,13 +1090,13 @@ function renderMembersBurndownModal(data) {
         '<div class="s4t-stats-grid">',
         '<div class="s4t-stat-box">',
         '<div class="s4t-stat-label">Hours completed <span aria-hidden="true">✓</span></div>',
-        '<div class="s4t-stat-value s4t-stat-val-green" id="s4t-sum-completed">' + summary.completed + ' hrs</div>',
+        '<div class="s4t-stat-value s4t-stat-val-green" id="s4t-sum-completed" role="button" tabindex="0" data-tooltip="Double-click to copy completed points" data-copy-value="' + summary.completed + '">' + summary.completed + ' / ' + summary.total + ' hrs</div>',
         '<div class="s4t-progress-container"><div class="s4t-progress-track"><div class="s4t-progress-fill" id="s4t-sum-pct-fill" style="width:' + summary.progress + '%;"></div></div></div>',
         '</div>',
         '<div class="s4t-stat-box">',
         '<div class="s4t-stat-label">Hours remaining <span aria-hidden="true">◷</span></div>',
-        '<div class="s4t-stat-value s4t-stat-val-amber" id="s4t-sum-remaining">' + summary.remaining + ' hrs</div>',
-        '<div class="s4t-summary-detail" id="s4t-sum-assigned">' + summary.total + ' total sprint hours</div>',
+        '<div class="s4t-stat-value s4t-stat-val-amber" id="s4t-sum-remaining" role="button" tabindex="0" data-tooltip="Double-click to copy remaining points" data-copy-value="' + summary.remaining + '">' + summary.remaining + ' hrs</div>',
+        '<div class="s4t-summary-detail" id="s4t-sum-assigned" role="button" tabindex="0" data-tooltip="Double-click to copy assigned points" data-copy-value="' + summary.total + '">' + summary.total + ' total sprint hours</div>',
         '</div>',
         '<div class="s4t-stat-box">',
         '<div class="s4t-stat-label">Cards progress <span aria-hidden="true">☑</span></div>',
@@ -1080,12 +1120,13 @@ function renderMembersBurndownModal(data) {
     ].join('');
 
     $('body').append(modalHtml);
+    s4tBindMetricCopy($('#s4t-members-modal'));
     $('#s4t-members-modal').data('members', data.members);
     $('#s4t-exclude-not-sure').on('change', function () {
         $('#s4t-members-container').html(renderMembersHtml($('#s4t-members-modal').data('members'), this.checked));
     });
 
-    $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp('Members Burndown', 'Spot uneven workloads and unfinished sprint work.', 'Team summaries and member assigned, done, remaining points, progress and card counts.', 'Not Sure lists are excluded from member rows by default; the four team summaries always include them.', 'Uncheck Exclude Not Sure list to include those cards in member rows. Refresh for the latest board data.'));
+    $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp("Members Burndown", "Check team and member progress.", "• Assigned, completed and remaining points\n• Card counts and progress bars\n• Exclude Not Sure list\n• View Full Dashboard", "Not Sure exclusion changes member rows only. Team summaries stay unchanged.", "Double-click a point value to copy it. Refresh to load current board data."));
 
     // Use Trello's live design tokens, just like Attention and Cards List.
     // Event handlers
@@ -1977,7 +2018,7 @@ function s4tCommentHeadings(text) {
         if (fence) return;
         var heading = line.match(/^ {0,3}#{1,3}[ \t\u00a0]+(.+?)(?:[ \t\u00a0]+#+)?[ \t\u00a0]*$/);
         if (heading) headings.push(s4tCommentHeadingName(heading[1]));
-        else if (/^ {0,3}(?:=+|-+)[ \t]*$/.test(line) && index && /\S/.test(lines[index-1]) && !/^\s*(?:>|#|`|~)/.test(lines[index-1])) headings.push(s4tCommentHeadingName(lines[index-1]));
+        else if (/^ {0,3}(?:=+|-+)[ \t]*$/.test(line) && index && /\S/.test(lines[index - 1]) && !/^\s*(?:>|#|`|~)/.test(lines[index - 1])) headings.push(s4tCommentHeadingName(lines[index - 1]));
     });
     return Array.from(new Set(headings));
 }
@@ -1999,15 +2040,15 @@ async function s4tLoadAttentionComments(cards, fetchPage, valid, cache, force) {
                 if (!Array.isArray(actions)) throw new Error('Invalid comment history');
                 actions.forEach(function (action) { s4tCommentHeadings(action.data && action.data.text).forEach(function (name) { headings.add(name); }); });
                 if (actions.length < 1000) break;
-                before = actions[actions.length-1].id;
+                before = actions[actions.length - 1].id;
                 if (!before || cursors.has(before)) throw new Error('Comment history incomplete');
                 cursors.add(before);
             }
             card.s4tCommentHeadings = Array.from(headings);
-            if (cache && revision) cache.set(card.id, {revision:revision, headings:card.s4tCommentHeadings});
+            if (cache && revision) cache.set(card.id, { revision: revision, headings: card.s4tCommentHeadings });
         }
     }
-    try { await Promise.all(Array.from({length:Math.min(4,cards.length)}, worker)); }
+    try { await Promise.all(Array.from({ length: Math.min(4, cards.length) }, worker)); }
     catch (error) { stopped = true; throw error; }
 }
 
@@ -2109,6 +2150,18 @@ function s4tReadNativeFilters(query, boardData) {
 }
 
 // Keep only the latest snapshot and result: bounded memory, invalidated on refresh/date/name changes.
+function s4tAttentionPointTotals(cards, ids) {
+    var selected = new Set(ids), seen = new Set(), assigned = 0, completed = 0;
+    cards.forEach(function (card) {
+        if (!selected.has(card.id) || seen.has(card.id)) return;
+        seen.add(card.id);
+        var points = parsePoints(card.name);
+        assigned += points.assigned === null ? 0 : points.assigned;
+        completed += points.completed === null ? 0 : points.completed;
+    });
+    return { assigned: Math.round(assigned * 100) / 100, completed: Math.round(completed * 100) / 100 };
+}
+
 function s4tCreateAttentionEvaluator() {
     var snapshot, issueKey, flags, resultKey, result;
     return function (boardData, options, now) {
@@ -2158,7 +2211,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     var memberFilters = [], labelFilters = [], matchAll = false, switching = false, nativeBlocked = false, dataWaiters = [];
     var evaluateAttention = s4tCreateAttentionEvaluator(), wasCompacted = false;
     function attentionResult() {
-        if (!data) return {index:{},ids:[],count:0};
+        if (!data) return { index: {}, ids: [], count: 0 };
         var result = evaluateAttention(data, { required: required, requiredComments: requiredComments, selected: selected.filter(function (key) { return key !== 'missingComments' || data.s4tCommentsLoaded; }), excluded: excluded, members: memberFilters, labels: labelFilters, matchAll: matchAll });
         if (!excluded.length) return result;
         // A new/moved card can be absent from the snapshot while its current list is known.
@@ -2185,7 +2238,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         });
         var hiddenIds = new Set(data.cards.filter(function (card) { return hidden.has(card.shortLink); }).map(function (card) { return card.id; }));
         var ids = result.ids.filter(function (id) { return !hiddenIds.has(id); });
-        return {index:index, ids:ids, count:ids.length};
+        return { index: index, ids: ids, count: ids.length };
     }
     var request = 0, loading = false, error = '', refreshed = '';
     var commentLoading = false, commentRequest = 0, commentCache = new Map(), commentError = '';
@@ -2257,7 +2310,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         var controlled = toggle && toggle.getAttribute('aria-controls');
         var linked = controlled && document.getElementById(controlled);
         if (linked && linked.getClientRects().length && outsideAttention(linked)) return linked;
-        return Array.from(document.querySelectorAll('[data-testid*="filter-popover"]:not(button), [data-testid*="filter-menu"], .pop-over, [role="dialog"], [role="menu"]')).find(function(node) {
+        return Array.from(document.querySelectorAll('[data-testid*="filter-popover"]:not(button), [data-testid*="filter-menu"], .pop-over, [role="dialog"], [role="menu"]')).find(function (node) {
             if (!outsideAttention(node) || !node.getClientRects().length) return false;
             var title = node.querySelector && node.querySelector('h1, h2, h3, [role="heading"]');
             var named = node.getAttribute('aria-label') || (title && title.textContent) || '';
@@ -2287,9 +2340,11 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             var choices = popover.querySelectorAll('input[type="checkbox"], [role="checkbox"], [role="option"][aria-selected]');
             var textFields = popover.querySelectorAll('input[type="search"], input[type="text"]');
             if (choices.length || textFields.length) {
-                return Array.from(choices).some(function (node) { var label = node.getAttribute('aria-label') || ((node.closest && node.closest('label')) || node).textContent || '';
+                return Array.from(choices).some(function (node) {
+                    var label = node.getAttribute('aria-label') || ((node.closest && node.closest('label')) || node).textContent || '';
                     if (/^(?:exact match|match (?:all|any)(?: selected)?(?: options| filters| labels)?|any match)$/i.test(label.trim())) return false;
-                    return node.checked || node.getAttribute('aria-checked') === 'true' || node.getAttribute('aria-selected') === 'true'; }) ||
+                    return node.checked || node.getAttribute('aria-checked') === 'true' || node.getAttribute('aria-selected') === 'true';
+                }) ||
                     Array.from(textFields).some(function (node) { return !!node.value.trim(); });
             }
         }
@@ -2557,14 +2612,20 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             panel.find('.s4t-attention-conflict').prop('hidden', !showPrompt);
             panel.find('.s4t-attention-pause-message').prop('hidden', !paused);
             columns.prop('hidden', showPrompt || (!data && !!error && !switching));
-            panel.find('.s4t-attention-count').prop('hidden', paused || !data);
+            panel.find('.s4t-attention-metrics').prop('hidden', paused || !data);
             if (!paused && focusWasInPrompt) panel.find('.s4t-attention-columns input:not(:disabled)').first().trigger('focus');
             var status = error || commentError || (commentLoading ? 'Checking comment headings… Other filters are ready to use.' : '');
             var statusEl = panel.find('.s4t-attention-status');
             if (statusEl.text() !== status) statusEl.text(status);
             statusEl.prop('hidden', !status);
-            var countText = data && !nativeBlocked ? count + ' matching cards' : '';
-            if (panel.find('.s4t-attention-count').text() !== countText) panel.find('.s4t-attention-count').text(countText);
+            var totals = data ? s4tAttentionPointTotals(data.cards, result.ids) : { assigned: 0, completed: 0 };
+            [['.s4t-attention-count', count, count + ' matching cards'],
+            ['.s4t-attention-assigned', totals.assigned, totals.assigned + ' assigned'],
+            ['.s4t-attention-completed', totals.completed, totals.completed + ' completed']].forEach(function (metric) {
+                var badge = panel.find(metric[0]);
+                if (badge.text() !== metric[2]) badge.text(metric[2]);
+                badge.attr('data-copy-value', metric[1]);
+            });
             panel.find('[data-refresh]').prop('disabled', loading).toggleClass('s4t-refreshing', loading).attr('aria-busy', String(loading));
         }
     }
@@ -2587,19 +2648,19 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         var snapshot = data, token = ++commentRequest, requestedBoard = board;
         commentLoading = true; commentError = ''; apply();
         s4tLoadAttentionComments(snapshot.cards, function (id, before) {
-            var params = {filter:'commentCard,copyCommentCard',limit:1000,fields:'id,data',memberCreator:false};
+            var params = { filter: 'commentCard,copyCommentCard', limit: 1000, fields: 'id,data', memberCreator: false };
             if (before) params.before = before;
-            return $.ajax({url:'/1/cards/' + encodeURIComponent(id) + '/actions',data:params,dataType:'json',timeout:20000,cache:false,xhrFields:{withCredentials:true}});
+            return $.ajax({ url: '/1/cards/' + encodeURIComponent(id) + '/actions', data: params, dataType: 'json', timeout: 20000, cache: false, xhrFields: { withCredentials: true } });
         }, function () { return token === commentRequest && data === snapshot && currentBoard() === requestedBoard; }, commentCache, snapshot.s4tForceCommentRead === true)
-        .then(function () {
-            if (token !== commentRequest || data !== snapshot) return;
-            data = Object.assign({}, snapshot, {s4tCommentsLoaded:true});
-        }, function () {
-            if (token === commentRequest) commentError = 'Could not load comments. Comment checking is paused; try Refresh.';
-        }).finally(function () {
-            if (token !== commentRequest) return;
-            commentLoading = false; apply();
-        });
+            .then(function () {
+                if (token !== commentRequest || data !== snapshot) return;
+                data = Object.assign({}, snapshot, { s4tCommentsLoaded: true });
+            }, function () {
+                if (token === commentRequest) commentError = 'Could not load comments. Comment checking is paused; try Refresh.';
+            }).finally(function () {
+                if (token !== commentRequest) return;
+                commentLoading = false; apply();
+            });
     }
 
     function fetchData(forceComments) {
@@ -2624,12 +2685,12 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         }
         function fallback() {
             $.ajax({
-                url: '/b/' + requestedBoard + '.json', dataType: 'json', timeout: 20000, cache:false,
+                url: '/b/' + requestedBoard + '.json', dataType: 'json', timeout: 20000, cache: false,
                 xhrFields: { withCredentials: true }
             }).done(finish).fail(function () { finish(null); });
         }
         $.ajax({
-            url: '/1/boards/' + requestedBoard, cache:false,
+            url: '/1/boards/' + requestedBoard, cache: false,
             data: {
                 cards: 'open', card_fields: 'name,desc,idList,idMembers,idLabels,idChecklists,shortLink,closed,due,dueComplete,badges,dateLastActivity',
                 members: 'all', member_fields: 'fullName,username,initials', labels: 'all', label_fields: 'name,color',
@@ -2715,7 +2776,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                 var next = (kind === 'member' ? memberFilters : labelFilters).filter(function (id) { return id !== entry.id; });
                 if (this.checked) next.push(entry.id);
                 if (kind === 'member') memberFilters = s4tToggleMembers(memberFilters, entry.id, this.checked, data.members.map(function (member) { return member.id; }), matchAll); else {
-                    labelFilters = s4tToggleLabels(labelFilters, entry.id, this.checked, data.labels.map(function(label) { return label.id; }), matchAll);
+                    labelFilters = s4tToggleLabels(labelFilters, entry.id, this.checked, data.labels.map(function (label) { return label.id; }), matchAll);
                     if (!this.checked && hotfixLabelIds().indexOf(entry.id) !== -1) {
                         selected = selected.filter(function (key) { return ['hotfixToday', 'hotfix', 'hotfixDue'].indexOf(key) === -1; });
                     }
@@ -2740,15 +2801,15 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                 .on('mousedown pointerdown', function () { $(this).addClass('s4t-tooltip-dismissed'); })
                 .on('mouseleave focusout', function () { $(this).removeClass('s4t-tooltip-dismissed'); })
         );
-        var allLabels = $('<input type="checkbox" data-attention-all-labels aria-label="All labels">').on('change', function() {
+        var allLabels = $('<input type="checkbox" data-attention-all-labels aria-label="All labels">').on('change', function () {
             labelFilters = this.checked ? [] : ['__empty__'];
-            if (!this.checked) selected = selected.filter(function(key) { return ['hotfixToday', 'hotfix', 'hotfixDue'].indexOf(key) === -1; });
+            if (!this.checked) selected = selected.filter(function (key) { return ['hotfixToday', 'hotfix', 'hotfixDue'].indexOf(key) === -1; });
             apply();
         });
         panel.find('.s4t-attention-label-group').empty().append(
             $('<label class="s4t-attention-group-toggle" data-tooltip="All labels">').append(allLabels)
-                .on('mousedown pointerdown', function() { $(this).addClass('s4t-tooltip-dismissed'); })
-                .on('mouseleave focusout', function() { $(this).removeClass('s4t-tooltip-dismissed'); })
+                .on('mousedown pointerdown', function () { $(this).addClass('s4t-tooltip-dismissed'); })
+                .on('mouseleave focusout', function () { $(this).removeClass('s4t-tooltip-dismissed'); })
         );
         data.members.slice().sort(function (a, b) { return (a.fullName || a.username || '').localeCompare(b.fullName || b.username || ''); }).forEach(function (member) { choice(people, member, 'member'); });
         data.labels.slice().sort(function (a, b) { return (a.name || a.color || '').localeCompare(b.name || b.color || ''); }).forEach(function (label) { choice(labels, label, 'label'); });
@@ -2764,9 +2825,12 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         if (panel) { close(); return; }
         panel = $('<section id="s4t-attention-panel" role="dialog" aria-label="Attention filters">');
         var heading = $('<div class="s4t-attention-heading">').append(
-            $('<div class="s4t-feature-title">').append($('<strong class="s4t-attention-title">').text('Attention'), s4tFeatureHelp('Attention', 'Find missing card details and hotfixes needing review.', 'Scope, points, hotfix and checklist checks; member, label and list filters.', 'Narrow the board without opening every card.', 'Select checks, then narrow by member or label. Exclude lists as needed; Clear filters restores the view.')),
+            $('<div class="s4t-feature-title">').append($('<strong class="s4t-attention-title">').text('Attention'), s4tFeatureHelp("Attention", "Find cards that need updates.", "• Column-1 features\n• Get Copiable Assigned, Completed points, Cards count any moment\n• Select/Deselect members/labels at one click\n• Filter cards against custom Checklist names & Comments\n• Exclude All Todo Lists/Not Sure lists at one click\n• Syncable with Trello Filters", "Striictly shows what selected. points updated based on selection. Excluded label/Excluded Lists cards/points stays excluded.", "Select checks, members and labels. Enter required names when prompted. Double-click count/point badges to copy. Use Clear filters to reset.")),
             $('<span class="s4t-attention-pause-message" role="status" hidden>').text('Attention is paused while Trello filters are active. Use Attention to switch.'),
-            $('<span class="s4t-attention-count">')
+            $('<div class="s4t-attention-metrics">').append(
+                $('<span class="s4t-attention-count s4t-metric-badge" role="button" tabindex="0" data-tooltip="Double-click to copy matching card count">'),
+                $('<span class="s4t-attention-assigned s4t-metric-badge" role="button" tabindex="0" data-tooltip="Double-click to copy assigned points">'),
+                $('<span class="s4t-attention-completed s4t-metric-badge" role="button" tabindex="0" data-tooltip="Double-click to copy completed points">'))
         );
         var header = $('<div class="s4t-attention-header">').append(heading);
         var headerActions = $('<div class="s4t-attention-header-actions">');
@@ -2789,8 +2853,8 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                 if (this.checked) {
                     selected.push(key);
                     if (['hotfixToday', 'hotfix', 'hotfixDue'].indexOf(key) !== -1) {
-                        labelFilters = labelFilters.filter(function(id) { return id !== '__empty__'; });
-                        hotfixLabelIds().forEach(function(id) { if (labelFilters.indexOf(id) === -1) labelFilters.push(id); });
+                        labelFilters = labelFilters.filter(function (id) { return id !== '__empty__'; });
+                        hotfixLabelIds().forEach(function (id) { if (labelFilters.indexOf(id) === -1) labelFilters.push(id); });
                     }
                 }
                 if (!this.checked && ['hotfixToday', 'hotfix', 'hotfixDue'].indexOf(key) !== -1 && !hasHotfixCheck()) {
@@ -2819,7 +2883,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         option('missing', 'Missing checklists');
         var requiredFields = $('<div class="s4t-attention-required-names" hidden>');
         requiredFields.append($('<label for="s4t-attention-names">').text('Required checklist names (new lines or commas)'));
-        requiredFields.append($('<textarea id="s4t-attention-names" rows="3" placeholder="Development\nTesting">').val(required).on('input', function () {
+        requiredFields.append($('<textarea id="s4t-attention-names" rows="3" placeholder="Process\Impact\nDependancies">').val(required).on('input', function () {
             required = this.value;
             try { localStorage.setItem(storageKey(), required); } catch (_) { /* Session still works. */ }
             apply();
@@ -2833,7 +2897,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         commentFields.append($('<label for="s4t-attention-comment-names">').text('Required comment headings (new lines or commas)'));
         commentFields.append($('<textarea id="s4t-attention-comment-names" rows="3" placeholder="Tech Design, Test Cases, Branch">').val(requiredComments).on('input', function () {
             requiredComments = this.value;
-            try { localStorage.setItem('s4t-attention-comment-names-' + board, requiredComments); } catch (_) {}
+            try { localStorage.setItem('s4t-attention-comment-names-' + board, requiredComments); } catch (_) { }
             apply();
         }));
         commentFields.append($('<p>').text('Shows cards missing any listed heading across their comments. H1–H3 only; case and extra spaces ignored. Test Cases/Testcases, Branch/Branches and Tech/Technical Design match. Enter at least one name.'));
@@ -2846,6 +2910,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         var labelsColumn = $('<div>').append($('<div class="s4t-attention-column-heading">').append($('<h3>').text('Labels'), $('<div class="s4t-attention-list-groups s4t-attention-label-group">')), $('<p class="s4t-label-match-hint">').text('Match any selected label.'), $('<div class="s4t-attention-labels">'));
         columns.append(checks, membersColumn, lists, labelsColumn); panel.append(columns);
         $('body').append(panel);
+        s4tBindMetricCopy(panel);
         button.attr('aria-expanded', 'true');
         renderLists(); renderPeopleAndLabels(); apply(); fetchData();
         panel.find('button').first().focus();
@@ -2915,20 +2980,20 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         cards.forEach(function (card) { commentCache.delete(card.id); });
         commentLoading = true; commentError = ''; apply();
         s4tLoadAttentionComments(cards, function (id, before) {
-            var params = {filter:'commentCard,copyCommentCard',limit:1000,fields:'id,data',memberCreator:false};
+            var params = { filter: 'commentCard,copyCommentCard', limit: 1000, fields: 'id,data', memberCreator: false };
             if (before) params.before = before;
-            return $.ajax({url:'/1/cards/' + encodeURIComponent(id) + '/actions',data:params,dataType:'json',timeout:20000,cache:false,xhrFields:{withCredentials:true}});
+            return $.ajax({ url: '/1/cards/' + encodeURIComponent(id) + '/actions', data: params, dataType: 'json', timeout: 20000, cache: false, xhrFields: { withCredentials: true } });
         }, function () { return token === commentRequest && data === snapshot; }, commentCache, true)
-        .then(function () {
-            if (token !== commentRequest || data !== snapshot) return;
-            var updates = new Map(cards.map(function (card) { return [card.id, card]; }));
-            data = Object.assign({}, snapshot, {cards:snapshot.cards.map(function (card) { return updates.get(card.id) || card; })});
-        }, function () {
-            if (token === commentRequest) commentError = 'Could not refresh edited comments. Try Refresh.';
-        }).finally(function () {
-            if (token !== commentRequest) return;
-            commentLoading = false; apply(); calcListPoints();
-        });
+            .then(function () {
+                if (token !== commentRequest || data !== snapshot) return;
+                var updates = new Map(cards.map(function (card) { return [card.id, card]; }));
+                data = Object.assign({}, snapshot, { cards: snapshot.cards.map(function (card) { return updates.get(card.id) || card; }) });
+            }, function () {
+                if (token === commentRequest) commentError = 'Could not refresh edited comments. Try Refresh.';
+            }).finally(function () {
+                if (token !== commentRequest) return;
+                commentLoading = false; apply(); calcListPoints();
+            });
     }
     new MutationObserver(function (mutations) {
         if (!data || !selected.includes('missingComments')) return;
@@ -2946,7 +3011,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             dirtyCommentCards.add(route[1]); clearTimeout(commentEditTimer);
             commentEditTimer = setTimeout(refreshEditedComments, 400);
         }
-    }).observe(document.body, {childList:true, subtree:true, characterData:true});
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
     document.addEventListener('s4t-checklist-updated', function () { if (data) fetchData(); });
     window.addEventListener('popstate', sync);
     // Trello's keyboard shortcuts can change native filters without clicking its popover.
@@ -2992,7 +3057,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         }, 250);
     }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'href'] });
     document.addEventListener('keydown', function (event) {
-        if (!active() || nativeBlocked || !data || !/^\/c\//.test(location.pathname) || !['ArrowLeft','ArrowRight'].includes(event.key)) return;
+        if (!active() || nativeBlocked || !data || !/^\/c\//.test(location.pathname) || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
         if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"],[role="listbox"],[id^="s4t-"]')) return;
         var current = location.pathname.match(/^\/c\/([A-Za-z0-9]+)/), index = attentionResult().index;
         var links = Array.from(document.querySelectorAll(S4T_CARD_SEL)).map(function (card) { return card.matches('a[href*="/c/"]') ? card : card.querySelector('a[href*="/c/"]'); }).filter(Boolean);
@@ -3019,12 +3084,12 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
 // Group selected cards only; multi-member and multi-label cards appear in each matching group.
 function s4tGroupCards(cards, board, mode) {
     var groups = [], index = new Map();
-    function addGroup(id, name) { var group = {name: name, cards: []}; groups.push(group); index.set(id, group); }
+    function addGroup(id, name) { var group = { name: name, cards: [] }; groups.push(group); index.set(id, group); }
     var definitions = mode === 'labels' ? board.labels : mode === 'lists' ? board.lists : board.members;
     (definitions || []).forEach(function (item) {
         addGroup(item.id, mode === 'dev' ? '@' + (item.fullName || item.username) : item.name || (mode === 'labels' ? (item.color || 'Unnamed') + ' label' : 'Unnamed list'));
     });
-    var fallback = {name: mode === 'labels' ? 'No labels' : mode === 'lists' ? 'Unknown list' : 'Unassigned', cards: []};
+    var fallback = { name: mode === 'labels' ? 'No labels' : mode === 'lists' ? 'Unknown list' : 'Unassigned', cards: [] };
     cards.forEach(function (card) {
         var ids = mode === 'labels' ? (card.idLabels || (card.labels || []).map(function (label) { return label.id; })) : mode === 'lists' ? [card.idList] : (card.idMembers || []);
         var matched = false;
@@ -3053,7 +3118,7 @@ var s4tOpenCardsList = (function () {
         current.find('.s4t-cards-status').text(message).prop('hidden', !message);
         if (message) {
             document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
-            state.statusTimer = setTimeout(function () { current.find('.s4t-cards-status').prop('hidden',true); },3500);
+            state.statusTimer = setTimeout(function () { current.find('.s4t-cards-status').prop('hidden', true); }, 3500);
         }
     }
     function button(text, handler, attrs) { return $('<button type="button">').text(text).attr(attrs || {}).on('click', handler); }
@@ -3129,7 +3194,7 @@ var s4tOpenCardsList = (function () {
     }
     function setLoading(value, previewOnly) {
         state.loading = value;
-        overlay.find('.s4t-cards-items, [data-cards-pane="preview"]').each(function() {
+        overlay.find('.s4t-cards-items, [data-cards-pane="preview"]').each(function () {
             if (!value || !previewOnly || this.matches('[data-cards-pane="preview"]')) s4tSetSkeleton(this, value);
         });
         overlay.find('.s4t-cards-toolbar').attr('inert', value ? '' : null);
@@ -3168,11 +3233,13 @@ var s4tOpenCardsList = (function () {
         var token = ++loadToken;
         setLoading(true, true);
         // Yield to paint the skeleton before rebuilding a potentially large message.
-        requestAnimationFrame(function() { setTimeout(function() {
-            if (token !== loadToken) return;
-            try { regenerateSlackPreviewText(); }
-            finally { setLoading(false); }
-        }, 0); });
+        requestAnimationFrame(function () {
+            setTimeout(function () {
+                if (token !== loadToken) return;
+                try { regenerateSlackPreviewText(); }
+                finally { setLoading(false); }
+            }, 0);
+        });
     }
     function close() { if (overlay) overlay.prop('hidden', true); hideSlackMentionAutocomplete(); document.getElementById('s4t-cards-launch')?.focus(); }
     function switchTab(tab) {
@@ -3188,12 +3255,12 @@ var s4tOpenCardsList = (function () {
     }
     function copied() {
         var current = overlay, action = current.find('[data-cards-copy]');
-        current.find('.s4t-cards-status').text('').prop('hidden',true);
-        action.addClass('s4t-copy-success').attr('data-tooltip','Copied!');
-        current.find('.s4t-cards-copy-toast').text('Copied for Slack').prop('hidden',false);
+        current.find('.s4t-cards-status').text('').prop('hidden', true);
+        action.addClass('s4t-copy-success').attr('data-tooltip', 'Copied!');
+        current.find('.s4t-cards-copy-toast').text('Copied for Slack').prop('hidden', false);
         document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
         clearTimeout(state.copyTimer);
-        state.copyTimer = setTimeout(function () { action.removeClass('s4t-copy-success').attr('data-tooltip','Copy for Slack'); current.find('.s4t-cards-copy-toast').prop('hidden',true); },1800);
+        state.copyTimer = setTimeout(function () { action.removeClass('s4t-copy-success').attr('data-tooltip', 'Copy for Slack'); current.find('.s4t-cards-copy-toast').prop('hidden', true); }, 1800);
     }
     async function copyMessage() {
         var text = state.hasUserEditedPreview ? extractPlainTextFromRichEditor(editor) : generateMissingEstimatesSlackText();
@@ -3213,7 +3280,7 @@ var s4tOpenCardsList = (function () {
         state = { board: options.board, tab: 'cards', groupBy: 'dev', excludeNotSure: false, includeDevelopers: false, mentionDevelopers: false, excludedCardIds: new Set(), search: '', format: 'both', hasUserEditedPreview: false, developers: [], devCardsMap: {} };
         overlay = $('<div id="s4t-cards-overlay">');
         var dialog = $('<section id="s4t-cards-dialog" role="dialog" aria-modal="true" aria-label="Cards List and Slack preview">');
-        var header = $('<header>').append($('<div class="s4t-feature-title">').append($('<h2>').text('Cards List'), s4tFeatureHelp('Cards List', 'Share selected Trello tasks in Slack.', 'Developer, label or list grouping; title/link formats and an editable Slack preview.', 'Build one message without copying card links individually.', 'Filter the board with Trello or Attention, select cards, edit the preview, then copy and paste into Slack.')), $('<span class="s4t-cards-count">').text('— selected / — cards'),
+        var header = $('<header>').append($('<div class="s4t-feature-title">').append($('<h2>').text('Cards List'), s4tFeatureHelp("Cards List", "Create a Slack message from filtered cards.", "• Search and select cards\n• Segregate By: Dev / Labels / Lists\n• Exclude Not Sure list in every grouping\n• Title + Link / Only Links / Only Titles\n• Add developer names and @ formatting under Labels", "Uses Trello or Attention results. Release, Template and cards assigned to everyone are omitted. @ names are plain text, not linked Slack mentions.", "Select cards, open Slack Preview & Edit, edit the message, then use the copy icon. Type @ for name suggestions.")), $('<span class="s4t-cards-count">').text('— selected / — cards'),
             button('↻', function () {
                 if (state.tab === 'preview') {
                     if (!state.hasUserEditedPreview || window.confirm('Replace your edited draft with the selected cards?')) rebuildPreview();
@@ -3264,9 +3331,9 @@ var s4tOpenCardsList = (function () {
             editor.scrollTop = scrollTop;
             var current = overlay, option = current.find('[data-add-developers]');
             option.addClass('s4t-option-success');
-            current.find('.s4t-cards-copy-toast').text(this.checked ? 'Developer names added' : 'Developer names removed').prop('hidden',false);
+            current.find('.s4t-cards-copy-toast').text(this.checked ? 'Developer names added' : 'Developer names removed').prop('hidden', false);
             document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
-            clearTimeout(state.copyTimer); state.copyTimer = setTimeout(function () { option.removeClass('s4t-option-success'); current.find('.s4t-cards-copy-toast').prop('hidden',true); },1800);
+            clearTimeout(state.copyTimer); state.copyTimer = setTimeout(function () { option.removeClass('s4t-option-success'); current.find('.s4t-cards-copy-toast').prop('hidden', true); }, 1800);
         }));
         var mentionOption = $('<label data-mention-developers data-tooltip="Format developer names with @ for Slack (names only, not linked Slack mentions)" hidden>').append($('<input type="checkbox" aria-label="Format developer names with @">').on('change', function () {
             if (state.hasUserEditedPreview && !window.confirm('Replace your edited draft with this name format?')) { this.checked = state.mentionDevelopers; return; }
@@ -3274,11 +3341,11 @@ var s4tOpenCardsList = (function () {
             var scrollTop = editor.scrollTop;
             state.hasUserEditedPreview = false; renderMissingEstimatesPreview(); editor.scrollTop = scrollTop;
             var current = overlay, option = current.find('[data-mention-developers]'); option.addClass('s4t-option-success');
-            current.find('.s4t-cards-copy-toast').text(this.checked ? '@ formatting enabled' : '@ formatting removed').prop('hidden',false);
+            current.find('.s4t-cards-copy-toast').text(this.checked ? '@ formatting enabled' : '@ formatting removed').prop('hidden', false);
             document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
-            clearTimeout(state.copyTimer); state.copyTimer = setTimeout(function () { option.removeClass('s4t-option-success'); current.find('.s4t-cards-copy-toast').prop('hidden',true); },1800);
+            clearTimeout(state.copyTimer); state.copyTimer = setTimeout(function () { option.removeClass('s4t-option-success'); current.find('.s4t-cards-copy-toast').prop('hidden', true); }, 1800);
         }));
-        previewTools.append(developerOption, mentionOption, button('', copyMessage, {'data-cards-copy':'', 'aria-label':'Copy for Slack', 'data-tooltip':'Copy for Slack', 'class':'s4t-cards-icon-button'}).html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>'));
+        previewTools.append(developerOption, mentionOption, button('', copyMessage, { 'data-cards-copy': '', 'aria-label': 'Copy for Slack', 'data-tooltip': 'Copy for Slack', 'class': 's4t-cards-icon-button' }).html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>'));
         var editorFrame = $('<div class="s4t-cards-editor-frame">').append(previewTools, $('<div class="s4t-cards-copy-toast" role="status" hidden>'), editor);
         var excludeNotSureOption = $('<label data-cards-exclude-not-sure data-tooltip="Exclude Not Sure list cards from the card list and preview in every grouping">').append(
             $('<input type="checkbox">').on('change', function () {
@@ -3914,7 +3981,7 @@ var s4tOpenCardsList = (function () {
             if (owner.classList.contains('s4t-feature-help')) owner.setAttribute('aria-expanded', 'true');
             tip.textContent = '';
             if (owner.hasAttribute('data-feature-purpose')) {
-                [['Feature', owner.getAttribute('data-tooltip')], ['Why use it', owner.getAttribute('data-feature-purpose')], ['What’s included', owner.getAttribute('data-feature-options')], ['Saves effort', owner.getAttribute('data-feature-benefit')], ['How to use', owner.getAttribute('data-feature-usage')]].forEach(function (section) {
+                [['Feature', owner.getAttribute('data-tooltip')], ['Purpose', owner.getAttribute('data-feature-purpose')], ['Features', owner.getAttribute('data-feature-options')], ['Rules', owner.getAttribute('data-feature-benefit')], ['How to use', owner.getAttribute('data-feature-usage')]].forEach(function (section) {
                     var row = document.createElement('div'), label = document.createElement('strong'), text = document.createElement('span');
                     row.className = 's4t-help-section'; label.textContent = section[0]; text.textContent = section[1];
                     row.append(label, text); tip.appendChild(row);
