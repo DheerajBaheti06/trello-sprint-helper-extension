@@ -8,6 +8,7 @@
             "jquery-2.1.4.min.js",
             "feature-preferences.js",
             "sprint-helper.js",
+            "charts.js",
             "eow-update.js",
             "hover-selectors.js"
          ],

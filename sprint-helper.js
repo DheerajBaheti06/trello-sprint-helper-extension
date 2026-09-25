@@ -292,7 +292,7 @@ function fetchBoardData(shortLink, forceRefresh, callback) {
         callback(null, data);
     }
     // Try Trello REST API first for maximum efficiency
-    var apiUrl = '/1/boards/' + shortLink + '?fields=name,shortLink&cards=open&card_fields=name,idList,idMembers,dueComplete,closed&lists=open&list_fields=name,closed&members=all&member_fields=fullName,username,avatarUrl,initials';
+    var apiUrl = '/1/boards/' + shortLink + '?fields=name,shortLink&cards=open&card_fields=name,idList,idMembers,idLabels,labels,dueComplete,closed&labels=all&label_fields=name,color&lists=open&list_fields=name,closed&members=all&member_fields=fullName,username,avatarUrl,initials';
 
     $.ajax({
         url: apiUrl,
@@ -1098,6 +1098,7 @@ function renderMembersBurndownModal(data) {
         '</div>',
         '<div class="s4t-header-actions">',
         '<a id="s4t-dashboard-link" target="_blank" rel="noopener noreferrer" aria-disabled="true">View Full Dashboard</a>',
+        '<button type="button" id="s4t-charts-action" aria-label="Open charts" data-tooltip="Interactive pie charts">Charts</button>',
         '<button type="button" id="s4t-preferences-action" aria-label="Settings" data-tooltip="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-.5 2-2 1.2-2-.6-2 3.4 1.5 1.4v2.4L2.5 14l2 3.4 2-.6 2 1.2.5 3h6l.5-3 2-1.2 2 .6 2-3.4-1.5-1.2v-2.4L21.5 9l-2-3.4-2 .6-2-1.2-.5-2z"/><circle cx="12" cy="12" r="3"/></svg></button>',
         '<button class="s4t-refresh-btn" id="s4t-refresh-action" aria-label="Refresh burndown" data-tooltip="Refresh burndown">' + s4tRefreshIcon() + '</button>',
         '<button class="s4t-close-btn" id="s4t-close-action" aria-label="Close" data-tooltip="Close">✕</button>',
@@ -1145,11 +1146,12 @@ function renderMembersBurndownModal(data) {
         s4tRenderMemberRows($('#s4t-members-modal').data('members'), this.checked);
     });
 
-    $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp("Members Burndown", "Check team and member progress.", "• Assigned, completed and remaining points\n• Card counts and progress bars\n• Exclude Not Sure list\n• View Full Dashboard", "Not Sure exclusion changes member rows only. Team summaries stay unchanged.", "Double-click a point value to copy it. Refresh to load current board data."));
+    $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp("Members Burndown", "Check team and member progress.", "• Assigned, completed and remaining points\n• Card counts and progress bars\n• Exclude Not Sure list\n• Interactive developer and label pie charts\n• View Full Dashboard", "Not Sure exclusion changes member rows only. Team summaries stay unchanged.", "Double-click a point value to copy it. Refresh to load current board data."));
 
     // Use Trello's live design tokens, just like Attention and Cards List.
     // Event handlers
     if (fullDashboardUrl) $('#s4t-dashboard-link').attr('href', fullDashboardUrl).removeAttr('aria-disabled');
+    $('#s4t-charts-action').on('click', function () { s4tOpenCharts(); });
     $('#s4t-preferences-action').on('click', function () { if (typeof s4tPreferences !== 'undefined') s4tPreferences.open(); });
     $('#s4t-close-action').click(hideMembersBurndown);
     $('#s4t-refresh-action').click(function () { s4tLoadMembers(true); });
