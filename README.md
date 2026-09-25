@@ -11,6 +11,7 @@ Built on [Scrum for Trello](https://github.com/Q42/TrelloScrum) by Q42, it exten
 | Workflow | What you can do |
 | --- | --- |
 | **Members Burndown** | Review completed and remaining hours, card completion and individual workloads in one sprint overview. |
+| **Preferences** | Open Members Burndown → Preferences to show or hide the four board features, Check All and comment search. Choices apply across boards in this browser; Show all features restores the defaults. |
 | **Attention** | Combine scope, points, hotfix and checklist checks with member, label and list filters. Preserve selections and import native Trello filters. |
 | **Cards List & Slack Preview** | Select filtered cards, group them by developer, label or list, choose title/link formats, optionally append developer names when grouping by labels, and copy from the preview panel. |
 | **EOW Update** | Build weekly reports with task categories, drag-and-drop organization, list exclusions, points display and editable Slack previews. |
@@ -61,7 +62,7 @@ Set `fullDashboardUrl` inside `renderMembersBurndownModal` in `sprint-helper.js`
 
 ### Data and limitations
 
-The extension reads Trello using your signed-in browser session. Point edits and Check All can modify Trello cards. Slack exports require manual copying/pasting. Attention filters and EOW drafts are stored in Trello-origin local storage; clearing site data removes them. General settings use Chrome sync storage when available.
+The extension reads Trello using your signed-in browser session. Point edits and Check All can modify Trello cards. Slack exports require manual copying/pasting. Feature preferences, Attention filters and EOW drafts are stored in Trello-origin local storage; clearing site data removes them. General settings use Chrome sync storage when available.
 
 Trello markup or endpoint changes can break integration. Cards assigned to every board member are excluded from Cards List/EOW, which also affects single-member boards. Done-list naming affects completion totals. See [the reliability review](RELIABILITY-REVIEW.md) for remaining findings, including unsafe name rendering; this is not a security-audited public release.
 

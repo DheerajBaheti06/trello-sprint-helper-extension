@@ -5,7 +5,7 @@ helpers=s[s.index('function parsePoints('):s.index('// Helper: Check if card tit
 features=s[s.index('/* Attention filters use their own class'):s.index('// Sequential, idempotent checklist completion')]
 # Controlled SPA route and animation clock; no Trello/network writes.
 features=features.replace('window.location.pathname','window.fixturePath').replace('location.pathname','window.fixturePath')
-setup='''window.fixturePath='/b/fixture';window.errors=[];window.addEventListener('error',e=>errors.push(e.message));localStorage.clear();
+setup='''window.fixturePath='/b/fixture';window.errors=[];window.addEventListener('error',e=>errors.push(e.message));localStorage.clear();localStorage.setItem('s4t-feature-preferences-v1',JSON.stringify({'attention.scope':false,'members.points':false,'hoverMenus':false}));
 window.requestAnimationFrame=fn=>setTimeout(fn,16);
 var S4T_CARD_SEL='[data-testid="list-card"]',S4T_LIST_SEL='[data-testid="list"]',S4T_TITLE_SEL='[data-testid="card-name"]';
 function getBoardShortLink(){return 'fixture'}function updateBurndownLink(){}function calcListPoints(){}function readAllCardsSynchronously(){}var skeletonCalls=0;function s4tSetSkeleton(){skeletonCalls++}
@@ -73,6 +73,15 @@ el('[data-cards-copy]').click();await wait(20);check(copiedText.includes('— @A
 group.value='lists';group.dispatchEvent(new Event('change'));await wait(60);
 for(const mode of ['dev','labels','lists']){group.value=mode;group.dispatchEvent(new Event('change'));await wait(60);check(!el('[data-cards-exclude-not-sure]').hidden,'Not Sure option visible for '+mode);el('[data-cards-exclude-not-sure] input').click();check(!el('#missing-slack-preview-rich').textContent.includes('Uncertain task'),'Not Sure excluded for '+mode);el('[data-cards-exclude-not-sure] input').click();check(el('#missing-slack-preview-rich').textContent.includes('Uncertain task'),'Not Sure restored for '+mode);}
 check(el('[data-add-developers]').hidden,'other grouping hides option');check(!el('#missing-slack-preview-rich').textContent.includes('— Alex'),'other grouping omits suffix');
+s4tPreferences.open();check(document.querySelectorAll('[data-feature-preference]').length===6,'only six major feature preferences');check([...document.querySelectorAll('[data-feature-preference]')].every(n=>n.checked),'all six features checked by default');
+check(!el('[data-feature-preference="attention.scope"]'),'no per-element settings');
+el('[data-feature-preference="members"]').click();check(getComputedStyle(el('#membersBurndownLink')).display==='none','members icon can be hidden');
+check(el('#s4t-preferences-dialog'),'preferences remain open when members is hidden');
+el('[data-feature-preference="cardsList"]').click();check(getComputedStyle(el('#s4t-cards-overlay')).display==='none','cards popup hidden');
+el('[data-feature-preference="attention"]').click();check(!el('#s4t-attention-panel'),'attention closes when disabled');check(!document.body.classList.contains('s4t-attention-active-filter'),'disabled attention restores board');
+check(JSON.parse(localStorage.getItem('s4t-feature-preferences-v1')).attention===false,'preferences persisted');
+el('#s4t-preferences-dialog header button').click();s4tPreferences.open();check(!el('[data-feature-preference="attention"]').checked,'saved choices restored');
+el('#s4t-preferences-dialog footer button').click();check(s4tPreferences.enabled('attention'),'show all restores features');el('#s4t-preferences-dialog header button').click();
 }catch(e){errors.push(e.stack)}el('#result').textContent=errors.length?'FAIL: '+errors.join('; '):'PASS: remount persistence, filtered arrows, typing, developer suffix, preview copy and grouping';})();'''
-html='<html><head><style>'+(root/'sprint-helper.css').read_text()+'</style></head><body><div id="s4t-board-tools"><button id="membersBurndownLink">Members</button></div><div data-testid="list"></div><input id="typing"><pre id="result">RUNNING</pre><script>'+(root/'jquery-2.1.4.min.js').read_text()+'</script><script>'+setup+helpers+features+'</script><script>'+tests+'</script></body></html>'
+html='<html><head><style>'+(root/'sprint-helper.css').read_text()+'</style></head><body><div id="s4t-board-tools"><button id="membersBurndownLink">Members</button></div><div data-testid="list"></div><input id="typing"><pre id="result">RUNNING</pre><script>'+(root/'jquery-2.1.4.min.js').read_text()+'</script><script>'+setup+(root/'feature-preferences.js').read_text()+helpers+features+'</script><script>'+tests+'</script></body></html>'
 Path('/tmp/s4t-cards-attention-ui.html').write_text(html)

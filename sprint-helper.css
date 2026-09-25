@@ -1553,3 +1553,41 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 }
 
 #s4t-icon-tooltip .s4t-help-section span { white-space:pre-line; }
+
+.s4t-checklist-actions > .s4t-checklist-action { width:100%; min-width:104px; white-space:nowrap; padding:5px 12px; }
+#s4t-preferences-overlay { position:fixed; inset:0; z-index:2147483646; display:flex; align-items:center; justify-content:center; padding:20px; background:#0007; }
+#s4t-preferences-dialog { display:flex; flex-direction:column; width:min(820px,100%); max-height:90vh; overflow:hidden; border-radius:14px; background:var(--ds-surface-overlay,#fff); color:var(--ds-text,#172b4d); box-shadow:0 12px 40px #0004; font:14px/1.45 system-ui,sans-serif; }
+#s4t-preferences-dialog header, #s4t-preferences-dialog footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; flex-shrink:0; }
+#s4t-preferences-dialog h2 { margin:0; font-size:18px; }
+#s4t-preferences-dialog > p { padding:0 18px 12px; margin:0; color:var(--ds-text-subtle,#626f86); }
+#s4t-preferences-dialog button { cursor:pointer; border:0; border-radius:7px; padding:7px 10px; background:var(--ds-background-neutral,#f1f2f4); color:inherit; font:inherit; }
+#s4t-preferences-dialog button:hover { background:var(--ds-background-neutral-hovered,#dcdfe4); }
+#s4t-preferences-dialog .s4t-preferences-groups { overflow:auto; padding:4px 18px 24px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+#s4t-preferences-dialog fieldset { margin:0; border:1px solid var(--ds-border,#dcdfe4); border-radius:10px; padding:10px 12px; min-width:0; }
+#s4t-preferences-dialog legend { padding:0 5px; font-weight:650; }
+#s4t-preferences-dialog label { display:flex; align-items:flex-start; gap:9px; padding:7px 0; cursor:pointer; }
+#s4t-preferences-dialog input { margin:3px 0 0; flex-shrink:0; accent-color:var(--ds-background-brand-bold,#0c66e4); }
+#s4t-preferences-dialog small { display:block; margin-top:2px; color:var(--ds-text-subtle,#626f86); font-size:12px; }
+#s4t-preferences-dialog :focus-visible { outline:2px solid var(--ds-border-focused,#388bff); outline-offset:2px; }
+#s4t-preferences-dialog footer [role=status] { font-size:12px; color:var(--ds-text-subtle,#626f86); }
+@media(max-width:600px) { #s4t-preferences-dialog .s4t-preferences-groups { grid-template-columns:1fr; } }
+
+/* One stable native scroll surface; keep wheel/touch scrolling inside the popup. */
+#s4t-members-modal .s4t-members-list {
+    overscroll-behavior:contain;
+    overflow-anchor:none;
+    scroll-behavior:smooth;
+    contain:layout paint;
+    isolation:isolate;
+    padding-top:8px;
+}
+#s4t-members-modal .s4t-member-card {
+    transition:none !important;
+}
+@media(prefers-reduced-motion:reduce) {
+    #s4t-members-modal .s4t-members-list { scroll-behavior:auto; }
+}
+
+#s4t-members-modal #s4t-preferences-action { display:inline-flex; align-items:center; justify-content:center; width:32px; padding:6px !important; }
+#s4t-members-modal #s4t-dashboard-link { background:var(--ds-background-brand-bold,#0c66e4); color:var(--ds-text-inverse,#fff); border-color:transparent; font-weight:600; }
+#s4t-members-modal #s4t-dashboard-link[href]:hover { background:var(--ds-background-brand-bold-hovered,#0055cc); }

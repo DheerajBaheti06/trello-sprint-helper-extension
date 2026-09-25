@@ -223,6 +223,10 @@ function updateBurndownLink() {
         toolbar = $('<div id="s4t-board-tools" role="group" aria-label="Scrum board tools">');
         updateBurndownLink.toolbar = toolbar;
     }
+    if (!toolbar.find('#s4t-preferences-launch').length) {
+        $('<button type="button" id="s4t-preferences-launch" class="s4t-navbar-icon-btn" aria-label="Preferences" data-tooltip="Preferences">')
+            .text('⚙').on('click', function () { if (typeof s4tPreferences !== 'undefined') s4tPreferences.open(); }).appendTo(toolbar);
+    }
     if (!toolbar.find('#membersBurndownLink').length) {
         var icon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/></svg>';
         $('<button type="button" id="membersBurndownLink" class="s4tLink s4t-navbar-icon-btn" data-tooltip="Members Burndown" aria-label="Members Burndown">').append(icon)
@@ -525,7 +529,7 @@ function updateModalContent(data) {
         $('#s4t-sum-updated').text('Updated ' + summary.date);
     }
     $('#s4t-members-modal').data('members', data.members);
-    $('#s4t-members-container').html(renderMembersHtml(data.members, $('#s4t-exclude-not-sure').prop('checked')));
+    s4tRenderMemberRows(data.members, $('#s4t-exclude-not-sure').prop('checked'));
 }
 
 // Keep existing content in place while an opaque, non-interactive skeleton covers it.
@@ -560,6 +564,8 @@ function s4tLoadMembers(force) {
     var modal = document.getElementById('s4t-members-modal');
     if (!modal || modal.getAttribute('aria-busy') === 'true') return;
     modal.setAttribute('aria-busy', 'true');
+    var memberList = modal.querySelector('.s4t-members-list');
+    var memberScroll = memberList ? memberList.scrollTop : 0;
     var surfaces = modal.querySelectorAll('.s4t-modal-body');
     surfaces.forEach(function (element) { s4tSetSkeleton(element, true); });
     var refresh = $(modal).find('#s4t-refresh-action').addClass('s4t-refreshing').attr('aria-busy', 'true').prop('disabled', true);
@@ -574,6 +580,7 @@ function s4tLoadMembers(force) {
             // Keep the last rendered totals if fresh data cannot be processed.
         } finally {
             surfaces.forEach(function (element) { s4tSetSkeleton(element, false); });
+            if (memberList) memberList.scrollTo({top:memberScroll, behavior:'instant'});
             modal.setAttribute('aria-busy', 'false');
             refresh.removeClass('s4t-refreshing').attr('aria-busy', 'false').prop('disabled', false);
         }
@@ -945,6 +952,16 @@ function collectMembersBurndownData() {
     };
 }
 
+function s4tRenderMemberRows(members, excludeNotSure) {
+    var container = document.getElementById('s4t-members-container');
+    if (!container) return;
+    var html = renderMembersHtml(members, excludeNotSure);
+    if (container._s4tRowsHtml === html) return;
+    var top = container.scrollTop;
+    container.innerHTML = html; container._s4tRowsHtml = html;
+    container.scrollTo({top:top, behavior:'instant'});
+}
+
 function renderMembersHtml(members, excludeNotSure) {
     if (!members || members.length === 0) {
         return '<div class="s4t-empty-state">No members with cards found on this board. Make sure cards have members assigned and points in parenthesis (assigned) and braces {completed}.</div>';
@@ -1080,6 +1097,7 @@ function renderMembersBurndownModal(data) {
         '</div>',
         '<div class="s4t-header-actions">',
         '<a id="s4t-dashboard-link" target="_blank" rel="noopener noreferrer" aria-disabled="true">View Full Dashboard</a>',
+        '<button type="button" id="s4t-preferences-action" aria-label="Settings" data-tooltip="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-.5 2-2 1.2-2-.6-2 3.4 1.5 1.4v2.4L2.5 14l2 3.4 2-.6 2 1.2.5 3h6l.5-3 2-1.2 2 .6 2-3.4-1.5-1.2v-2.4L21.5 9l-2-3.4-2 .6-2-1.2-.5-2z"/><circle cx="12" cy="12" r="3"/></svg></button>',
         '<button class="s4t-refresh-btn" id="s4t-refresh-action" aria-label="Refresh burndown" data-tooltip="Refresh burndown">' + s4tRefreshIcon() + '</button>',
         '<button class="s4t-close-btn" id="s4t-close-action" aria-label="Close" data-tooltip="Close">✕</button>',
         '</div>',
@@ -1123,7 +1141,7 @@ function renderMembersBurndownModal(data) {
     s4tBindMetricCopy($('#s4t-members-modal'));
     $('#s4t-members-modal').data('members', data.members);
     $('#s4t-exclude-not-sure').on('change', function () {
-        $('#s4t-members-container').html(renderMembersHtml($('#s4t-members-modal').data('members'), this.checked));
+        s4tRenderMemberRows($('#s4t-members-modal').data('members'), this.checked);
     });
 
     $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp("Members Burndown", "Check team and member progress.", "• Assigned, completed and remaining points\n• Card counts and progress bars\n• Exclude Not Sure list\n• View Full Dashboard", "Not Sure exclusion changes member rows only. Team summaries stay unchanged.", "Double-click a point value to copy it. Refresh to load current board data."));
@@ -1131,6 +1149,7 @@ function renderMembersBurndownModal(data) {
     // Use Trello's live design tokens, just like Attention and Cards List.
     // Event handlers
     if (fullDashboardUrl) $('#s4t-dashboard-link').attr('href', fullDashboardUrl).removeAttr('aria-disabled');
+    $('#s4t-preferences-action').on('click', function () { if (typeof s4tPreferences !== 'undefined') s4tPreferences.open(); });
     $('#s4t-close-action').click(hideMembersBurndown);
     $('#s4t-refresh-action').click(function () { s4tLoadMembers(true); });
 
@@ -2244,6 +2263,15 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     var commentLoading = false, commentRequest = 0, commentCache = new Map(), commentError = '';
     var panel, button, controls, cardsButton, clearButton, observerTimer, layoutKey = '', savedState = '';
 
+    function applyFeaturePreferences() {
+        if (typeof s4tPreferences === 'undefined') return;
+        if (!s4tPreferences.enabled('attention')) {
+            selected = []; excluded = []; memberFilters = []; labelFilters = []; matchAll = false;
+            commentRequest++; commentLoading = false; commentError = ''; close();
+        }
+    }
+    document.addEventListener('s4t-preferences-changed', function () { applyFeaturePreferences(); apply(); });
+
     function active() { return selected.length > 0 || excluded.length > 0 || memberFilters.length > 0 || labelFilters.length > 0; }
     function attentionIcon() {
         return '<svg class="s4t-attention-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="var(--ds-surface, #fff)"/><circle cx="16" cy="12" r="2" fill="var(--ds-surface, #fff)"/><circle cx="8" cy="18" r="2" fill="var(--ds-surface, #fff)"/></svg>';
@@ -2545,6 +2573,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         return selected.some(function (key) { return ['hotfixToday', 'hotfix', 'hotfixDue'].indexOf(key) !== -1; });
     }
     function apply() {
+        applyFeaturePreferences();
         if (hasHotfixCheck() && labelFilters.length) {
             hotfixLabelIds().forEach(function (id) { if (labelFilters.indexOf(id) === -1) labelFilters.push(id); });
         }
@@ -2873,11 +2902,11 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         option('missingCompleted', 'Missing Completed Points', 'completed points missing');
         option('pointsMismatch', 'Points mismatch', 'Assigned and completed points differ. Excludes cards missing either or both values. Zero(0) counts as a value.');
         // option('unassigned', 'Unassigned — no member'); // we already have this in members selection
-        checks.append($('<h4>').text('Hotfix'));
+        checks.append($('<h4 data-preference-section="hotfix">').text('Hotfix'));
         option('hotfixToday', "Today's Hotfix", 'due date/time is of today');
         option('hotfix', 'All Hotfix Cards', 'includes past, present, and future due dates');
         option('hotfixDue', 'Already Due Hotfix cards', 'due date/time is past');
-        checks.append($('<h4>').text('Checklists'));
+        checks.append($('<h4 data-preference-section="checklists">').text('Checklists'));
         option('incomplete', 'Unchecked Items Remain', 'Checklist Items and Amazing Fields');
         option('complete', 'All Items Complete', 'Checklist Items and Amazing Fields');
         option('missing', 'Missing checklists');
@@ -2890,7 +2919,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         }));
         requiredFields.append($('<p>').text('Shows cards missing at least one name. Case and extra spaces are ignored. Leave blank for cards with no checklists.'));
         checks.append(requiredFields);
-        checks.append($('<h4>').text('Comments'));
+        checks.append($('<h4 data-preference-section="comments">').text('Comments'));
         option('missingComments', 'Missing required comments', 'Missing at least one required H1, H2 or H3 comment heading. Case-insensitive; comments only.');
         var commentFields = $('<div class="s4t-attention-comment-names" hidden>');
         commentFields.append($('<div class="s4t-attention-comment-progress" aria-hidden="true" hidden>'));
@@ -2953,7 +2982,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                     });
                 });
         }
-        if (anchor && anchor.getClientRects().length) {
+        if (anchor && anchor.parentElement && anchor.parentElement.getClientRects().length) {
             controls.removeClass('s4t-attention-floating');
             cardsButton.removeClass('s4t-cards-floating');
             if (anchor.previousElementSibling !== cardsButton[0]) $(anchor).before(cardsButton);
@@ -3950,7 +3979,7 @@ var s4tOpenCardsList = (function () {
 /* Shared tooltips stay outside scroll containers and dismiss on pointer down. */
 (function () {
     if (typeof document === 'undefined') return;
-    var selector = '#s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-checklist-action, #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
+    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-checklist-action, #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
     var tip, owner, timer, leaveTimer, pinned = false;
     function hide() {
         clearTimeout(timer); clearTimeout(leaveTimer); pinned = false;
@@ -4085,9 +4114,10 @@ async function s4tCompleteChecklist(adapter) {
     function positionAction(actions) {
         var remove = actions._nativeDelete;
         if (!remove || !remove.isConnected) return;
-        actions.style.left = remove.offsetLeft + 'px';
+        var width = Math.max(remove.offsetWidth, 104);
+        actions.style.left = Math.max(0, remove.offsetLeft + remove.offsetWidth - width) + 'px';
         actions.style.top = remove.offsetTop + 'px';
-        actions.style.width = Math.max(remove.offsetWidth, 64) + 'px';
+        actions.style.width = width + 'px';
     }
     function mount() {
         document.querySelectorAll(roots).forEach(function (root) {
