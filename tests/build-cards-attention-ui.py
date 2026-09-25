@@ -73,8 +73,10 @@ el('[data-cards-copy]').click();await wait(20);check(copiedText.includes('— @A
 group.value='lists';group.dispatchEvent(new Event('change'));await wait(60);
 for(const mode of ['dev','labels','lists']){group.value=mode;group.dispatchEvent(new Event('change'));await wait(60);check(!el('[data-cards-exclude-not-sure]').hidden,'Not Sure option visible for '+mode);el('[data-cards-exclude-not-sure] input').click();check(!el('#missing-slack-preview-rich').textContent.includes('Uncertain task'),'Not Sure excluded for '+mode);el('[data-cards-exclude-not-sure] input').click();check(el('#missing-slack-preview-rich').textContent.includes('Uncertain task'),'Not Sure restored for '+mode);}
 check(el('[data-add-developers]').hidden,'other grouping hides option');check(!el('#missing-slack-preview-rich').textContent.includes('— Alex'),'other grouping omits suffix');
-s4tPreferences.open();check(document.querySelectorAll('[data-feature-preference]').length===6,'only six major feature preferences');check([...document.querySelectorAll('[data-feature-preference]')].every(n=>n.checked),'all six features checked by default');
-check(!el('[data-feature-preference="attention.scope"]'),'no per-element settings');
+s4tPreferences.open();check(document.querySelectorAll('[data-feature-preference]').length===7,'six major features and one special setting');check([...document.querySelectorAll('[data-feature-preference]')].every(n=>n.checked===(n.dataset.featurePreference!=='hideNativeFilter')),'major features on and native filter hiding off by default');
+check(!el('[data-feature-preference="attention.scope"]'),'no per-element settings');const nativeFilter=document.createElement('button');nativeFilter.dataset.testid='filter-popover-button';document.body.append(nativeFilter);
+el('[data-feature-preference="hideNativeFilter"]').click();check(getComputedStyle(nativeFilter).display==='none','native filter button hidden');el('[data-feature-preference="hideNativeFilter"]').click();check(getComputedStyle(nativeFilter).display!=='none','native filter button restored');nativeFilter.remove();
+
 el('[data-feature-preference="members"]').click();check(getComputedStyle(el('#membersBurndownLink')).display==='none','members icon can be hidden');
 check(el('#s4t-preferences-dialog'),'preferences remain open when members is hidden');
 el('[data-feature-preference="cardsList"]').click();check(getComputedStyle(el('#s4t-cards-overlay')).display==='none','cards popup hidden');

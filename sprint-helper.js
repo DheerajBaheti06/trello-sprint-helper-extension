@@ -207,7 +207,8 @@ var S4T_TITLE_SEL = "[data-testid='card-name'], a[data-testid='card-name'], .lis
 function s4tBoardToolbarAnchor() {
     return Array.from(document.querySelectorAll('[data-testid="filter-popover-button"], [data-testid="board-filter-button"]')).find(function (node) {
         return !node.closest('#s4t-attention-panel, #s4t-cards-overlay, #s4t-modal-overlay') &&
-            node.getClientRects().length && window.getComputedStyle(node).visibility !== 'hidden';
+            ((node.getClientRects().length && window.getComputedStyle(node).visibility !== 'hidden') ||
+             (typeof s4tPreferences !== 'undefined' && s4tPreferences.enabled('hideNativeFilter') && node.parentElement && node.parentElement.getClientRects().length));
     });
 }
 
@@ -2986,7 +2987,9 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             controls.removeClass('s4t-attention-floating');
             cardsButton.removeClass('s4t-cards-floating');
             if (anchor.previousElementSibling !== cardsButton[0]) $(anchor).before(cardsButton);
-            if (cardsButton[0].previousElementSibling !== controls[0]) cardsButton.before(controls);
+            if (anchor.nextElementSibling !== controls[0]) $(anchor).after(controls);
+            var eow = document.getElementById('s4t-eow-launch');
+            if (eow && cardsButton[0].previousElementSibling !== eow) cardsButton.before(eow);
         } else {
             // Do not show temporary floating actions while Trello is loading its header.
             controls.detach();

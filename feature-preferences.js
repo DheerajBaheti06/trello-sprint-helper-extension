@@ -8,6 +8,9 @@ var s4tPreferences = (function () {
             ['cardsList', 'Cards List', 'Select cards and create Slack messages.', '#s4t-cards-launch, #s4t-cards-overlay'],
             ['eow', 'EOW Update', 'Create weekly task reports.', '#s4t-eow-launch, #s4t-eow-overlay']
         ]],
+        ['Special', [
+            ['hideNativeFilter', 'Hide Trello built-in filter', 'Hides the button only; existing Trello filters stay active.']
+        ]],
         ['Card tools', [
             ['checkAll', 'Check All', 'Complete every item in a checklist.', '.s4t-checklist-actions'],
             ['commentSearch', 'Comment search', 'Find text inside card comments.', '.s4t-comment-search-slot, .s4t-comment-navigator']
@@ -16,16 +19,17 @@ var s4tPreferences = (function () {
     var ids = new Set(groups.flatMap(function (group) { return group[1].map(function (entry) { return entry[0]; }); }));
     function clean(saved) {
         var next = {};
-        if (saved && typeof saved === 'object' && !Array.isArray(saved)) ids.forEach(function (id) { if (saved[id] === false) next[id] = false; });
+        if (saved && typeof saved === 'object' && !Array.isArray(saved)) ids.forEach(function (id) { if (typeof saved[id] === 'boolean') next[id] = saved[id]; });
         return next;
     }
     try { values = clean(JSON.parse(localStorage.getItem(key) || '{}')); } catch (_) {}
     // All features start checked; only an explicit saved opt-out disables one.
-    function enabled(id) { return values[id] !== false; }
+    function enabled(id) { return id === 'hideNativeFilter' ? values[id] === true : values[id] !== false; }
     function apply() {
         if (!style) { style = document.createElement('style'); style.id = 's4t-preference-styles'; (document.head || document.documentElement).appendChild(style); }
         var rules = [];
         groups.forEach(function (group) { group[1].forEach(function (entry) { if (!enabled(entry[0]) && entry[3]) rules.push(entry[3] + '{display:none!important}'); }); });
+        if (enabled('hideNativeFilter')) rules.push('[data-testid="filter-popover-button"], [data-testid="board-filter-button"]{display:none!important}');
         if (enabled('members')) rules.push('#s4t-preferences-launch{display:none!important}');
         style.textContent = rules.join('\n');
         document.dispatchEvent(new Event('s4t-preferences-changed'));
@@ -39,7 +43,7 @@ var s4tPreferences = (function () {
         var previous = document.activeElement;
         modal = document.createElement('div'); modal.id = 's4t-preferences-overlay';
         var dialog = document.createElement('section'); dialog.id = 's4t-preferences-dialog'; dialog.setAttribute('role','dialog'); dialog.setAttribute('aria-modal','true'); dialog.setAttribute('aria-labelledby','s4t-preferences-title');
-        dialog.innerHTML = '<header><h2 id="s4t-preferences-title">Preferences</h2><button type="button" aria-label="Close preferences">✕</button></header><p>Choose the features you want to see. Saved in this browser for all Trello boards. If Members Burndown is hidden, use the Preferences button on the board.</p><div class="s4t-preferences-groups"></div><footer><span role="status"></span><button type="button">Show all features</button></footer>';
+        dialog.innerHTML = '<header><h2 id="s4t-preferences-title">Preferences</h2><button type="button" aria-label="Close preferences">✕</button></header><p>Choose the features you want to see. Saved in this browser for all Trello boards. If Members Burndown is hidden, use the Preferences button on the board.</p><div class="s4t-preferences-groups"></div><footer><span role="status"></span><button type="button">Check Mark All features</button></footer>';
         var container = dialog.querySelector('.s4t-preferences-groups'), status = dialog.querySelector('[role="status"]');
         function close() { modal.remove(); modal = null; if (previous && previous.isConnected) previous.focus(); }
         dialog.querySelector('header button').onclick = close;
