@@ -32,7 +32,7 @@
    "web_accessible_resources": [
       {
          "matches": [
-            "<all_urls>"
+            "https://trello.com/*"
          ],
          "resources": [
             "images/storypoints-icon.png",

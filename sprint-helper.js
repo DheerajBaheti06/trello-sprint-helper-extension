@@ -969,8 +969,9 @@ function renderMembersHtml(members, excludeNotSure) {
     }
     var html = '';
     members.forEach(function (m) {
-        var assigned = m.assigned, completed = m.completed, remaining = m.remaining, progress = m.completionPercentage;
-        var cardsTotal = m.cardsTotal, cardsCompleted = m.cardsCompleted, cardsPending = m.cardsPending;
+        var number = function(value){return Number.isFinite(Number(value)) ? Math.max(0,Number(value)) : 0;};
+        var assigned = number(m.assigned), completed = number(m.completed), remaining = number(m.remaining), progress = Math.min(100,number(m.completionPercentage));
+        var cardsTotal = number(m.cardsTotal), cardsCompleted = number(m.cardsCompleted), cardsPending = number(m.cardsPending);
         if (excludeNotSure && (m.notSureAssigned || m.notSureCompleted || m.notSureCardsTotal)) {
             cardsTotal = Math.max(0, cardsTotal - (m.notSureCardsTotal || 0));
             cardsCompleted = Math.max(0, cardsCompleted - (m.notSureCardsCompleted || 0));
@@ -980,16 +981,18 @@ function renderMembersHtml(members, excludeNotSure) {
             remaining = Math.round(Math.max(0, assigned - completed) * 100) / 100;
             progress = assigned > 0 ? Math.min(100, Math.round(completed / assigned * 100)) : (cardsTotal > 0 ? Math.round(cardsCompleted / cardsTotal * 100) : 0);
         }
-        var avatarMarkup = m.avatar
-            ? '<img class="s4t-avatar" src="' + m.avatar + '" alt="' + m.name + '"/>'
-            : '<div class="s4t-avatar">' + (m.initials || '👤') + '</div>';
+        var avatar = s4tSafeAvatarUrl(m.avatar);
+        var name = s4tEscapeHtml(m.name), username = s4tEscapeHtml(m.username);
+        var avatarMarkup = avatar
+            ? '<img class="s4t-avatar" src="' + s4tEscapeHtml(avatar) + '" alt="' + name + '"/>'
+            : '<div class="s4t-avatar">' + s4tEscapeHtml(m.initials || '👤') + '</div>';
 
         html += [
             '<div class="s4t-member-card">',
             '<div class="s4t-member-info">',
             avatarMarkup,
             '<div class="s4t-member-meta">',
-            '<div class="s4t-member-name" title="' + m.name + (m.username && m.username !== m.name ? ' (@' + m.username + ')' : '') + '">' + m.name + (m.username && m.username !== m.name ? ' <span class="s4t-member-username">(@' + m.username + ')</span>' : '') + '</div>',
+            '<div class="s4t-member-name" title="' + name + (m.username && m.username !== m.name ? ' (@' + username + ')' : '') + '">' + name + (m.username && m.username !== m.name ? ' <span class="s4t-member-username">(@' + username + ')</span>' : '') + '</div>',
             '<div class="s4t-member-cards-count">' + cardsTotal + ' cards (' + cardsCompleted + ' done, ' + cardsPending + ' pending)</div>',
             '</div>',
             '</div>',
@@ -1051,6 +1054,28 @@ function s4tBindMetricCopy(root) {
     });
 }
 
+// Escape Trello-controlled values in HTML templates and quoted attributes.
+function s4tEscapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char];
+    });
+}
+function s4tSafeAvatarUrl(value) {
+    try {
+        var url = new URL(String(value || ''));
+        if (url.protocol !== 'https:' || url.username || url.password) return '';
+        var host = url.hostname.toLowerCase();
+        if (host !== 'trello-members.s3.amazonaws.com' && !['trello.com','atlassian.com','atl-paas.net','gravatar.com'].some(function (domain) { return host === domain || host.endsWith('.' + domain); })) return '';
+        return url.href;
+    } catch (_) { return ''; }
+}
+function s4tSpreadsheetText(value) {
+    var text = String(value == null ? '' : value);
+    // Prevent task text from being interpreted as a spreadsheet formula.
+    if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = "'" + text;
+    return s4tEscapeHtml(text);
+}
+
 function s4tSprintSummary(team) {
     var number = function (value) { return Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0; };
     var format = function (value, digits) { return String(Number(value.toFixed(digits))); };
@@ -1094,7 +1119,7 @@ function renderMembersBurndownModal(data) {
         '<div class="s4t-modal-header">',
         '<div class="s4t-modal-title-area">',
         '<h2 class="s4t-modal-title">Members Burndown</h2>',
-        '<span class="s4t-board-badge">' + data.boardName + '</span>',
+        '<span class="s4t-board-badge">' + s4tEscapeHtml(data.boardName) + '</span>',
         '</div>',
         '<div class="s4t-header-actions">',
         '<a id="s4t-dashboard-link" target="_blank" rel="noopener noreferrer" aria-disabled="true">View Full Dashboard</a>',
@@ -1772,7 +1797,7 @@ function showExcelExport() {
         s += '<tr><th>Points</th><th>Story</th><th>Description</th></tr>';
         $.each(data['lists'], function (key, list) {
             var list_id = list["id"];
-            s += '<tr><th colspan="3">' + list['name'] + '</th></tr>';
+            s += '<tr><th colspan="3">' + s4tSpreadsheetText(list['name']) + '</th></tr>';
 
             $.each(data["cards"], function (key, card) {
                 if (card["idList"] == list_id) {
@@ -1780,7 +1805,7 @@ function showExcelExport() {
                     var parsed = title.match(reg);
                     var points = parsed ? parsed[1] : '';
                     title = title.replace(reg, '');
-                    s += '<tr><td>' + points + '</td><td>' + title + '</td><td>' + card["desc"] + '</td></tr>';
+                    s += '<tr><td>' + s4tSpreadsheetText(points) + '</td><td>' + s4tSpreadsheetText(title) + '</td><td>' + s4tSpreadsheetText(card["desc"]) + '</td></tr>';
                 }
             });
             s += '<tr><td colspan=3></td></tr>';

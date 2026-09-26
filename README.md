@@ -43,7 +43,7 @@ Run `git pull --ff-only` from your cloned folder, or replace the files with the 
 
 ## Before using
 
-Point edits and **Check All** modify Trello cards. Cards assigned to everyone are excluded from Cards List/EOW; this also affects single-member boards. Review the [known limitations](RELIABILITY-REVIEW.md), including outstanding name-rendering security findings, before wider deployment.
+Point edits and **Check All** modify Trello cards. Cards assigned to everyone are excluded from Cards List/EOW; this also affects single-member boards. Review the [known limitations](RELIABILITY-REVIEW.md), including Trello compatibility and team-rule assumptions, before wider deployment.
 
 <details>
 <summary><strong>Advanced usage, data storage and developer setup</strong></summary>
@@ -64,7 +64,7 @@ Set `fullDashboardUrl` inside `renderMembersBurndownModal` in `sprint-helper.js`
 
 The extension reads Trello using your signed-in browser session. Point edits and Check All can modify Trello cards. Slack exports require manual copying/pasting. Feature preferences, Attention filters and EOW drafts are stored in Trello-origin local storage; clearing site data removes them. General settings use Chrome sync storage when available.
 
-Trello markup or endpoint changes can break integration. Cards assigned to every board member are excluded from Cards List/EOW, which also affects single-member boards. Done-list naming affects completion totals. See [the reliability review](RELIABILITY-REVIEW.md) for remaining findings, including unsafe name rendering; this is not a security-audited public release.
+Trello markup or endpoint changes can break integration. Cards assigned to every board member are excluded from Cards List/EOW, which also affects single-member boards. Done-list naming affects completion totals. See [the reliability review](RELIABILITY-REVIEW.md) for remaining findings, and the targeted security fixes; this has not undergone an independent security audit.
 
 ### Development
 

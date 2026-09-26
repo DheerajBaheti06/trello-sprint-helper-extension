@@ -4,7 +4,15 @@ Reviewed 2026-09-13. Scope: extension runtime (`sprint-helper.js`, `eow-update.j
 
 ## Follow-up — 2026-09-14
 
-Fixed issue 1 (board-specific cache, response identity checks, stale-refresh protection, navigation guard) and issue 8 (20-second timeout per primary/fallback request). Added `tests/board-cache.test.cjs`; regression suites pass. The remaining findings below describe the original audit and have not been changed. The assigned-to-everyone rule remains intentional per user direction.
+Fixed issue 1 (board-specific cache, response identity checks, stale-refresh protection, navigation guard) and issue 8 (20-second timeout per primary/fallback request). Added `tests/board-cache.test.cjs`; regression suites pass. The findings below describe the original audit; later fixes are recorded in the follow-ups. The assigned-to-everyone rule remains intentional per user direction.
+
+## Security follow-up — 2026-09-27
+
+Fixed issue 3: board/member names, usernames, initials and avatar attributes are escaped before HTML rendering. Avatar URLs now require HTTPS and approved Trello/Atlassian/Gravatar hosts; invalid URLs use initials. Member metrics are normalized to numbers before interpolation.
+
+The legacy spreadsheet export now escapes list names, card titles and descriptions and prefixes formula-like text with an apostrophe. Web-accessible image resources are limited to Trello pages instead of all websites. Added regression tests for malicious markup, avatar schemes/hosts, export content and resource scope.
+
+These are targeted security fixes, not an independent security audit or a guarantee against future Trello changes. Spreadsheet behavior still depends on the importing application; no desktop Excel integration test was performed. The bundled legacy jQuery dependency remains a maintenance risk and needs a separately tested migration.
 
 ## Confirmed issues, ordered by impact
 
@@ -20,7 +28,7 @@ Location: `sprint-helper.js`, `computeBurndownFromBoardData`, around line 372; e
 
 Completion uses unanchored substrings such as `complete`. A list called **Incomplete** marks a `(5) Build login` card complete with zero remaining points. Reproduced. Renaming Done to a team-specific name can cause the opposite problem. Prefer explicit done-list IDs per board, with deliberate defaults and a visible settings mapping, rather than fuzzy status detection.
 
-### 3. Board/member names are inserted as HTML (high)
+### 3. Board/member names are inserted as HTML (high; fixed 2026-09-27)
 
 Location: `sprint-helper.js`, `renderMembersHtml`, around line 918, and board badge markup in `renderMembersBurndownModal`.
 
