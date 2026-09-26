@@ -9,6 +9,7 @@
             "feature-preferences.js",
             "sprint-helper.js",
             "title-points-editor.js",
+            "comment-layout.js",
             "charts.js",
             "eow-update.js",
             "hover-selectors.js"
