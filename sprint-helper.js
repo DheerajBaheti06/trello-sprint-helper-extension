@@ -225,7 +225,7 @@ function updateBurndownLink() {
         updateBurndownLink.toolbar = toolbar;
     }
     if (!toolbar.find('#s4t-preferences-launch').length) {
-        $('<button type="button" id="s4t-preferences-launch" class="s4t-navbar-icon-btn" aria-label="Preferences" data-tooltip="Preferences">')
+        $('<button type="button" id="s4t-preferences-launch" class="s4t-navbar-icon-btn" aria-label="Settings" data-tooltip="Settings">')
             .text('⚙').on('click', function () { if (typeof s4tPreferences !== 'undefined') s4tPreferences.open(); }).appendTo(toolbar);
     }
     if (!toolbar.find('#membersBurndownLink').length) {
@@ -2019,6 +2019,23 @@ function s4tCompactAttentionLists(enabled) {
     });
 }
 
+// Hide in place: never remove or reinsert Trello's list nodes.
+function s4tHideEmptyAttentionLists(enabled) {
+    var wanted = new Set();
+    if (enabled) document.querySelectorAll(S4T_LIST_SEL).forEach(function (list) {
+        var cards = Array.from(list.querySelectorAll(S4T_CARD_SEL));
+        if (cards.some(function (card) { return !card.classList.contains('s4t-attention-hidden'); })) return;
+        var wrapper = list.closest('[data-testid="list-wrapper"], .list-wrapper');
+        wanted.add(wrapper || list);
+    });
+    document.querySelectorAll('.s4t-attention-list-hidden').forEach(function (node) {
+        if (!wanted.has(node)) node.classList.remove('s4t-attention-list-hidden');
+    });
+    wanted.forEach(function (node) {
+        if (!node.classList.contains('s4t-attention-list-hidden')) node.classList.add('s4t-attention-list-hidden');
+    });
+}
+
 function s4tIsCommonCard(card) {
     if (['asMy0RMf', '3DtkgH4w'].indexOf(card.shortLink) !== -1) return true;
     var name = String(card.name || '').replace(/[([{]\s*(?:\?|[-+]?\d+(?:\.\d+)?)(?:\s*\/\s*\d+(?:\.\d+)?)?\s*(?:pts?|points?)?\s*[)\]}]/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -2257,6 +2274,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
 (function () {
     if (typeof document === 'undefined') return;
     var board = null, data = null, selected = [], excluded = [], required = '', requiredComments = 'Tech Design\nTest Cases\nBranch';
+    var hideEmptyLists = false;
     var memberFilters = [], labelFilters = [], matchAll = false, switching = false, nativeBlocked = false, dataWaiters = [];
     var evaluateAttention = s4tCreateAttentionEvaluator(), wasCompacted = false;
     function attentionResult() {
@@ -2296,13 +2314,13 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     function applyFeaturePreferences() {
         if (typeof s4tPreferences === 'undefined') return;
         if (!s4tPreferences.enabled('attention')) {
-            selected = []; excluded = []; memberFilters = []; labelFilters = []; matchAll = false;
+            selected = []; excluded = []; memberFilters = []; labelFilters = []; matchAll = false; hideEmptyLists = false;
             commentRequest++; commentLoading = false; commentError = ''; close();
         }
     }
     document.addEventListener('s4t-preferences-changed', function () { applyFeaturePreferences(); clearHiddenNativeFilters(); apply(); });
 
-    function active() { return selected.length > 0 || excluded.length > 0 || memberFilters.length > 0 || labelFilters.length > 0; }
+    function active() { return hideEmptyLists || selected.length > 0 || excluded.length > 0 || memberFilters.length > 0 || labelFilters.length > 0; }
     function attentionIcon() {
         return '<svg class="s4t-attention-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="var(--ds-surface, #fff)"/><circle cx="16" cy="12" r="2" fill="var(--ds-surface, #fff)"/><circle cx="8" cy="18" r="2" fill="var(--ds-surface, #fff)"/></svg>';
     }
@@ -2321,7 +2339,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     }
     function saveFilters() {
         if (!board) return false;
-        var value = JSON.stringify({ selected: selected, excluded: excluded, members: memberFilters, labels: labelFilters, matchAll: matchAll });
+        var value = JSON.stringify({ selected: selected, excluded: excluded, members: memberFilters, labels: labelFilters, matchAll: matchAll, hideEmptyLists: hideEmptyLists });
         if (value === savedState) return true;
         try { localStorage.setItem('s4t-attention-filters-' + board, value); savedState = value; return true; } catch (_) { return false; }
     }
@@ -2331,7 +2349,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         board = current;
         dataWaiters.splice(0).forEach(function (callback) { callback(new Error('Board changed')); });
         request++; commentRequest++; commentLoading = false; commentError = ''; commentCache.clear();
-        data = null; selected = []; excluded = []; loading = false; error = ''; refreshed = '';
+        data = null; selected = []; excluded = []; hideEmptyLists = false; loading = false; error = ''; refreshed = '';
         memberFilters = []; labelFilters = [];
         matchAll = false;
         savedState = '';
@@ -2344,6 +2362,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             memberFilters = Array.isArray(stored.members) ? stored.members.filter(function (id) { return typeof id === 'string'; }) : [];
             labelFilters = Array.isArray(stored.labels) ? stored.labels.filter(function (id) { return typeof id === 'string'; }) : [];
             matchAll = stored.matchAll === true;
+            hideEmptyLists = stored.hideEmptyLists === true;
         } catch (_) { /* Ignore malformed stored preferences. */ }
         try { required = localStorage.getItem(storageKey()) || ''; } catch (_) { required = ''; }
         try { requiredComments = localStorage.getItem('s4t-attention-comment-names-' + board) ?? 'Tech Design\nTest Cases\nBranch'; } catch (_) { requiredComments = 'Tech Design\nTest Cases\nBranch'; }
@@ -2352,6 +2371,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             el.classList.remove('s4t-attention-hidden');
         });
         compactLists(false);
+        s4tHideEmptyAttentionLists(false);
     }
 
     function close() {
@@ -2603,7 +2623,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         var attentionInput = target.closest('#s4t-attention-panel input[type="checkbox"]');
         if (attentionInput && nativeFiltersActive()) {
             var desired = attentionInput.checked;
-            var attribute = ['data-check', 'data-exclude-list', 'data-list-group', 'data-attention-member', 'data-attention-all-members', 'data-attention-all-labels', 'data-attention-label'].find(function (name) { return attentionInput.hasAttribute(name); });
+            var attribute = ['data-hide-empty-lists', 'data-check', 'data-exclude-list', 'data-list-group', 'data-attention-member', 'data-attention-all-members', 'data-attention-all-labels', 'data-attention-label'].find(function (name) { return attentionInput.hasAttribute(name); });
             var value = attribute && attentionInput.getAttribute(attribute);
             event.preventDefault(); event.stopImmediatePropagation();
             switchToAttention(function () {
@@ -2622,7 +2642,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     }, true);
 
     function clearFilters() {
-        selected = []; excluded = []; memberFilters = []; labelFilters = []; matchAll = false;
+        selected = []; excluded = []; memberFilters = []; labelFilters = []; matchAll = false; hideEmptyLists = false;
         if (panel) panel.find('input[type="checkbox"]').prop('checked', false);
         apply();
         if (button) button.focus();
@@ -2670,10 +2690,11 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             }
         });
         compactLists(filterActive);
+        s4tHideEmptyAttentionLists(filterActive && hideEmptyLists);
         document.body.classList.toggle('s4t-attention-active-filter', filterActive);
         if (changed) calcListPoints();
         if (button) {
-            var label = active() ? 'Attention • ' + (selected.length + excluded.length + memberFilters.length + labelFilters.length) : 'Attention';
+            var label = active() ? 'Attention • ' + (selected.length + excluded.length + memberFilters.length + labelFilters.length + (hideEmptyLists ? 1 : 0)) : 'Attention';
             if (nativeBlocked) label += ' (paused: Trello filters active)';
             button.attr('aria-label', label).attr('data-tooltip', label);
             button.toggleClass('s4t-attention-active', active());
@@ -2963,6 +2984,10 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             if (tooltip) row.append($('<span class="s4t-attention-info" tabindex="0" aria-label="Completion filter details">').attr('data-tooltip', tooltip).text('ⓘ'));
             checks.append(row);
         }
+        checks.append($('<label class="s4t-attention-option">').append(
+            $('<input type="checkbox" data-hide-empty-lists>').prop('checked', hideEmptyLists).on('change', function () { hideEmptyLists = this.checked; apply(); }),
+            $('<span>').text('Hide empty lists'),
+            $('<span class="s4t-attention-info" tabindex="0" aria-label="Hide empty lists details">').attr('data-tooltip', 'Hide lists with no matching cards. Original list order is preserved.').text('ⓘ')));
         option('scope', 'Missing Scope', 'description is missing');
         option('estimate', 'Missing Assigned Points', 'assigned points missing');
         option('missingCompleted', 'Missing Completed Points', 'completed points missing');
@@ -3145,6 +3170,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                 });
             });
         }
+        if (active() && !nativeBlocked && data) s4tHideEmptyAttentionLists(hideEmptyLists);
         if (visibilityChanged) calcListPoints();
         if (mutations.every(function (mutation) { return mutation.type === 'attributes'; })) return;
         if (mutations.every(function (mutation) {

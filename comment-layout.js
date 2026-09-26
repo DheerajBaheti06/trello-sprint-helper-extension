@@ -6,9 +6,52 @@
     style.textContent += '.s4t-comment-layout-toggle[hidden]{display:none!important}.s4t-review-marker-on [data-testid="card-back-title"],.s4t-review-marker-on [data-testid="card-back-title-input"],.s4t-review-marker-on .description-content,.s4t-review-marker-on .ak-renderer-document,.s4t-review-marker-on .comment-container,.s4t-review-marker-on [data-testid="comment-text"]{cursor:crosshair}#s4t-review-ink-layer{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;padding:0;margin:0;border:0;background:transparent;pointer-events:none;overflow:hidden}#s4t-review-ink-layer::backdrop{background:transparent;pointer-events:none}#s4t-review-ink{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2147483600;pointer-events:none;overflow:hidden}.s4t-review-laser-glow{filter:blur(2px);animation:s4t-laser-glow .8s ease-in-out infinite alternate}@keyframes s4t-laser-glow{from{opacity:.55}to{opacity:.95}}.s4t-review-stroke-fading{animation:s4t-review-fade .3s ease-out forwards}@keyframes s4t-review-fade{to{opacity:0}}@media(prefers-reduced-motion:reduce){.s4t-review-stroke-fading{animation:none;opacity:0}.s4t-review-laser-glow{animation:none;opacity:.75}}';
     style.textContent += '.s4t-review-no-selection,.s4t-review-no-selection *{user-select:none!important;-webkit-user-select:none!important}.s4t-review-no-selection input,.s4t-review-no-selection textarea,.s4t-review-no-selection [contenteditable="true"],.s4t-review-no-selection [contenteditable="true"] *{user-select:text!important;-webkit-user-select:text!important}.s4t-review-no-selection [contenteditable="true"],.s4t-review-no-selection textarea{cursor:text}.s4t-review-marker:disabled{opacity:.45;cursor:default}';
     document.head.appendChild(style);
+    function enabled(id){return typeof s4tPreferences==='undefined'||s4tPreferences.enabled(id);}
     function currentCard(){return slot&&slot.closest('[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window, [role="dialog"]');}
     var titleSelector='[data-testid="card-back-title"],[data-testid="card-back-title-input"],[data-testid="card-back-title-container"],.card-detail-title,textarea.js-card-detail-title-input';
     var contentSelector='.ak-renderer-document,.markeddown,.comment-container,.current-comment,.action-comment,[data-testid="comment-text"],[data-testid="comment-content"],[data-testid="action-comment"],[data-testid="card-back-comment"],[data-testid="card-back-action-comment"],[data-testid="card-back-description"],[data-testid="description-content"],.description-content';
+    var descriptionSelector='[data-testid="card-back-description"],[data-testid="card-back-description-content"],[data-testid="description-content"],[data-testid="card-description"],.description-content,.js-card-desc,.js-desc';
+    function descriptionBody(target){
+        var card=currentCard();
+        if(!target||!card||!card.contains(target)||target.closest(titleSelector))return null;
+        // Read-only Trello renderers can have role="textbox" and generated
+        // wrappers. Those roles do not mean an actual editor is open.
+        if(target.closest('input,textarea,select,[contenteditable="true"],.ProseMirror'))return null;
+        var surface=target.closest(descriptionSelector);
+        if(!surface){
+            var rendered=target.closest('.ak-renderer-document,.markeddown');
+            var comment=target.closest('.comment-container,.current-comment,.action-comment,[data-testid*="comment"],[data-testid*="action"]');
+            if(rendered&&!comment)surface=rendered;
+        }
+        if(!surface){
+            // Include whitespace around the rendered description, but never
+            // infer from the whole card or another card section.
+            for(var section=target;section&&section!==card;section=section.parentElement){
+                if(section.querySelector('.s4t-comment-search-slot'))break;
+                var heading=section.querySelector('h2,h3,[role="heading"]');
+                if(heading&&/^description$/i.test(heading.textContent.trim())){
+                    surface=section;break;
+                }
+            }
+        }
+        if(!surface)return null;
+        var control=target.closest('button,a,[role="button"],[data-testid="description-edit-button"],[data-testid="card-back-description-edit-button"]');
+        // A button wrapping the renderer is the click-to-edit surface, not
+        // the separate Edit control. Links and buttons within text still work.
+        if(control&&!control.contains(surface)&&!control.querySelector('.ak-renderer-document,.markeddown'))return null;
+        return surface;
+    }
+    function guardDescriptionEdit(event){
+        if(!markerEnabled)return;
+        var target=event.target instanceof Element?event.target:event.target.parentElement;
+        if(!descriptionBody(target))return;
+        event.preventDefault();event.stopImmediatePropagation();
+    }
+    ['mousedown','mouseup','click','dblclick'].forEach(function(type){window.addEventListener(type,guardDescriptionEdit,true);});
+    window.addEventListener('pointerup',function(event){
+        // Finish the ink stroke before blocking Trello's pointer-up edit handler.
+        if(markerEnabled&&descriptionBody(event.target)){finishStroke(event);guardDescriptionEdit(event);}
+    },true);
     function editingComment(){
         var card=currentCard();if(!card)return false;
         return Array.from(card.querySelectorAll('textarea,input,[contenteditable="true"]')).some(function(field){
@@ -32,7 +75,7 @@
         inkTimers.forEach(clearTimeout);inkTimers.clear();if(inkLayer)inkLayer.remove();else if(ink)ink.remove();inkLayer=null;ink=null;
     }
     function setMarker(enabled){
-        markerEnabled=enabled&&!!currentCard()&&!editingComment();
+        markerEnabled=enabled&&(typeof s4tPreferences==='undefined'||s4tPreferences.enabled('laserPointer'))&&!!currentCard()&&!editingComment();
         if(markerCard)markerCard.classList.remove('s4t-review-marker-on','s4t-review-no-selection');
         markerCard=markerEnabled?currentCard():null;
         if(markerCard)markerCard.classList.add('s4t-review-marker-on','s4t-review-no-selection');
@@ -56,16 +99,18 @@
         // The title's display-only point mirror lives outside the card DOM.
         if(target.closest('#s4t-title-point-highlight'))target=card.querySelector(typeof s4tTitleEditorSelector==='string'?s4tTitleEditorSelector:titleSelector)||target;
         if(!card.contains(target)||target.closest('.s4t-comment-search-slot,.s4t-comment-navigator'))return;
-        var rendered=target.closest(contentSelector+','+titleSelector);
+        var description=descriptionBody(target);
+        var rendered=target.closest(contentSelector+','+titleSelector)||description;
         if(!rendered&&!(collapsed&&collapsed.comments.contains(target)))return;
         var idleTitle=target.matches('input,textarea')&&target.closest(titleSelector)&&document.activeElement!==target;
         for(var node=target;node&&node!==card;node=node.parentElement){
             if(node===target&&idleTitle)continue;
-            if(node.matches('a,button,input,textarea,select,[contenteditable="true"],[role="textbox"]'))return;
+            if(description&&(node===description||node.contains(description)))continue;
+            if(node.matches('a,button,input,textarea,select,[contenteditable="true"],[role="textbox"]')&&!(description&&node.getAttribute('role')==='textbox'&&!node.isContentEditable))return;
             if(node.matches('[role="button"]')&&(!rendered||rendered.contains(node)))return;
         }
         var comment=rendered||collapsed.comments;
-        event.preventDefault();event.stopPropagation();document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
+        event.preventDefault();event.stopImmediatePropagation();document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
         if(!ink){ink=document.createElementNS('http://www.w3.org/2000/svg','svg');ink.id='s4t-review-ink';ink.setAttribute('aria-hidden','true');
             // Keep ink inside Trello's dialog/top layer rather than behind its backdrop.
             var host=card;
@@ -142,6 +187,7 @@
         toggle.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6M7 7h4M7 11h3M7 15h3"/><circle cx="16" cy="7" r="4"/><path d="m19 10 3 3"/></svg>';
         toggle.addEventListener('click',function(event){
             event.preventDefault();event.stopPropagation();
+            if(!enabled('reviewMode'))return;
             if(collapsed)restore();else{
                 var found=columns();
                 if(!found){toggle.setAttribute('data-tooltip','Comments already use the available width');document.dispatchEvent(new Event('s4t-dismiss-tooltip'));return;}
@@ -157,5 +203,6 @@
         slot.prepend(toggle,markerButton);updateLabel();
     }
     new MutationObserver(function(){syncEditor();if(!queued)queued=setTimeout(mount,50);}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['contenteditable','hidden','disabled','aria-hidden']});
+    document.addEventListener('s4t-preferences-changed',function(){if(!enabled('reviewMode')&&collapsed)restore();if(!enabled('laserPointer'))setMarker(false);});
     window.addEventListener('popstate',mount);mount();
 })();

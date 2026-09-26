@@ -56,6 +56,13 @@ function s4tChartCopyText(board, excludeNotSure, tab, fields) {
 
 var s4tOpenCharts = (function () {
     var overlay, peekWindow, openingPeek = false;
+    function enabled(){return typeof s4tPreferences==='undefined'||s4tPreferences.enabled('charts');}
+    if(typeof document!=='undefined') document.addEventListener('s4t-preferences-changed',function(){
+        if(enabled())return;
+        if(overlay){overlay.remove();overlay=null;}
+        if(peekWindow&&!peekWindow.closed)peekWindow.close();
+        peekWindow=null;
+    });
     var copyPreferences={},copyKey='s4t-chart-copy-template-v1';
     function readFields(tab){try{var saved=JSON.parse(localStorage.getItem(copyKey)||'{}');if(saved&&typeof saved==='object')copyPreferences=saved;}catch(_){}return s4tChartCopyFields(tab,copyPreferences[tab]);}
 
@@ -229,6 +236,7 @@ var s4tOpenCharts = (function () {
                     if(dialog.isConnected){var message=dialog.querySelector('.s4t-chart-pop-error');if(!message){message=el('p',undefined,content);message.className='s4t-chart-pop-error';message.setAttribute('role','status');}message.textContent='Could not open chart window. Allow pop-ups and try again.';}
                     return;
                 }
+                if(!enabled()){pop.close();return;}
                 peekWindow=pop;
                 pop.opener=null;pop.document.title='Sprint Helper Charts';
                 pop.document.body.style.cssText='margin:0;width:100vw;height:100dvh;overflow:hidden;background:'+background;
@@ -245,7 +253,7 @@ var s4tOpenCharts = (function () {
         return {select:function(value){tab=value;render();if(detached){var slice=dialog.querySelector('.s4t-chart-slice');if(slice)slice.focus();}}};
     }
     return function () {
-        if(overlay) return;
+        if(!enabled() || overlay) return;
         var boardId=getBoardShortLink();if(!boardId)return;
         var exclude=!!document.getElementById('s4t-exclude-not-sure')?.checked, previous=document.activeElement;
         overlay=document.createElement('div');overlay.className='s4t-chart-overlay';document.body.appendChild(overlay);

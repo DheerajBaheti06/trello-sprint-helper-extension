@@ -16,6 +16,18 @@ var copiedText='';Object.defineProperty(navigator,'clipboard',{value:{writeText:
 tests='''const wait=ms=>new Promise(r=>setTimeout(r,ms)),el=s=>document.querySelector(s),check=(v,m)=>{if(!v)errors.push(m)};
 (async()=>{try{
 el('#s4t-attention-button').click();await wait(60);
+const emptyWrapper=document.createElement('div');emptyWrapper.className='list-wrapper';emptyWrapper.innerHTML='<div data-testid="list" data-list-id="empty"></div>';document.body.append(emptyWrapper);
+const nextSibling=emptyWrapper.nextSibling,originalParent=emptyWrapper.parentNode;
+el('[data-hide-empty-lists]').click();
+check(emptyWrapper.classList.contains('s4t-attention-list-hidden'),'empty list wrapper is hidden');
+check(JSON.parse(localStorage.getItem('s4t-attention-filters-fixture')).hideEmptyLists===true,'hide empty persists');
+emptyWrapper.firstChild.innerHTML='<div data-testid="list-card"><a href="/c/newvisible">New visible card</a></div>';await wait(30);
+check(!emptyWrapper.classList.contains('s4t-attention-list-hidden'),'new visible card restores list');
+emptyWrapper.firstChild.innerHTML='';await wait(30);
+check(emptyWrapper.classList.contains('s4t-attention-list-hidden'),'removing last card hides list');
+el('[data-hide-empty-lists]').click();
+check(!emptyWrapper.classList.contains('s4t-attention-list-hidden'),'unchecking restores empty list');
+check(emptyWrapper.parentNode===originalParent && emptyWrapper.nextSibling===nextSibling,'list never moved');emptyWrapper.remove();
 check([...document.querySelectorAll('.s4t-attention-column-heading h3')].map(n=>n.textContent).join(',')==='Members,Exclude lists,Labels','member and list column order');
 const scopedBoard={members:[{id:'a',fullName:'Alex'},{id:'b',fullName:'Blair'}],lists:[{id:'a',name:'Alex Not Sure'},{id:'b',name:'Blair Todo'},{id:'empty',name:'done-closed'}],cards:[{idList:'a',name:'A',idMembers:['a']},{idList:'b',name:'B',idMembers:['b']}]};
 check(s4tAttentionMemberLists(scopedBoard,['a'],false).map(l=>l.id).join(',')==='a','only lists with selected member cards visible');
@@ -37,6 +49,7 @@ el('[data-check="scope"]').click();
 const list=el('[data-testid="list"]');list.innerHTML=boardData.cards.map(c=>'<div data-testid="list-card"><a href="/c/'+c.shortLink+'">'+c.name+'</a></div>').join('');await Promise.resolve();await Promise.resolve();
 check(el('a[href="/c/bbb"]').parentElement.classList.contains('s4t-attention-hidden'),'remount filtered before timer');
 list.setAttribute('data-list-id','todo');el('[data-exclude-list="todo"]').click();
+el('[data-hide-empty-lists]').click();check(list.classList.contains('s4t-attention-list-hidden'),'list with all cards filtered out is hidden');el('[data-hide-empty-lists]').click();check(!list.classList.contains('s4t-attention-list-hidden'),'filtered list restored when unchecked');
 list.insertAdjacentHTML('beforeend','<div data-testid="list-card"><a href="/c/newcard">New card absent from snapshot</a></div>');await Promise.resolve();await Promise.resolve();
 check(el('a[href="/c/newcard"]').parentElement.classList.contains('s4t-attention-hidden'),'new card in excluded list hidden immediately');
 el('[data-check="missingComments"]').click();await wait(40);check([...list.querySelectorAll('[data-testid="list-card"]')].every(n=>n.classList.contains('s4t-attention-hidden')),'excluded list wins over comment results');
@@ -73,7 +86,10 @@ el('[data-cards-copy]').click();await wait(20);check(copiedText.includes('— @A
 group.value='lists';group.dispatchEvent(new Event('change'));await wait(60);
 for(const mode of ['dev','labels','lists']){group.value=mode;group.dispatchEvent(new Event('change'));await wait(60);check(!el('[data-cards-exclude-not-sure]').hidden,'Not Sure option visible for '+mode);el('[data-cards-exclude-not-sure] input').click();check(!el('#missing-slack-preview-rich').textContent.includes('Uncertain task'),'Not Sure excluded for '+mode);el('[data-cards-exclude-not-sure] input').click();check(el('#missing-slack-preview-rich').textContent.includes('Uncertain task'),'Not Sure restored for '+mode);}
 check(el('[data-add-developers]').hidden,'other grouping hides option');check(!el('#missing-slack-preview-rich').textContent.includes('— Alex'),'other grouping omits suffix');
-s4tPreferences.open();check(document.querySelectorAll('[data-feature-preference]').length===7,'six major features and one special setting');check([...document.querySelectorAll('[data-feature-preference]')].every(n=>n.checked===(n.dataset.featurePreference!=='hideNativeFilter')),'major features on and native filter hiding off by default');
+s4tPreferences.open();check(document.querySelectorAll('[data-feature-preference]').length===11,'ten major features and one special setting');check([...document.querySelectorAll('[data-feature-preference]')].every(n=>n.checked===(n.dataset.featurePreference!=='hideNativeFilter')),'major features on and native filter hiding off by default');
+const tools=document.createElement('div');tools.innerHTML='<div class="s4t-comment-search-slot"><button class="s4t-comment-layout-toggle">Review</button><button class="s4t-review-marker">Laser</button><div class="s4t-comment-navigator">Search</div></div><button id="s4t-charts-action">Charts</button>';document.body.append(tools);
+el('[data-feature-preference="commentSearch"]').click();check(getComputedStyle(tools.querySelector('.s4t-comment-search-slot')).display!=='none','search setting keeps review toolbar visible');check(getComputedStyle(tools.querySelector('.s4t-comment-navigator')).display==='none','search hidden independently');el('[data-feature-preference="commentSearch"]').click();
+for(const [key,selector] of [['reviewMode','.s4t-comment-layout-toggle'],['laserPointer','.s4t-review-marker'],['charts','#s4t-charts-action']]){el('[data-feature-preference="'+key+'"]').click();check(getComputedStyle(tools.querySelector(selector)).display==='none',key+' hidden');el('[data-feature-preference="'+key+'"]').click();}tools.remove();
 check(!el('[data-feature-preference="attention.scope"]'),'no per-element settings');const nativeFilter=document.createElement('button');nativeFilter.dataset.testid='filter-popover-button';document.body.append(nativeFilter);
 el('[data-feature-preference="hideNativeFilter"]').click();check(getComputedStyle(nativeFilter).display==='none','native filter button hidden');el('[data-feature-preference="hideNativeFilter"]').click();check(getComputedStyle(nativeFilter).display!=='none','native filter button restored');nativeFilter.remove();
 

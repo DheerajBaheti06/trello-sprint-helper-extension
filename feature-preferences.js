@@ -8,12 +8,18 @@ var s4tPreferences = (function () {
             ['cardsList', 'Cards List', 'Select cards and create Slack messages.', '#s4t-cards-launch, #s4t-cards-overlay'],
             ['eow', 'EOW Update', 'Create weekly task reports.', '#s4t-eow-launch, #s4t-eow-overlay']
         ]],
+        ['Charts', [
+            ['charts', 'Sprint charts', 'Developer points and label distribution, including pop-out charts.', '#s4t-charts-action, .s4t-chart-overlay']
+        ]],
         ['Special', [
             ['hideNativeFilter', 'Hide Trello built-in filter', 'Hides Trello filters and clears restored native filters; Attention stays unchanged.']
         ]],
         ['Card tools', [
             ['checkAll', 'Check All', 'Complete every item in a checklist.', '.s4t-checklist-actions'],
-            ['commentSearch', 'Comment search', 'Find text inside card comments.', '.s4t-comment-search-slot, .s4t-comment-navigator']
+            ['commentSearch', 'Comment search', 'Find text inside card comments.', '.s4t-comment-navigator'],
+            ['titlePoints', 'Quick point editing', 'Highlighted assigned/completed brackets in the card title.'],
+            ['reviewMode', 'Review mode', 'Expand comments by hiding the left card section.', '.s4t-comment-layout-toggle:not(.s4t-review-marker)'],
+            ['laserPointer', 'Laser pointer', 'Temporary highlights over the title, description and comments.', '.s4t-review-marker']
         ]]
     ];
     var ids = new Set(groups.flatMap(function (group) { return group[1].map(function (entry) { return entry[0]; }); }));
@@ -43,7 +49,7 @@ var s4tPreferences = (function () {
         var previous = document.activeElement;
         modal = document.createElement('div'); modal.id = 's4t-preferences-overlay';
         var dialog = document.createElement('section'); dialog.id = 's4t-preferences-dialog'; dialog.setAttribute('role','dialog'); dialog.setAttribute('aria-modal','true'); dialog.setAttribute('aria-labelledby','s4t-preferences-title');
-        dialog.innerHTML = '<header><h2 id="s4t-preferences-title">Preferences</h2><button type="button" aria-label="Close preferences">✕</button></header><p>Choose the features you want to see. Saved in this browser for all Trello boards. If Members Burndown is hidden, use the Preferences button on the board.</p><div class="s4t-preferences-groups"></div><footer><span role="status"></span><button type="button">Check Mark All features</button></footer>';
+        dialog.innerHTML = '<header><h2 id="s4t-preferences-title">Settings</h2><button type="button" aria-label="Close settings">✕</button></header><p>Choose the features you want to see. Saved in this browser for all Trello boards. If Members Burndown is hidden, use the Settings button on the board.</p><div class="s4t-preferences-groups"></div><footer><span role="status"></span><button type="button">Reset to defaults</button></footer>';
         var container = dialog.querySelector('.s4t-preferences-groups'), status = dialog.querySelector('[role="status"]');
         function close() { modal.remove(); modal = null; if (previous && previous.isConnected) previous.focus(); }
         dialog.querySelector('header button').onclick = close;
@@ -64,7 +70,7 @@ var s4tPreferences = (function () {
                 }); container.appendChild(field);
             });
         }
-        dialog.querySelector('footer button').onclick = function () { if (save({})) { render(); status.textContent = 'All features shown.'; } else status.textContent = 'Could not save preferences. Try again.'; };
+        dialog.querySelector('footer button').onclick = function () { if (save({})) { render(); status.textContent = 'Features enabled; native filter hiding off.'; } else status.textContent = 'Could not save preferences. Try again.'; };
         modal.appendChild(dialog); document.body.appendChild(modal); render(); dialog.querySelector('button').focus();
         modal.onmousedown = function (event) { if (event.target === modal) close(); };
         modal.onkeydown = function (event) {

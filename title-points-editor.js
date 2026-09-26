@@ -23,6 +23,7 @@ function s4tSetTitleValue(input, value) {
 
 var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"], textarea[data-testid="card-back-title-input"], input[data-testid="card-back-title-input"], textarea[data-testid="card-name-input"], [data-testid="card-back-title-container"] textarea, [data-testid="card-back-title-container"] input[type="text"]';
 (function () {
+    function enabled() { return typeof s4tPreferences === 'undefined' || s4tPreferences.enabled('titlePoints'); }
     var selector = s4tTitleEditorSelector;
     var highlighted, mirror, viewStyle;
     function restoreView() {
@@ -38,6 +39,7 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         mirror = null; highlighted = null;
     }
     function highlight(input) {
+        if (!enabled()) { removeHighlight(); return; }
         var viewing = !edits.has(input);
         if (viewStyle && (viewStyle.input !== input || !viewing)) restoreView();
         if (!input.isConnected) { removeHighlight(); return; }
@@ -82,7 +84,7 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
     window.addEventListener('resize', function () { if (highlighted) highlight(highlighted); });
     var edits = new WeakMap();
     function begin(input) {
-        if (!input.matches || !input.matches(selector) || input.readOnly || input.disabled || edits.has(input)) return;
+        if (!enabled() || !input.matches || !input.matches(selector) || input.readOnly || input.disabled || edits.has(input)) return;
         var original = input.value, prepared = s4tTitlePointSlots(original, true);
         edits.set(input, { original: original, prepared: prepared });
         var start = input.selectionStart, end = input.selectionEnd;
@@ -120,6 +122,7 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         if (event.target.closest('.card-detail-title .js-save-edit')) finish(document.activeElement, false);
     }, true);
     function syncView() {
+        if (!enabled()) { removeHighlight(); return; }
         var input = Array.from(document.querySelectorAll(selector)).find(function (node) { return node.getClientRects().length && !node.disabled; });
         if (!input) { removeHighlight(); return; }
         if (document.activeElement === input) begin(input);
@@ -133,5 +136,11 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         })) return;
         syncView();
     }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['readonly', 'data-testid'] });
+    document.addEventListener('s4t-preferences-changed', function () {
+        if (!enabled()) {
+            document.querySelectorAll(selector).forEach(function (input) { finish(input, false); });
+            removeHighlight();
+        } else syncView();
+    });
     syncView();
 })();

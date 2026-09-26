@@ -11,7 +11,7 @@ Built on [Scrum for Trello](https://github.com/Q42/TrelloScrum) by Q42, it exten
 | Workflow | What you can do |
 | --- | --- |
 | **Members Burndown** | Review completed and remaining hours, card completion and individual workloads in one sprint overview. Charts opens interactive developer-points and label-distribution pies with a pop-out view. |
-| **Preferences** | Open Members Burndown → Preferences to show or hide the four board features, Check All and comment search. Choices apply across boards in this browser; Show all features restores the defaults. |
+| **Settings** | Open Members Burndown → Settings to control the four board features, charts, Check All, comment search, quick point editing, Review mode and the laser pointer. Choices apply across boards in this browser. All features start enabled; hiding Trello’s native filter is optional. Reset to defaults restores these choices. |
 | **Attention** | Combine scope, points, hotfix and checklist checks with member, label and list filters. Preserve selections and import native Trello filters. |
 | **Cards List & Slack Preview** | Select filtered cards, group them by developer, label or list, choose title/link formats, optionally append developer names when grouping by labels, and copy from the preview panel. |
 | **EOW Update** | Build weekly reports with task categories, drag-and-drop organization, list exclusions, points display and editable Slack previews. |
