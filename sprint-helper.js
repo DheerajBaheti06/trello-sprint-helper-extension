@@ -1703,18 +1703,19 @@ function showPointPicker(targetEl) {
         var value = $(this).text();
         var $text = $('.card-detail-title .edit textarea'); // old text-areas
         if ($text.length == 0) {
-            $text = $('textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]'); // new text-area
+            $text = $(typeof s4tTitleEditorSelector === 'string' ? s4tTitleEditorSelector : 'textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]'); // new text-area
         }
         var text = $text.val();
 
         // replace estimates in card title
-        $text[0].value = text.match(reg) ? text.replace(reg, '(' + value + ') ') : '(' + value + ') ' + text;
+        s4tSetTitleValue($text[0], s4tTitlePointSlots(text, true).replace(/^\([^)]*\)/, '(' + value + ')'));
+        s4tSetTitleValue($text[0], s4tTitlePointSlots($text[0].value, false));
 
         // in old-textarea method, click our button so it all gets saved away
         $(".card-detail-title .edit .js-save-edit").click();
         // in new-textarea method, have to do a few actions to get it to save after we click away from the card
-        $('textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').click();
-        $('textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').focus();
+        $(typeof s4tTitleEditorSelector === 'string' ? s4tTitleEditorSelector : 'textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').click();
+        $(typeof s4tTitleEditorSelector === 'string' ? s4tTitleEditorSelector : 'textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').focus();
 
         return false;
     }));
@@ -1728,18 +1729,19 @@ function showPointPicker(targetEl) {
         var value = $(this).text();
         var $text = $('.card-detail-title .edit textarea'); // old text-areas
         if ($text.length == 0) {
-            $text = $('textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]'); // new text-area
+            $text = $(typeof s4tTitleEditorSelector === 'string' ? s4tTitleEditorSelector : 'textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]'); // new text-area
         }
         var text = $text.val();
 
         // replace consumed value in card title
-        $text[0].value = text.match(regC) ? text.replace(regC, ' [' + value + ']') : text + ' [' + value + ']';
+        s4tSetTitleValue($text[0], s4tTitlePointSlots(text, true).replace(/\[[^\]]*\]$/, '[' + value + ']'));
+        s4tSetTitleValue($text[0], s4tTitlePointSlots($text[0].value, false));
 
         // in old-textarea method, click our button so it all gets saved away
         $(".card-detail-title .edit .js-save-edit").click();
         // in new-textarea method, have to do a few actions to get it to save after we click away from the card
-        $('textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').click();
-        $('textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').focus();
+        $(typeof s4tTitleEditorSelector === 'string' ? s4tTitleEditorSelector : 'textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').click();
+        $(typeof s4tTitleEditorSelector === 'string' ? s4tTitleEditorSelector : 'textarea.js-card-detail-title-input, textarea[data-testid="card-back-title"]').focus();
 
         return false;
     }));
@@ -2273,7 +2275,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             commentRequest++; commentLoading = false; commentError = ''; close();
         }
     }
-    document.addEventListener('s4t-preferences-changed', function () { applyFeaturePreferences(); apply(); });
+    document.addEventListener('s4t-preferences-changed', function () { applyFeaturePreferences(); clearHiddenNativeFilters(); apply(); });
 
     function active() { return selected.length > 0 || excluded.length > 0 || memberFilters.length > 0 || labelFilters.length > 0; }
     function attentionIcon() {
@@ -2358,7 +2360,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             if (names.some(function (value) {
                 var name = (value || '').replace(/\s+/g, ' ').trim();
                 return /^clear (all )?filters(?:\s*\(\d+\))?$/i.test(name) ||
-                    (popover && popover.contains(node) && /^clear(?: all)?$/i.test(name));
+                    ((popover && popover.contains(node) || node.closest('[data-testid="board-header"], .board-header')) && /^clear(?: all)?$/i.test(name));
             })) known.push(node);
         });
         return known.find(function (node) { return outsideAttention(node) && !node.closest('.window, .card-detail-window, [data-testid="card-back"], [data-testid="card-back-container"]') && !node.disabled && node.getAttribute('aria-disabled') !== 'true' && node.getClientRects().length; });
@@ -2380,6 +2382,42 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             }
         }
         return !!nativeClearButton();
+    }
+    var hiddenNativeReset = { key: '', attempts: 0, next: 0 };
+    function clearHiddenNativeFilters() {
+        var hiding = typeof s4tPreferences !== 'undefined' && s4tPreferences.enabled('hideNativeFilter');
+        if (!hiding) {
+            document.documentElement.removeAttribute('data-s4t-native-filter-recovery');
+            hiddenNativeReset = { key: '', attempts: 0, next: 0 };
+            return false;
+        }
+        if (!/^\/b\//.test(window.location.pathname) || switching) return false;
+        if (!nativeFiltersActive()) {
+            document.documentElement.removeAttribute('data-s4t-native-filter-recovery');
+            hiddenNativeReset = { key: '', attempts: 0, next: 0 };
+            return false;
+        }
+        var key = currentBoard() + ':' + window.location.search;
+        if (hiddenNativeReset.key !== key) hiddenNativeReset = { key: key, attempts: 0, next: 0 };
+        if (Date.now() < hiddenNativeReset.next) return true;
+        var toggle = document.querySelector('[data-testid="filter-popover-button"], [data-testid="board-filter-button"]');
+        if (!toggle) return true; // Trello is still mounting its header.
+        if (hiddenNativeReset.attempts >= 6) {
+            // Never strand users with hidden active filters if Trello's controls changed.
+            document.documentElement.setAttribute('data-s4t-native-filter-recovery', '');
+            return true;
+        }
+        hiddenNativeReset.attempts++;
+        hiddenNativeReset.next = Date.now() + 750;
+        var clear = nativeClearButton();
+        if (clear) {
+            // Use Trello's handler to clear persisted state too, without reloading or
+            // discarding the user's independent Attention selections.
+            switching = true;
+            try { clear.click(); } finally { switching = false; }
+            observedNativeQuery = window.location.search;
+        }
+        return true;
     }
     async function clearNativeFilterControls(pause) {
         var visited = new Set();
@@ -2950,6 +2988,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
 
     function sync() {
         resetBoard();
+        clearHiddenNativeFilters();
         if (!board) { if (controls) controls.remove(); if (cardsButton) cardsButton.remove(); controls = null; cardsButton = null; button = null; clearButton = null; return; }
         updateBurndownLink();
         var anchor = document.getElementById('membersBurndownLink');
@@ -3051,11 +3090,12 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     // Trello's keyboard shortcuts can change native filters without clicking its popover.
     var observedNativeQuery = window.location.search;
     setInterval(function () {
+        var resettingHiddenFilters = clearHiddenNativeFilters();
         var query = window.location.search;
         if (query === observedNativeQuery) return;
         observedNativeQuery = query;
         if (/^\/c\//.test(window.location.pathname)) return;
-        if (!switching && board === currentBoard() && active() && nativeFiltersActive()) {
+        if (!resettingHiddenFilters && !switching && board === currentBoard() && active() && nativeFiltersActive()) {
             clearFilters(); close(); notice('Attention filters cleared because Trello filters changed.');
         }
         sync();

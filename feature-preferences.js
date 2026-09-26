@@ -9,7 +9,7 @@ var s4tPreferences = (function () {
             ['eow', 'EOW Update', 'Create weekly task reports.', '#s4t-eow-launch, #s4t-eow-overlay']
         ]],
         ['Special', [
-            ['hideNativeFilter', 'Hide Trello built-in filter', 'Hides the button only; existing Trello filters stay active.']
+            ['hideNativeFilter', 'Hide Trello built-in filter', 'Hides Trello filters and clears restored native filters; Attention stays unchanged.']
         ]],
         ['Card tools', [
             ['checkAll', 'Check All', 'Complete every item in a checklist.', '.s4t-checklist-actions'],
@@ -29,7 +29,7 @@ var s4tPreferences = (function () {
         if (!style) { style = document.createElement('style'); style.id = 's4t-preference-styles'; (document.head || document.documentElement).appendChild(style); }
         var rules = [];
         groups.forEach(function (group) { group[1].forEach(function (entry) { if (!enabled(entry[0]) && entry[3]) rules.push(entry[3] + '{display:none!important}'); }); });
-        if (enabled('hideNativeFilter')) rules.push('[data-testid="filter-popover-button"], [data-testid="board-filter-button"]{display:none!important}');
+        if (enabled('hideNativeFilter')) rules.push('html:not([data-s4t-native-filter-recovery]) [data-testid="filter-popover-button"], html:not([data-s4t-native-filter-recovery]) [data-testid="board-filter-button"]{display:none!important}');
         if (enabled('members')) rules.push('#s4t-preferences-launch{display:none!important}');
         style.textContent = rules.join('\n');
         document.dispatchEvent(new Event('s4t-preferences-changed'));
