@@ -1098,7 +1098,7 @@ function renderMembersBurndownModal(data) {
         '</div>',
         '<div class="s4t-header-actions">',
         '<a id="s4t-dashboard-link" target="_blank" rel="noopener noreferrer" aria-disabled="true">View Full Dashboard</a>',
-        '<button type="button" id="s4t-charts-action" aria-label="Open charts" data-tooltip="Interactive pie charts">Charts</button>',
+        '<button type="button" id="s4t-charts-action" aria-label="Open charts" data-tooltip="Interactive pie charts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M10 3a9 9 0 1 0 11 11H10V3Z"/><path d="M14 2v8h8a9 9 0 0 0-8-8Z"/></svg></button>',
         '<button type="button" id="s4t-preferences-action" aria-label="Settings" data-tooltip="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-.5 2-2 1.2-2-.6-2 3.4 1.5 1.4v2.4L2.5 14l2 3.4 2-.6 2 1.2.5 3h6l.5-3 2-1.2 2 .6 2-3.4-1.5-1.2v-2.4L21.5 9l-2-3.4-2 .6-2-1.2-.5-2z"/><circle cx="12" cy="12" r="3"/></svg></button>',
         '<button class="s4t-refresh-btn" id="s4t-refresh-action" aria-label="Refresh burndown" data-tooltip="Refresh burndown">' + s4tRefreshIcon() + '</button>',
         '<button class="s4t-close-btn" id="s4t-close-action" aria-label="Close" data-tooltip="Close">✕</button>',

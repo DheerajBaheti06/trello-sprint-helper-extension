@@ -1,37 +1,42 @@
 /* Expand native comments by hiding only the adjacent left card column. */
 (function () {
-    var toggle, markerButton, markerEnabled=false, ink, inkLayer, stroke, inkTimers=new Set(), slot, collapsed, route = location.pathname, queued;
+    var markerCard, toggle, markerButton, markerEnabled=false, ink, inkLayer, stroke, inkTimers=new Set(), slot, collapsed, route = location.pathname, queued;
     var style=document.createElement('style');
     style.textContent='.s4t-comment-search-slot.s4t-comment-layout-slot{display:flex;align-items:center;gap:4px;flex:0 0 auto;width:auto;max-width:none}.s4t-comment-layout-slot>.s4t-comment-navigator{flex:0 0 240px;width:240px;min-width:240px}.s4t-comment-navigator-pinned{width:240px!important}.s4t-comment-layout-toggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;width:30px;height:30px;padding:5px;border:1px solid var(--ds-border,#dcdfe4);border-radius:6px;background:var(--ds-surface-overlay,#fff);color:var(--ds-text,#172b4d);cursor:pointer}.s4t-comment-layout-toggle:hover{background:var(--ds-background-neutral-hovered,#dcdfe4)}.s4t-comment-layout-toggle[aria-pressed=true]{color:var(--ds-text-selected,#0055cc);background:var(--ds-background-selected,#e9f2ff)}.s4t-comment-layout-toggle:focus-visible{outline:2px solid var(--ds-border-focused,#388bff);outline-offset:2px}.s4t-comment-left-hidden{display:none!important}.s4t-comment-column-wide{grid-column:1/-1!important;flex:1 1 100%!important;width:100%!important;max-width:none!important;min-width:0!important}.s4t-comment-columns-wide{grid-template-columns:minmax(0,1fr)!important}';
-    style.textContent += '.s4t-comment-layout-toggle[hidden]{display:none!important}.s4t-review-marker-on .ak-renderer-document,.s4t-review-marker-on .comment-container,.s4t-review-marker-on [data-testid="comment-text"]{cursor:crosshair}#s4t-review-ink-layer{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;padding:0;margin:0;border:0;background:transparent;pointer-events:none;overflow:hidden}#s4t-review-ink-layer::backdrop{background:transparent;pointer-events:none}#s4t-review-ink{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2147483600;pointer-events:none;overflow:hidden}.s4t-review-laser-glow{filter:blur(2px);animation:s4t-laser-glow .8s ease-in-out infinite alternate}@keyframes s4t-laser-glow{from{opacity:.55}to{opacity:.95}}.s4t-review-stroke-fading{animation:s4t-review-fade .3s ease-out forwards}@keyframes s4t-review-fade{to{opacity:0}}@media(prefers-reduced-motion:reduce){.s4t-review-stroke-fading{animation:none;opacity:0}.s4t-review-laser-glow{animation:none;opacity:.75}}';
+    style.textContent += '.s4t-comment-layout-toggle[hidden]{display:none!important}.s4t-review-marker-on [data-testid="card-back-title"],.s4t-review-marker-on [data-testid="card-back-title-input"],.s4t-review-marker-on .description-content,.s4t-review-marker-on .ak-renderer-document,.s4t-review-marker-on .comment-container,.s4t-review-marker-on [data-testid="comment-text"]{cursor:crosshair}#s4t-review-ink-layer{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;padding:0;margin:0;border:0;background:transparent;pointer-events:none;overflow:hidden}#s4t-review-ink-layer::backdrop{background:transparent;pointer-events:none}#s4t-review-ink{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:2147483600;pointer-events:none;overflow:hidden}.s4t-review-laser-glow{filter:blur(2px);animation:s4t-laser-glow .8s ease-in-out infinite alternate}@keyframes s4t-laser-glow{from{opacity:.55}to{opacity:.95}}.s4t-review-stroke-fading{animation:s4t-review-fade .3s ease-out forwards}@keyframes s4t-review-fade{to{opacity:0}}@media(prefers-reduced-motion:reduce){.s4t-review-stroke-fading{animation:none;opacity:0}.s4t-review-laser-glow{animation:none;opacity:.75}}';
     style.textContent += '.s4t-review-no-selection,.s4t-review-no-selection *{user-select:none!important;-webkit-user-select:none!important}.s4t-review-no-selection input,.s4t-review-no-selection textarea,.s4t-review-no-selection [contenteditable="true"],.s4t-review-no-selection [contenteditable="true"] *{user-select:text!important;-webkit-user-select:text!important}.s4t-review-no-selection [contenteditable="true"],.s4t-review-no-selection textarea{cursor:text}.s4t-review-marker:disabled{opacity:.45;cursor:default}';
     document.head.appendChild(style);
+    function currentCard(){return slot&&slot.closest('[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window, [role="dialog"]');}
+    var titleSelector='[data-testid="card-back-title"],[data-testid="card-back-title-input"],[data-testid="card-back-title-container"],.card-detail-title,textarea.js-card-detail-title-input';
+    var contentSelector='.ak-renderer-document,.markeddown,.comment-container,.current-comment,.action-comment,[data-testid="comment-text"],[data-testid="comment-content"],[data-testid="action-comment"],[data-testid="card-back-comment"],[data-testid="card-back-action-comment"],[data-testid="card-back-description"],[data-testid="description-content"],.description-content';
     function editingComment(){
-        if(!collapsed)return false;
-        return Array.from(collapsed.comments.querySelectorAll('textarea,[contenteditable="true"]')).some(function(field){
-            if(field.disabled||field.readOnly||!field.getClientRects().length||getComputedStyle(field).visibility==='hidden')return false;
-            return field===document.activeElement||field.contains(document.activeElement)||!!field.closest('.comment-container,.current-comment,.action-comment,[data-testid="card-back-comment"],[data-testid="action-comment"],[data-testid="card-back-action-comment"],.edit-comment,[data-testid*="edit-comment"]');
+        var card=currentCard();if(!card)return false;
+        return Array.from(card.querySelectorAll('textarea,input,[contenteditable="true"]')).some(function(field){
+            if(field.closest('.s4t-comment-search-slot,.s4t-comment-navigator,[id^="s4t-"]')||field.disabled||field.readOnly||!field.getClientRects().length||getComputedStyle(field).visibility==='hidden')return false;
+            return field===document.activeElement||field.contains(document.activeElement)||!!field.closest('.comment-container,.current-comment,.action-comment,[data-testid="card-back-comment"],[data-testid="action-comment"],[data-testid="card-back-action-comment"],.edit-comment,[data-testid*="edit-comment"],.description-edit,[data-testid="description-editor"],[data-testid="card-back-description-editor"]');
         });
     }
     function syncEditor(){
         var editing=editingComment();
         if(editing&&markerEnabled)setMarker(false);
-        if(markerButton){if(markerButton.disabled!==editing)markerButton.disabled=editing;markerButton.setAttribute('data-tooltip',editing?'Marker disabled while editing a comment':markerEnabled?'Laser pointer on · Drag over comments · Marks fade in 0.6 seconds':'Temporary red laser pointer');}
+        if(markerButton){if(markerButton.disabled!==editing)markerButton.disabled=editing;markerButton.setAttribute('data-tooltip',editing?'Marker disabled while editing':markerEnabled?'Laser pointer on · Drag over title, description or comments · Marks fade in 0.6 seconds':'Temporary red laser pointer');}
     }
     document.addEventListener('focusin',syncEditor,true);
     document.addEventListener('focusout',function(){setTimeout(syncEditor,0);},true);
     document.addEventListener('selectstart',function(event){
         var target=event.target.nodeType===1?event.target:event.target.parentElement;
-        if(collapsed&&target&&collapsed.comments.contains(target)&&!target.closest('input,textarea,[contenteditable="true"]'))event.preventDefault();
+        if(target&&((collapsed&&collapsed.comments.contains(target))||(markerEnabled&&currentCard()&&currentCard().contains(target)))&&!target.closest('input,textarea,[contenteditable="true"]'))event.preventDefault();
     },true);
     function clearInk(){
         if(stroke){if(stroke.frame)cancelAnimationFrame(stroke.frame);try{if(stroke.target.hasPointerCapture(stroke.id))stroke.target.releasePointerCapture(stroke.id);}catch(_){}stroke=null;}
         inkTimers.forEach(clearTimeout);inkTimers.clear();if(inkLayer)inkLayer.remove();else if(ink)ink.remove();inkLayer=null;ink=null;
     }
     function setMarker(enabled){
-        markerEnabled=enabled&&!!collapsed&&!editingComment();
-        if(collapsed)collapsed.comments.classList.toggle('s4t-review-marker-on',markerEnabled);
-        if(markerButton){markerButton.setAttribute('aria-pressed',String(markerEnabled));markerButton.setAttribute('data-tooltip',markerEnabled?'Laser pointer on · Drag over comments · Marks fade in 0.6 seconds':'Temporary red laser pointer');}
+        markerEnabled=enabled&&!!currentCard()&&!editingComment();
+        if(markerCard)markerCard.classList.remove('s4t-review-marker-on','s4t-review-no-selection');
+        markerCard=markerEnabled?currentCard():null;
+        if(markerCard)markerCard.classList.add('s4t-review-marker-on','s4t-review-no-selection');
+        if(markerButton){markerButton.setAttribute('aria-pressed',String(markerEnabled));markerButton.setAttribute('data-tooltip',markerEnabled?'Laser pointer on · Drag over title, description or comments · Marks fade in 0.6 seconds':'Temporary red laser pointer');}
         if(!markerEnabled)clearInk();
     }
     function later(fn,ms){var timer=setTimeout(function(){inkTimers.delete(timer);fn();},ms);inkTimers.add(timer);}
@@ -45,21 +50,25 @@
     function inkPoint(x,y){var matrix=ink.getScreenCTM();return matrix?new DOMPoint(x,y).matrixTransform(matrix.inverse()):{x:x,y:y};}
     window.addEventListener('pointerdown',function(event){
         syncEditor();
-        if(!markerEnabled||!collapsed||stroke||event.button!==0||event.ctrlKey||event.metaKey||event.altKey)return;
-        var target=event.target;
-        if(!(target instanceof Element)||!collapsed.comments.contains(target))return;
-        var rendered=target.closest('.ak-renderer-document,.markeddown,[data-testid="comment-text"],[data-testid="comment-content"]');
-        for(var node=target;node&&node!==collapsed.comments;node=node.parentElement){
+        if(!markerEnabled||!currentCard()||stroke||event.button!==0||event.ctrlKey||event.metaKey||event.altKey)return;
+        var target=event.target,card=currentCard();
+        if(!(target instanceof Element))return;
+        // The title's display-only point mirror lives outside the card DOM.
+        if(target.closest('#s4t-title-point-highlight'))target=card.querySelector(typeof s4tTitleEditorSelector==='string'?s4tTitleEditorSelector:titleSelector)||target;
+        if(!card.contains(target)||target.closest('.s4t-comment-search-slot,.s4t-comment-navigator'))return;
+        var rendered=target.closest(contentSelector+','+titleSelector);
+        if(!rendered&&!(collapsed&&collapsed.comments.contains(target)))return;
+        var idleTitle=target.matches('input,textarea')&&target.closest(titleSelector)&&document.activeElement!==target;
+        for(var node=target;node&&node!==card;node=node.parentElement){
+            if(node===target&&idleTitle)continue;
             if(node.matches('a,button,input,textarea,select,[contenteditable="true"],[role="textbox"]'))return;
-            // Some rendered Trello comments sit inside a clickable wrapper. That
-            // wrapper must not prevent marking their read-only text.
             if(node.matches('[role="button"]')&&(!rendered||rendered.contains(node)))return;
         }
-        var comment=target.closest('.ak-renderer-document,.markeddown,.comment-container,.current-comment,.action-comment,[data-testid="comment-text"],[data-testid="comment-content"],[data-testid="action-comment"],[data-testid="card-back-comment"],[data-testid="card-back-action-comment"]')||collapsed.comments;
+        var comment=rendered||collapsed.comments;
         event.preventDefault();event.stopPropagation();document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
         if(!ink){ink=document.createElementNS('http://www.w3.org/2000/svg','svg');ink.id='s4t-review-ink';ink.setAttribute('aria-hidden','true');
             // Keep ink inside Trello's dialog/top layer rather than behind its backdrop.
-            var host=collapsed.comments.closest('dialog,[role="dialog"],[data-testid="card-back"],[data-testid="card-back-container"],.window')||collapsed.parent;
+            var host=card;
             inkLayer=document.createElement('div');inkLayer.id='s4t-review-ink-layer';inkLayer.setAttribute('aria-hidden','true');inkLayer.appendChild(ink);host.appendChild(inkLayer);
             // A non-interactive top-layer surface avoids clipping by Trello's
             // nested scroll containers and transformed card panels.
@@ -101,7 +110,7 @@
         if(collapsed){collapsed.left.classList.remove('s4t-comment-left-hidden');collapsed.comments.classList.remove('s4t-comment-column-wide','s4t-review-no-selection');collapsed.parent.classList.remove('s4t-comment-columns-wide');collapsed=null;}
         updateLabel();
     }
-    function updateLabel(){if(!toggle)return;var label=collapsed?'Exit Review mode · Restore left section':'Review mode · Expand comments';if(markerButton)markerButton.hidden=!collapsed;toggle.setAttribute('aria-pressed',String(!!collapsed));toggle.setAttribute('aria-label',label);toggle.setAttribute('data-tooltip',label);}
+    function updateLabel(){if(!toggle)return;var label=collapsed?'Exit Review mode · Restore left section':'Review mode · Expand comments';if(markerButton)markerButton.hidden=false;toggle.setAttribute('aria-pressed',String(!!collapsed));toggle.setAttribute('aria-label',label);toggle.setAttribute('data-tooltip',label);}
     function columns(){
         var card=slot.closest('[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window, [role="dialog"]');
         if(!card)return null;
@@ -141,7 +150,7 @@
             document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
             window.dispatchEvent(new Event('resize'));
         });
-        markerButton=document.createElement('button');markerButton.type='button';markerButton.className='s4t-comment-layout-toggle s4t-review-marker';markerButton.hidden=true;
+        markerButton=document.createElement('button');markerButton.type='button';markerButton.className='s4t-comment-layout-toggle s4t-review-marker';markerButton.hidden=false;
         markerButton.setAttribute('aria-label','Temporary red laser pointer');markerButton.setAttribute('aria-pressed','false');markerButton.setAttribute('data-tooltip','Temporary red laser pointer');
         markerButton.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 14 9-9 5 5-9 9-5-5Zm-1 1-2 6 6-2M13 6l5 5"/><path d="M13 21h8" stroke="#ef3340" stroke-width="3"/></svg>';
         markerButton.onclick=function(event){event.preventDefault();event.stopPropagation();setMarker(!markerEnabled);document.dispatchEvent(new Event('s4t-dismiss-tooltip'));};
