@@ -128,13 +128,21 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         if (document.activeElement === input) begin(input);
         highlight(input);
     }
-    // Ignore our mirror mutations to avoid feedback loops; native remounts still resync.
+    // Board badges and popup updates cannot change a card-title mirror.
+    // Coalesce relevant card layout mutations; typing still updates immediately.
+    var viewTimer;
+    var cardScope='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window';
     new MutationObserver(function (mutations) {
-        if (mutations.every(function (mutation) {
-            return mutation.target === mirror || (mirror && mirror.contains(mutation.target)) ||
-                (mutation.type === 'childList' && Array.from(mutation.addedNodes).concat(Array.from(mutation.removedNodes)).every(function (node) { return node.id === 's4t-title-point-highlight'; }));
-        })) return;
-        syncView();
+        var relevant=mutations.some(function(mutation){
+            var target=mutation.target.nodeType===1?mutation.target:mutation.target.parentElement;
+            if(target&&target.closest('#s4t-title-point-highlight,#s4t-review-ink-layer'))return false;
+            var nodes=Array.from(mutation.addedNodes||[]).concat(Array.from(mutation.removedNodes||[]));
+            if(nodes.length&&nodes.every(function(node){return node.nodeType===1&&(node.id==='s4t-title-point-highlight'||node.id==='s4t-review-ink-layer');}))return false;
+            if(highlighted&&!highlighted.isConnected)return true;
+            if(target&&(target.matches(selector)||target.closest(cardScope)))return true;
+            return nodes.some(function(node){return node.nodeType===1&&(node.matches(selector)||node.querySelector(selector));});
+        });
+        if(relevant&&!viewTimer)viewTimer=setTimeout(function(){viewTimer=null;syncView();},32);
     }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['readonly', 'data-testid'] });
     document.addEventListener('s4t-preferences-changed', function () {
         if (!enabled()) {

@@ -87,3 +87,11 @@ Unlike EOW and Attention, neither request sets a timeout. A stalled request can 
 The existing Node suites passed. A separate read-only VM harness reproduced issues 1–6 using fixture data. Passing the existing suites does not cover these missing cases. No real cards were modified, no accounts were messaged, and no production board data was used for these reproductions.
 
 Recommended fix order: board cache isolation; safe name rendering; explicit done/template rules; EOW date semantics and draft reconciliation; request timeouts; centralized Trello adapters; then measured performance work.
+
+## Performance follow-up — 2026-09-27
+
+List totals now read each visible card once for both point values, cache parsed points by card and source title using a WeakMap, and leave unchanged total elements intact. Visibility and list membership are still evaluated on each calculation; changed source titles invalidate the cache. The broad page observer no longer requests a full-board card refresh on unrelated changes: the mount watcher and list observers handle initialization and local changes. Title-point and review observers ignore unrelated board changes and their own overlay rendering; title layout work is coalesced.
+
+Reproducible local fixture: `python3 tests/build-points-performance-ui.py` generates `/tmp/s4t-points-performance.html`. It uses 12 lists / 480 cards, warms up, then requests ten unchanged total refreshes. Before: 9,600 point parses and 360 mutations inside total elements. After: zero additional point parses and zero total-element mutations, with identical assigned/completed totals. These numbers cover the repeated-refresh phase only; initial parsing is still necessary. Headless virtual-time startup readings were approximately 240 ms both before and after and are not real-world loading benchmarks.
+
+Validation: 87 Node tests and browser fixtures for late list/card/header mounting, cache invalidation, visibility/filter changes, Cards List/Attention, title points, comment/review tools, Check All remounts, charts, EOW, and member scrolling. The EOW fixture was updated to mock its existing comment-history request, await asynchronous loading, and assert the current footer/toast UI. No production Trello board or network performance was measured; comment-history requests and Trello's own rendering remain separate costs.

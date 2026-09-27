@@ -50,6 +50,7 @@ var s4tPreferences = (function () {
         modal = document.createElement('div'); modal.id = 's4t-preferences-overlay';
         var dialog = document.createElement('section'); dialog.id = 's4t-preferences-dialog'; dialog.setAttribute('role','dialog'); dialog.setAttribute('aria-modal','true'); dialog.setAttribute('aria-labelledby','s4t-preferences-title');
         dialog.innerHTML = '<header><h2 id="s4t-preferences-title">Settings</h2><button type="button" aria-label="Close settings">✕</button></header><p>Choose the features you want to see. Saved in this browser for all Trello boards. If Members Burndown is hidden, use the Settings button on the board.</p><div class="s4t-preferences-groups"></div><footer><span role="status"></span><button type="button">Reset to defaults</button></footer>';
+        var rules = document.createElement('button'); rules.type = 'button'; rules.id = 's4t-preferences-rules'; rules.textContent = 'Sprint Helper workflow rules'; rules.onclick = function () { s4tWorkflowRules.open(rules); }; dialog.querySelector('p').after(rules);
         var container = dialog.querySelector('.s4t-preferences-groups'), status = dialog.querySelector('[role="status"]');
         function close() { modal.remove(); modal = null; if (previous && previous.isConnected) previous.focus(); }
         dialog.querySelector('header button').onclick = close;

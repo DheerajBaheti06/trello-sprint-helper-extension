@@ -1594,3 +1594,34 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 
 /* Preserve native list nodes/order while collapsing empty filtered columns. */
 .s4t-attention-list-hidden { display: none !important; }
+
+#s4t-workflow-launch { height:32px; margin-inline:4px; padding:0 10px; flex-shrink:0; border:1px solid var(--ds-border,#dfe1e6); border-radius:6px; background:var(--ds-background-neutral, #091e420f); color:var(--ds-text,#172b4d); font:500 13px system-ui; cursor:pointer; }
+#s4t-workflow-launch:hover { background:var(--ds-background-neutral-hovered,#091e4224); }
+#s4t-workflow-rules { width:min(1040px,calc(100vw - 32px)); max-height:85dvh; padding:0; border:1px solid var(--ds-border,#dfe1e6); border-radius:14px; color:var(--ds-text,#172b4d); background:var(--ds-surface-overlay,#fff); box-shadow:0 16px 48px #0004; overflow:hidden; font:14px/1.5 system-ui; }
+#s4t-workflow-rules::backdrop { background:#091e4266; }
+#s4t-workflow-rules header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; border-bottom:1px solid var(--ds-border,#dfe1e6); }
+#s4t-workflow-rules h2 { margin:0; font-size:19px; }
+#s4t-workflow-rules header p { margin:4px 0 0; color:var(--ds-text-subtle,#44546f); }
+#s4t-workflow-rules button { background:transparent; color:inherit; border:0; border-radius:6px; padding:8px; cursor:pointer; }
+#s4t-workflow-rules .s4t-workflow-body { max-height:calc(85dvh - 100px); overflow:auto; padding:4px 20px 28px; }
+#s4t-workflow-rules table { width:100%; border-collapse:collapse; font-size:13px; }
+#s4t-workflow-rules th, #s4t-workflow-rules td { text-align:left; vertical-align:top; padding:10px; border-bottom:1px solid var(--ds-border,#dfe1e6); overflow-wrap:anywhere; }
+#s4t-workflow-rules th { background:var(--ds-background-neutral,#091e420f); }
+#s4t-workflow-rules code { font-size:12px; background:var(--ds-background-neutral,#091e420f); border-radius:3px; padding:1px 3px; }
+#s4t-workflow-rules li { margin:8px 0; }
+#s4t-preferences-rules { margin:0 18px 12px; color:var(--ds-link,#0c66e4); background:transparent; border:0; cursor:pointer; text-decoration:underline; }
+
+/* Distinguish extension help from Trello controls without shifting layout. */
+#s4t-workflow-launch { display:inline-flex; align-items:center; gap:6px; color:#fff; background:linear-gradient(115deg,#5b35bd,#006c92); border-color:#987de0; box-shadow:0 0 0 1px #ac8cff33; }
+#s4t-workflow-launch:hover { background:linear-gradient(115deg,#7046d0,#007b9f); }
+#s4t-workflow-launch small { font-size:10px; opacity:.9; border-left:1px solid #ffffff55; padding-left:6px; }
+#s4t-workflow-launch svg { flex-shrink:0; }
+#s4t-workflow-launch .s4t-rules-spark { fill:#ffe492; stroke:#ffe492; transform-origin:18px 6px; animation:s4t-rules-sparkle 3s ease-in-out infinite; }
+@keyframes s4t-rules-sparkle { 0%,65%,100% { opacity:.65; transform:scale(.85); } 80% { opacity:1; transform:scale(1.15); } }
+@media(prefers-reduced-motion:reduce) { #s4t-workflow-launch .s4t-rules-spark { animation:none; opacity:1; } }
+@media(max-width:900px) { #s4t-workflow-launch small { display:none; } }
+
+#s4t-workflow-rules table:first-of-type th:first-child,
+#s4t-workflow-rules table:first-of-type td:first-child { width:175px; min-width:145px; }
+#s4t-workflow-rules h3 { margin:24px 0 8px; font-size:16px; color:var(--ds-text,#172b4d); }
+@media(max-width:600px) { #s4t-workflow-rules table:first-of-type th:first-child, #s4t-workflow-rules table:first-of-type td:first-child { min-width:90px; width:100px; } }

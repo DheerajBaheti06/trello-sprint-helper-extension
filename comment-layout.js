@@ -202,7 +202,18 @@
         markerButton.onclick=function(event){event.preventDefault();event.stopPropagation();setMarker(!markerEnabled);document.dispatchEvent(new Event('s4t-dismiss-tooltip'));};
         slot.prepend(toggle,markerButton);updateLabel();
     }
-    new MutationObserver(function(){syncEditor();if(!queued)queued=setTimeout(mount,50);}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['contenteditable','hidden','disabled','aria-hidden']});
+    new MutationObserver(function(mutations){
+        var cardSelector='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window';
+        var relevant=(slot&&!slot.isConnected)||mutations.some(function(mutation){
+            var target=mutation.target.nodeType===1?mutation.target:mutation.target.parentElement;
+            if(target&&target.closest('#s4t-review-ink-layer,#s4t-title-point-highlight'))return false;
+            var nodes=Array.from(mutation.addedNodes||[]).concat(Array.from(mutation.removedNodes||[]));
+            if(nodes.length&&nodes.every(function(node){return node.nodeType===1&&(node.id==='s4t-review-ink-layer'||node.id==='s4t-title-point-highlight');}))return false;
+            if(target&&target.closest(cardSelector))return true;
+            return nodes.some(function(node){return node.nodeType===1&&(node.matches(cardSelector)||node.querySelector(cardSelector)||node.matches('.s4t-comment-search-slot')||node.querySelector('.s4t-comment-search-slot'));});
+        });
+        if(relevant&&!queued)queued=setTimeout(mount,50);
+    }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['contenteditable','hidden','disabled','aria-hidden']});
     document.addEventListener('s4t-preferences-changed',function(){if(!enabled('reviewMode')&&collapsed)restore();if(!enabled('laserPointer'))setMarker(false);});
     window.addEventListener('popstate',mount);mount();
 })();

@@ -41,6 +41,19 @@ var debounce = function (func, threshold, execAsap) {
     };
 }
 
+// Coalesce updates without postponing them indefinitely while Trello hydrates.
+function s4tBoundedRefresh(fn, delay) {
+    var timer, context, args;
+    return function () {
+        context = this; args = arguments;
+        if (timer) return;
+        timer = setTimeout(function () {
+            timer = null;
+            fn.apply(context, args);
+        }, delay);
+    };
+}
+
 // For MutationObserver
 var obsConfig = { childList: true, characterData: true, attributes: false, subtree: true };
 
@@ -115,8 +128,8 @@ $(function () {
 });
 
 // Recalculates every card and its totals (used for significant DOM modifications).
-var recalcListAndTotal = debounce(function ($el) {
-    ($el || $("[data-testid='list']")).each(function () {
+var recalcListAndTotal = s4tBoundedRefresh(function ($el) {
+    ($el || $(S4T_LIST_CONTAINER_SEL).filter(function () { return !$(this).find(S4T_LIST_SEL).length; })).each(function () {
         if (!this.list) new List(this);
         else if (this.list.refreshList) {
             this.list.refreshList(); // make sure each card's points are still accurate (also calls list.calc()).
@@ -134,7 +147,7 @@ var recalcTotalsObserver = new CrossBrowser.MutationObserver(function (mutations
         $.each(mutations, function (index, mutation) {
             var $target = $(mutation.target);
             // Strictly ignore card modals/dialogs, preview popovers, and Sprint Helper UI
-            if ($target.closest('[id^="s4t-"], [class*="s4t-"], .s4tLink, .point-picker, .picker, .s4t-comment-navigator, #s4t-attention-panel, #s4t-board-tools, #s4t-cards-overlay, #s4t-modal-overlay, #s4t-icon-tooltip, #s4t-attention-notice, [role="dialog"], .window, .card-detail-window, [data-testid="card-back"], .card-detail-data').length) return;
+            if ($target.closest('[id^="s4t-"], .s4tLink, .point-picker, .picker, .s4t-comment-navigator, #s4t-attention-panel, #s4t-board-tools, #s4t-cards-overlay, #s4t-modal-overlay, #s4t-icon-tooltip, #s4t-attention-notice, [role="dialog"], .window, .card-detail-window, [data-testid="card-back"], .card-detail-data').length) return;
 
             // Strictly ignore card badges, points, titles, and list totals/headers updated by Sprint Helper
             if ($target.closest('[data-testid="card-front-badges"], [data-testid="badges"], .badges, .badge-points, [data-s4t-badge], .badge, [data-testid="card-name"], .list-card-title, .js-card-name, .list-total, [data-testid="list-header"], [data-testid="list-title"], .list-header, .list-title').length) return;
@@ -175,7 +188,8 @@ var recalcTotalsObserver = new CrossBrowser.MutationObserver(function (mutations
         });
 
         if (doFullRefresh) {
-            recalcListAndTotal();
+            // New lists/cards are initialized by watchPointMounts; existing
+            // lists observe their own changes. Do not refresh the whole board.
             updateBurndownLink();
         } else if (refreshJustTotals) {
             calcListPoints();
@@ -197,11 +211,43 @@ var recalcTotalsObserver = new CrossBrowser.MutationObserver(function (mutations
 recalcTotalsObserver.observe(document.body, obsConfig);
 
 // Universal selectors supporting classic and modern Trello (React / Atlassian updates)
-var S4T_CARD_SEL = "[data-testid='list-card']:not(.placeholder)";
+var S4T_CARD_SEL = "[data-testid='list-card']:not(.placeholder), .list-card:not(.placeholder)";
 var S4T_CARD_CLOSEST_SEL = "[data-testid='list-card'], .list-card";
 var S4T_LIST_SEL = "[data-testid='list'], .list, .js-list";
 var S4T_LIST_CONTAINER_SEL = "[data-testid='list'], [data-testid='list-wrapper'], .list, .js-list";
 var S4T_TITLE_SEL = "[data-testid='card-name'], a[data-testid='card-name'], .list-card-title, .js-card-name";
+
+// Initialize actual board nodes as they mount, independently of the broad
+// page observer (which deliberately ignores many noisy Trello containers).
+(function watchPointMounts() {
+    var pending = new Set();
+    var flush = s4tBoundedRefresh(function () {
+        var lists = Array.from(pending); pending.clear();
+        lists.forEach(function (list) {
+            if (!list.isConnected) return;
+            if (!list.list) new List(list);
+            else list.list.refreshList();
+        });
+    }, 100);
+    function inspect(node) {
+        if (!node || node.nodeType !== 1 || node.closest('[id^="s4t-"], .list-total, .badge-points, [data-s4t-badge], [data-testid="card-back"], [data-testid="card-back-container"]')) return;
+        var selector = S4T_LIST_CONTAINER_SEL + ',' + S4T_CARD_SEL + ',' + S4T_TITLE_SEL;
+        var nodes = Array.from(node.querySelectorAll(selector));
+        if (node.matches(selector)) nodes.push(node);
+        nodes.forEach(function (item) {
+            var list = item.matches(S4T_LIST_CONTAINER_SEL) ? item : item.closest(S4T_LIST_CONTAINER_SEL);
+            if (list && !list.querySelector(S4T_LIST_SEL)) pending.add(list);
+        });
+        if (pending.size) flush();
+    }
+    new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+            if (mutation.type === 'attributes') inspect(mutation.target);
+            else Array.from(mutation.addedNodes).forEach(inspect);
+        });
+    }).observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['data-testid']});
+    inspect(document.body);
+})();
 
 // Refreshes the link to the Burndown dialog.
 function s4tBoardToolbarAnchor() {
@@ -1419,7 +1465,7 @@ var lto;
 function calcListPoints() {
     clearTimeout(lto);
     lto = setTimeout(function () {
-        $(S4T_LIST_SEL).each(function () {
+        $(S4T_LIST_CONTAINER_SEL).filter(function () { return !$(this).find(S4T_LIST_SEL).length; }).each(function () {
             if (!this.list) new List(this);
             else if (this.list.calc) this.list.calc();
         });
@@ -1433,6 +1479,7 @@ function List(el) {
 
     var $list = $(el),
         $total = $('<div class="list-total">'),
+        pointCache = new WeakMap(), totalsKey = null,
         busy = false,
         to;
 
@@ -1452,95 +1499,89 @@ function List(el) {
         });
     };
 
-    // All calls to calc are throttled to happen no more than once every 500ms (makes page-load and recalculations much faster).
+    // Coalesce calculations within 150ms without waiting for a quiet page.
     var self = this;
-    this.calc = debounce(function () {
+    this.calc = s4tBoundedRefresh(function () {
         self._calcInner();
-    }, 150, false); // Always run the final calculation after visibility changes settle.
+    }, 150); // Refresh during sustained mutations, using the latest visibility state.
     this._calcInner = function (e) { // don't call this directly. Call calc() instead.
         //if(e&&e.target&&!$(e.target).hasClass('list-card')) return; // TODO: REMOVE - What was this? We never pass a param into this function.
         clearTimeout(to);
         to = setTimeout(function () {
             var $header = $list.find("[data-testid='list-header'], .list-header").first();
             if (!$header.length) {
-                $header = $list.find("[data-testid='list-title'], .list-title, [data-testid='list-name']").first().closest('[data-testid="list-header"], div');
+                $header = $list.find("[data-testid='list-title'], .list-title, [data-testid='list-name'], [data-testid='list-name-textarea'], .list-header-name").first().closest('[data-testid="list-header"], div');
             }
             if ($header.length > 0) {
                 $list.find('.list-total').not($total).remove();
                 if ($header.next()[0] !== $total[0]) {
                     $total.insertAfter($header);
                 }
+            } else if ($total.parent()[0] !== el) {
+                // A new Trello header layout must not leave totals detached.
+                $total.prependTo($list);
             }
-            $total.empty();
-            var hasPoints = false;
-            for (var i in _pointsAttr) {
-                var score = 0,
-                    attr = ['points', 'cpoints'][i];
-                $list.find(S4T_CARD_SEL).each(function () {
-                    if (!this.listCard || this.closest('.s4t-attention-hidden') || s4tIsCommonCardElement(this)) return;
-                    if (!isNaN(Number(this.listCard[attr].points))) {
-                        // Performance note: calling :visible in the selector above leads to noticible CPU usage.
-                        if (jQuery.expr.filters.visible(this)) {
-                            score += Number(this.listCard[attr].points);
-                        }
-                    }
-                });
-                var scoreTruncated = round(score);
-                if (scoreTruncated > 0) {
-                    hasPoints = true;
-                    var scoreSpan = $('<span/>', { class: attr, 'data-tooltip': attr === 'points' ? 'Assigned points' : 'Completed points' }).text(scoreTruncated);
-                    $total.append(scoreSpan);
+            var scores = { points: 0, cpoints: 0 };
+            $list.find(S4T_CARD_SEL).each(function () {
+                if (this.closest('.s4t-attention-hidden') || s4tIsCommonCardElement(this) || !jQuery.expr.filters.visible(this)) return;
+                var title = this.querySelector(S4T_TITLE_SEL);
+                var raw = this.getAttribute('data-s4t-orig-title') || this._origTitle ||
+                    (title && (title.getAttribute('data-s4t-orig-title') || title.textContent)) || '';
+                var cached = pointCache.get(this);
+                if (!cached || cached.raw !== raw) {
+                    cached = { raw: raw, parsed: parsePoints(raw) };
+                    pointCache.set(this, cached);
                 }
-            }
-            if (!hasPoints) {
-                $total.hide();
-            } else {
-                $total.show();
-            }
+                // One visibility check and title read supplies both totals.
+                ['points', 'cpoints'].forEach(function (attr) {
+                    var value = cached.parsed[attr === 'points' ? 'assigned' : 'completed'];
+                    if (value === null && this.listCard && this.listCard[attr]) value = Number(this.listCard[attr].points);
+                    if (Number.isFinite(value) && value >= 0) scores[attr] += value;
+                }, this);
+            });
+            var assigned = round(scores.points), completed = round(scores.cpoints);
+            var nextKey = assigned + ':' + completed;
+            if (totalsKey === nextKey && $total[0].childElementCount === ((assigned > 0 ? 1 : 0) + (completed > 0 ? 1 : 0))) return;
+            totalsKey = nextKey;
+            $total.empty();
+            ['points', 'cpoints'].forEach(function (attr) {
+                var value = round(scores[attr]);
+                if (value > 0) $total.append($('<span/>', { class: attr, 'data-tooltip': attr === 'points' ? 'Assigned points' : 'Completed points' }).text(value));
+            });
+            $total.toggle(assigned > 0 || completed > 0);
             computeTotal();
         });
     };
 
-    this.refreshList = debounce(function () {
+    this.refreshList = s4tBoundedRefresh(function () {
         readCard($list.find(S4T_CARD_SEL));
-        this.calc(); // readCard will call this.calc() if any of the cards get refreshed.
-    }, 500, false);
+        this.calc(); // readCard also schedules totals after card points refresh.
+    }, 500);
 
     var cardAddedRemovedObserver = new CrossBrowser.MutationObserver(function (mutations) {
-        // Determine if the mutation event included an ACTUAL change to the list rather than
-        // a modification caused by this extension making an update to points, etc. (prevents
-        // infinite recursion).
-        $.each(mutations, function (index, mutation) {
-            var $target = $(mutation.target);
-
-            // Ignore Sprint Helper nodes, badges, points, titles, and list totals
-            if ($target.closest('[data-testid="card-front-badges"], [data-testid="badges"], .badge-points, [data-s4t-badge], .list-total, [data-testid="card-name"], [class*="s4t-"], [id^="s4t-"]').length) return;
-
-            // Ignore a bunch of known elements that send mutation events.
-            if (!($target.hasClass('list-total')
-                || $target.hasClass('list-title')
-                || $target.hasClass('list-header')
-                || $target.hasClass('badge-points')
-                || $target.hasClass('badges')
-                || (typeof mutation.target.className == "undefined")
-            )) {
-                var list;
-                // It appears this was an actual mutation and not a recursive notification.
-                $list = $target.closest(S4T_LIST_CONTAINER_SEL);
-                if ($list.length > 0) {
-                    list = $list.get(0).list;
-                    if (!list) {
-                        list = new List($list.get(0));
-                    }
-                    if (list) {
-                        list.refreshList(); // debounced, so its safe to call this multiple times for the same list in this loop.
-                    }
-                }
-            }
+        var changed = mutations.some(function (mutation) {
+            var target = mutation.target.nodeType === 1 ? mutation.target : mutation.target.parentElement;
+            if (!target || target.closest('.list-total, .badge-points, [data-s4t-badge], [data-testid="card-front-badges"], [data-testid="badges"], [id^="s4t-"]')) return false;
+            if (mutation.type === 'attributes') return target === el || target.matches(S4T_CARD_SEL);
+            if (mutation.type === 'characterData') return !!target.closest(S4T_TITLE_SEL);
+            var nodes = Array.from(mutation.addedNodes).concat(Array.from(mutation.removedNodes));
+            return nodes.some(function (node) {
+                return node.nodeType !== 1 || !node.matches('.list-total, .badge-points, [data-s4t-badge], [id^="s4t-"]');
+            });
         });
+        // Headers and card titles can mount after their list/card shells.
+        // Keep the original list reference; nested wrappers must not replace it.
+        if (changed) self.refreshList();
     });
 
-    cardAddedRemovedObserver.observe($list.get(0), obsConfig);
+    cardAddedRemovedObserver.observe(el, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+    // Trello can hydrate a hidden board and reveal it without adding any nodes.
+    if (typeof IntersectionObserver !== 'undefined') {
+        var visibilityObserver = new IntersectionObserver(function (entries) {
+            if (entries.some(function (entry) { return entry.isIntersecting; })) self.calc();
+        });
+        visibilityObserver.observe(el);
+    }
 
     setTimeout(function () {
         readCard($list.find(S4T_CARD_SEL));
@@ -1582,7 +1623,7 @@ function ListCard(el, identifier) {
 
         to = setTimeout(function () {
             var $title = $card.find(S4T_TITLE_SEL).first();
-            if (!$title[0]) return;
+            if (!$title[0]) { busy = false; return; }
 
             // Get or preserve unstripped original title
             var titleTextContent = $card.attr('data-s4t-orig-title') ||

@@ -1,8 +1,8 @@
 from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 s=(root/'sprint-helper.js').read_text()
-code=s[s.index('var debounce ='):s.index('// For MutationObserver')]+s[s.index('function List(el)'):s.index('//.list-card pseudo')]
-setup='''var _pointsAttr=['cpoints','points'],S4T_CARD_SEL='[data-testid="list-card"]',S4T_LIST_CONTAINER_SEL='[data-testid="list"]',obsConfig={};
+code=s[s.index('function parsePoints('):s.index('// Helper: Check if card title')]+s[s.index('var debounce ='):s.index('// For MutationObserver')]+s[s.index('function List(el)'):s.index('//.list-card pseudo')]
+setup='''var _pointsAttr=['cpoints','points'],S4T_CARD_SEL='[data-testid="list-card"]',S4T_LIST_CONTAINER_SEL='[data-testid="list"]',S4T_TITLE_SEL='[data-testid="card-name"]',obsConfig={};
 var CrossBrowser={MutationObserver:class{observe(){}}};function round(v){return Math.round(v*100)/100}function computeTotal(){}function s4tIsCommonCardElement(){return false}
 for(const [i,n] of [...document.querySelectorAll(S4T_CARD_SEL)].entries())n.listCard={points:{points:[4,6][i],refresh(){}},cpoints:{points:[2,3][i],refresh(){}}};
 '''

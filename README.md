@@ -43,6 +43,8 @@ Run `git pull --ff-only` from your cloned folder, or replace the files with the 
 
 ## Before using
 
+Read the short [workflow rules and examples](WORKFLOW-RULES.md) for point formats, list names, exclusions and EOW grouping. The same guide opens from the colored **Workflow rules · Sprint Helper** button in Trello’s top bar, before **Share your thoughts**, or from **Settings → Sprint Helper workflow rules**. Its subtle sparkle identifies extension help; reduced-motion settings disable the animation. If the feedback control is unavailable, the button stays in the top bar.
+
 Point edits and **Check All** modify Trello cards. Cards assigned to everyone are excluded from Cards List/EOW; this also affects single-member boards. Review the [known limitations](RELIABILITY-REVIEW.md), including Trello compatibility and team-rule assumptions, before wider deployment.
 
 <details>

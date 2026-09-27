@@ -7,6 +7,7 @@
          "js": [
             "jquery-2.1.4.min.js",
             "feature-preferences.js",
+            "workflow-rules.js",
             "sprint-helper.js",
             "title-points-editor.js",
             "comment-layout.js",
@@ -40,7 +41,8 @@
             "images/burndown-icon_12x12.png",
             "images/burndown-icon_18x18.png",
             "images/sprint-helper-icon_12x12.png",
-            "images/sprint-helper-icon_18x18.png"
+            "images/sprint-helper-icon_18x18.png",
+            "WORKFLOW-RULES.md"
          ]
       }
    ]
