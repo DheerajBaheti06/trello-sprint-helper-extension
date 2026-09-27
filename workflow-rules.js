@@ -52,21 +52,29 @@ var s4tWorkflowRules = (function () {
         var headerSelector='#header,[data-testid="header-container"],[data-testid="global-header"],header[role="banner"],[role="banner"]';
         var header=document.querySelector(headerSelector);
         var root=header||document;
-        var anchor = Array.from(root.querySelectorAll('button, [role="button"], a')).find(function (node) {
-            if (node.closest('[id^="s4t-"]')) return false;
+        var anchor = root.querySelector('button[aria-owns="feedback-menu-popover-content"], button[aria-controls="feedback-menu-popover-content"]') || Array.from(root.querySelectorAll('button, [role="button"], a')).find(function (node) {
+            if (node.closest('[id^="s4t-"], [data-testid="header-notifications-button"]') || node.querySelector('[data-testid="header-notifications-button"]')) return false;
             var labelled=(node.getAttribute('aria-labelledby')||'').split(/\s+/).map(function(id){var label=document.getElementById(id);return label?label.textContent:'';}).join(' ');
             return [node.getAttribute('aria-label'), node.getAttribute('title'), node.getAttribute('data-tooltip'), node.getAttribute('data-testid'), labelled, node.textContent].some(function (text) {
-                return /share\s+(?:your|ur)\s+thoughts|(?:give|send|share)[\s_-]*(?:us[\s_-]*)?feedback|feedback[\s_-]*(?:button|popover)/i.test(text||'');
+                return /^feedback$/i.test((text||'').trim()) || /share\s+(?:your|ur)\s+thoughts|(?:give|send|share)[\s_-]*(?:us[\s_-]*)?feedback|feedback[\s_-]*(?:button|popover)/i.test(text||'');
             });
         });
         exactAnchor=!!anchor;
-        // Feedback can be an unlabelled icon until its tooltip mounts. Keep
-        // the extension help available in the global header in the meantime.
-        if(!anchor&&header)anchor=header.querySelector('[data-testid="header-member-menu-button"],[data-testid="header-notifications-button"]');
+        // Never anchor to Notifications: its unread indicator can overlap
+        // neighbouring controls. Until feedback is identified, use the header
+        // itself, outside native notification/profile containers.
         if (!anchor && !header) return;
         // Mount beside the feedback control's wrapper, not inside a
         // fixed-width tooltip wrapper. Respect reversed header flex layouts.
-        while(anchor&&anchor.parentElement&&anchor.parentElement!==header&&anchor.parentElement!==document.body&&anchor.parentElement.children.length===1)anchor=anchor.parentElement;
+        while(anchor&&anchor.parentElement&&anchor.parentElement!==header&&anchor.parentElement!==document.body){
+            var parent=anchor.parentElement;
+            var controls=Array.from(parent.querySelectorAll('button,[role="button"],a,input,select,textarea')).filter(function(node){return node!==launch&&!node.closest('#s4t-workflow-launch');});
+            // Badges are siblings of the native button, not extra controls.
+            // Keep the whole native badge/tooltip wrapper together so its
+            // unread count cannot be positioned over our help button.
+            if(controls.some(function(node){return node!==anchor&&!anchor.contains(node);}))break;
+            anchor=parent;
+        }
         feedbackAnchor = anchor;
         if (!launch) {
             launch = document.createElement('button'); launch.type = 'button'; launch.id = 's4t-workflow-launch';
@@ -80,14 +88,17 @@ var s4tWorkflowRules = (function () {
             if(placeAfter){if(anchor.nextElementSibling!==launch)anchor.after(launch);}
             else if(anchor.previousElementSibling!==launch)anchor.before(launch);
         }
-        else if(launch.parentElement!==header)header.appendChild(launch);
+        else {
+            launch.style.order='';
+            if(launch.parentElement!==header||header.firstElementChild!==launch)header.prepend(launch);
+        }
     }
     new MutationObserver(function (mutations) {
         if (exactAnchor && launch && launch.isConnected && feedbackAnchor && feedbackAnchor.isConnected && (placeAfter ? launch.previousElementSibling : launch.nextElementSibling) === feedbackAnchor) return;
         if (mutations.every(function (m) { return m.target.nodeType===1 && m.target.closest('[id^="s4t-"]'); })) return;
         if(launch&&launch.isConnected&&mutations.every(function(m){return !launch.parentElement.contains(m.target)&&!Array.from(m.addedNodes||[]).some(function(n){return n.nodeType===1&&n.contains(launch.parentElement);});}))return;
         if (!timer) timer = setTimeout(mount, 150);
-    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label', 'aria-labelledby', 'title', 'data-testid'] });
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-label', 'aria-labelledby', 'aria-owns', 'aria-controls', 'title', 'data-testid'] });
     window.addEventListener('resize',function(){if(!timer)timer=setTimeout(mount,150);});
     mount();
     return { open: open };

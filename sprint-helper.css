@@ -1625,3 +1625,8 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 #s4t-workflow-rules table:first-of-type td:first-child { width:175px; min-width:145px; }
 #s4t-workflow-rules h3 { margin:24px 0 8px; font-size:16px; color:var(--ds-text,#172b4d); }
 @media(max-width:600px) { #s4t-workflow-rules table:first-of-type th:first-child, #s4t-workflow-rules table:first-of-type td:first-child { min-width:90px; width:100px; } }
+
+#s4t-workflow-launch { position:relative; isolation:isolate; }
+#s4t-workflow-launch::before, #s4t-workflow-launch::after { content:none !important; display:none !important; }
+
+#s4t-workflow-launch { flex:0 0 auto; width:max-content; max-width:none; white-space:nowrap; }
