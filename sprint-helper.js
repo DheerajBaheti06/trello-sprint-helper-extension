@@ -245,7 +245,7 @@ var S4T_TITLE_SEL = "[data-testid='card-name'], a[data-testid='card-name'], .lis
             if (mutation.type === 'attributes') inspect(mutation.target);
             else Array.from(mutation.addedNodes).forEach(inspect);
         });
-    }).observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['data-testid']});
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-testid'] });
     inspect(document.body);
 })();
 
@@ -254,7 +254,7 @@ function s4tBoardToolbarAnchor() {
     return Array.from(document.querySelectorAll('[data-testid="filter-popover-button"], [data-testid="board-filter-button"]')).find(function (node) {
         return !node.closest('#s4t-attention-panel, #s4t-cards-overlay, #s4t-modal-overlay') &&
             ((node.getClientRects().length && window.getComputedStyle(node).visibility !== 'hidden') ||
-             (typeof s4tPreferences !== 'undefined' && s4tPreferences.enabled('hideNativeFilter') && node.parentElement && node.parentElement.getClientRects().length));
+                (typeof s4tPreferences !== 'undefined' && s4tPreferences.enabled('hideNativeFilter') && node.parentElement && node.parentElement.getClientRects().length));
     });
 }
 
@@ -627,7 +627,7 @@ function s4tLoadMembers(force) {
             // Keep the last rendered totals if fresh data cannot be processed.
         } finally {
             surfaces.forEach(function (element) { s4tSetSkeleton(element, false); });
-            if (memberList) memberList.scrollTo({top:memberScroll, behavior:'instant'});
+            if (memberList) memberList.scrollTo({ top: memberScroll, behavior: 'instant' });
             modal.setAttribute('aria-busy', 'false');
             refresh.removeClass('s4t-refreshing').attr('aria-busy', 'false').prop('disabled', false);
         }
@@ -1006,7 +1006,7 @@ function s4tRenderMemberRows(members, excludeNotSure) {
     if (container._s4tRowsHtml === html) return;
     var top = container.scrollTop;
     container.innerHTML = html; container._s4tRowsHtml = html;
-    container.scrollTo({top:top, behavior:'instant'});
+    container.scrollTo({ top: top, behavior: 'instant' });
 }
 
 function renderMembersHtml(members, excludeNotSure) {
@@ -1015,8 +1015,8 @@ function renderMembersHtml(members, excludeNotSure) {
     }
     var html = '';
     members.forEach(function (m) {
-        var number = function(value){return Number.isFinite(Number(value)) ? Math.max(0,Number(value)) : 0;};
-        var assigned = number(m.assigned), completed = number(m.completed), remaining = number(m.remaining), progress = Math.min(100,number(m.completionPercentage));
+        var number = function (value) { return Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0; };
+        var assigned = number(m.assigned), completed = number(m.completed), remaining = number(m.remaining), progress = Math.min(100, number(m.completionPercentage));
         var cardsTotal = number(m.cardsTotal), cardsCompleted = number(m.cardsCompleted), cardsPending = number(m.cardsPending);
         if (excludeNotSure && (m.notSureAssigned || m.notSureCompleted || m.notSureCardsTotal)) {
             cardsTotal = Math.max(0, cardsTotal - (m.notSureCardsTotal || 0));
@@ -1103,7 +1103,7 @@ function s4tBindMetricCopy(root) {
 // Escape Trello-controlled values in HTML templates and quoted attributes.
 function s4tEscapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
-        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char];
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char];
     });
 }
 function s4tSafeAvatarUrl(value) {
@@ -1111,7 +1111,7 @@ function s4tSafeAvatarUrl(value) {
         var url = new URL(String(value || ''));
         if (url.protocol !== 'https:' || url.username || url.password) return '';
         var host = url.hostname.toLowerCase();
-        if (host !== 'trello-members.s3.amazonaws.com' && !['trello.com','atlassian.com','atl-paas.net','gravatar.com'].some(function (domain) { return host === domain || host.endsWith('.' + domain); })) return '';
+        if (host !== 'trello-members.s3.amazonaws.com' && !['trello.com', 'atlassian.com', 'atl-paas.net', 'gravatar.com'].some(function (domain) { return host === domain || host.endsWith('.' + domain); })) return '';
         return url.href;
     } catch (_) { return ''; }
 }
@@ -4116,7 +4116,7 @@ var s4tOpenCardsList = (function () {
 /* Shared tooltips stay outside scroll containers and dismiss on pointer down. */
 (function () {
     if (typeof document === 'undefined') return;
-    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-checklist-action, #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
+    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-checklist-action, #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
     var tip, owner, timer, leaveTimer, pinned = false;
     function hide() {
         clearTimeout(timer); clearTimeout(leaveTimer); pinned = false;
@@ -4360,9 +4360,10 @@ function s4tCommentSearchSpans(text, query) {
 
 (function () {
     if (typeof document === 'undefined') return;
-    var bar, slot, header, cardHeader, scope, input, counter, previous, next, timer, positionFrame, matches = [], active = -1, route = '', textIndex = [], indexDirty = true;
+    var bar, slot, header, cardHeader, scope, jumps, input, counter, previous, next, timer, positionFrame, matches = [], active = -1, route = '', textIndex = [], indexDirty = true;
     function setText(node, text) { if (node.textContent !== text) node.textContent = text; }
     function removeBar() {
+        if (jumps) jumps.remove(); jumps=null;
         if (bar) bar.remove();
         if (slot) slot.remove();
         if (cardHeader) cardHeader.classList.remove('s4t-comments-heading-row');
@@ -4371,6 +4372,7 @@ function s4tCommentSearchSpans(text, query) {
     }
     function positionBar() {
         positionFrame = null;
+        positionCommentJumps();
         if (!bar || !slot || !slot.isConnected || !scope || !scope.isConnected) return;
         var rect = slot.getBoundingClientRect(), top = 8, bottom = window.innerHeight - 8;
         for (var ancestor = slot.parentElement; ancestor && ancestor !== document.body; ancestor = ancestor.parentElement) {
@@ -4466,8 +4468,9 @@ function s4tCommentSearchSpans(text, query) {
     }
     function update() {
         if (!bar || !bar.isConnected || !scope || !scope.isConnected) return;
+        mountCommentJumps();
         var current = matches[active];
-        if (indexDirty) buildTextIndex();
+        if (indexDirty && input.value.trim()) buildTextIndex();
         var found = [];
         textIndex.forEach(function (entry) {
             s4tCommentSearchSpans(entry.text, input.value).forEach(function (hit) {
@@ -4508,6 +4511,68 @@ function s4tCommentSearchSpans(text, query) {
         setText(counter, (active + 1) + '/' + matches.length);
         schedulePosition();
     }
+    function mountCommentJumps() {
+        if(!scope)return;
+        var comments=Array.from(scope.querySelectorAll('.comment-container,.current-comment,.action-comment,[data-testid="comment-text"],[data-testid="card-back-comment"],[data-testid="action-comment"], [data-testid*="comment"] .ak-renderer-document'));
+        if(!comments.length){if(jumps)jumps.remove();return;}
+        var host=comments[0].parentElement;
+        while(host&&host!==scope&&!comments.every(function(node){return host.contains(node);}))host=host.parentElement;
+        if(!host||host===scope){if(jumps)jumps.remove();return;}
+        if(!jumps){
+            jumps=document.createElement('div');jumps.className='s4t-comment-jumps';jumps.setAttribute('role','group');jumps.setAttribute('aria-label','Scroll comments');
+            [false,true].forEach(function(bottom){
+                var jump=makeButton('',bottom?'Move to bottom of comments':'Move to top of comments',function(){jumpComments(bottom);});
+                jump.classList.add('s4t-comment-jump');jump.setAttribute('data-comment-jump',bottom?'bottom':'top');
+                jump.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(bottom?'<path d="M5 20h14M12 4v12m-5-5 5 5 5-5"/>':'<path d="M5 4h14M12 20V8m-5 5 5-5 5 5"/>')+'</svg>';
+                jumps.appendChild(jump);
+            });
+        }
+        jumps._commentHost=host;
+        if(jumps.parentElement!==scope)scope.appendChild(jumps);
+        positionCommentJumps();
+    }
+    function commentScrollPane() {
+        for(var node=jumps&&jumps._commentHost;node&&node!==document.body;node=node.parentElement){
+            if(/auto|scroll/.test(getComputedStyle(node).overflowY))return node;
+        }
+        return document.scrollingElement;
+    }
+    function positionCommentJumps() {
+        if(!jumps||!jumps.isConnected||!jumps._commentHost)return;
+        var host=jumps._commentHost, pane=commentScrollPane(), box=host.getBoundingClientRect();
+        var viewport=pane===document.scrollingElement?{top:0,bottom:innerHeight}:pane.getBoundingClientRect();
+        var left=box.left,right=box.right,top=viewport.top,bottom=viewport.bottom;
+        // Intersect the comments with every clipping viewport, including its scroll pane.
+        for(var node=pane;node;node=node.parentElement){
+            var css=getComputedStyle(node),rect=node.getBoundingClientRect();
+            if(node===scope||/auto|scroll|hidden|clip/.test(css.overflowY)){
+                top=Math.max(top,rect.top+node.clientTop);bottom=Math.min(bottom,rect.top+node.clientTop+node.clientHeight);
+            }
+            if(node===scope||/auto|scroll|hidden|clip/.test(css.overflowX)){
+                left=Math.max(left,rect.left+node.clientLeft);right=Math.min(right,rect.left+node.clientLeft+node.clientWidth);
+            }
+        }
+        bottom=Math.min(bottom,innerHeight);right=Math.min(right,innerWidth);top=Math.max(top,0);
+        jumps.hidden=bottom-top<72||right-left<50;
+        var atTop=pane.scrollTop<=2;
+        var atBottom=pane.scrollTop+pane.clientHeight>=pane.scrollHeight-2;
+        jumps.querySelector('[data-comment-jump="top"]').hidden=atTop;
+        jumps.querySelector('[data-comment-jump="bottom"]').hidden=atBottom;
+
+        jumps.style.left='0px';jumps.style.top='0px';
+        var origin=jumps.getBoundingClientRect();
+        jumps.style.left=(right-42-origin.left)+'px';
+        jumps.style.top=(bottom-76-origin.top)+'px';
+    }
+    function jumpComments(bottom) {
+        if (!scope || !scope.isConnected) return;
+        var scroller=commentScrollPane();
+        if(!scroller)return;
+        var behavior=window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth';
+        scroller.scrollTo({top:bottom?Math.max(0,scroller.scrollHeight-scroller.clientHeight):0,behavior:behavior});
+        schedulePosition();
+    }
+
     function makeButton(text, label, action) {
         var node = document.createElement('button'); node.type = 'button'; node.textContent = text;
         node.setAttribute('aria-label', label); node.setAttribute('data-tooltip', label);
@@ -4517,7 +4582,7 @@ function s4tCommentSearchSpans(text, query) {
     function searchPlacement(card) {
         var toolbarSelector = '[role="toolbar"], header, [data-testid="card-back-header"], [data-testid="card-back-header-actions"]';
         var covers = Array.from(card.querySelectorAll('button, a, [role="button"]')).filter(function (node) {
-            if (!node.getClientRects().length || node.closest('.s4t-comment-navigator')) return false;
+            if (node.closest('.s4t-comment-search-slot')) return false;
             return /(?:^|-)cover(?:-image)?(?:-button)?$/.test(node.getAttribute('data-testid') || '') ||
                 [node.getAttribute('aria-label'), node.getAttribute('title'), node.textContent].some(function (text) {
                     return /^(?:edit |change |add )?(?:card )?cover(?: image)?$/i.test((text || '').trim());
@@ -4529,7 +4594,11 @@ function s4tCommentSearchSpans(text, query) {
                 a.getBoundingClientRect().top - b.getBoundingClientRect().top;
         });
         var cover = covers[0];
-        if (!cover) return null; // Wait for the native navbar; never fall back onto the card title.
+        if (!cover) {
+            var toolbar=card.querySelector('[data-testid="card-back-header-actions"], [role="toolbar"], [data-testid="card-back-header"], header');
+            cover=toolbar&&Array.from(toolbar.querySelectorAll('button, [role="button"]')).find(function(node){return !node.closest('.s4t-comment-search-slot');});
+        }
+        if (!cover) return toolbar ? {host:toolbar,anchor:null} : null; // Reserve the navbar slot before native actions finish loading.
         var anchor = cover;
         while (anchor.parentElement && anchor.parentElement !== card &&
             anchor.parentElement.children.length === 1 &&
@@ -4547,8 +4616,8 @@ function s4tCommentSearchSpans(text, query) {
         });
         var nextScope = title && title.closest('[role="dialog"], .window, [data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window');
         if (!nextScope) nextScope = Array.from(document.querySelectorAll('[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window, [role="dialog"]')).find(function (node) {
-            return node.getClientRects().length && !node.closest('#s4t-cards-overlay, #s4t-attention-panel, #s4t-modal-overlay') &&
-                !!node.querySelector('[data-testid="card-back-title"], [data-testid="card-back-header"], .card-detail-title');
+            return !node.closest('#s4t-cards-overlay, #s4t-attention-panel, #s4t-modal-overlay') &&
+                (node.matches('[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window') || !!node.querySelector('[data-testid="card-back-title"], [data-testid="card-back-header"], .card-detail-title'));
         });
         if (!nextScope) { removeBar(); clearHighlights(); matches = []; active = -1; return; }
         var placement = nextScope && searchPlacement(nextScope);
@@ -4567,14 +4636,19 @@ function s4tCommentSearchSpans(text, query) {
         bar.append(input, counter, previous, next);
         slot = document.createElement('div'); slot.className = 's4t-comment-search-slot s4t-card-header-search';
         slot.appendChild(bar);
-        placement.anchor.before(slot);
+        if(placement.anchor)placement.anchor.before(slot);else placement.host.appendChild(slot);
+        document.dispatchEvent(new Event('s4t-card-toolbar-mounted'));
         update();
     }
     new MutationObserver(function (mutations) {
-        if (mutations.every(function (m) { var node = m.target.nodeType === 1 ? m.target : m.target.parentElement; return node && node.closest && node.closest('[id^="s4t-"], [class*="s4t-"]'); })) return;
+        if (mutations.every(function (m) { var node = m.target.nodeType === 1 ? m.target : m.target.parentElement; return node && node.closest && node.closest('[id^="s4t-"], .s4t-comment-navigator, .s4t-comment-search-slot, .s4t-comment-jumps'); })) return;
         indexDirty = true;
-        if (!timer) timer = setTimeout(function () { timer = null; mount(); }, 150);
-    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+        // Mount/remount before the next paint when a card or its navbar appears.
+        if (!bar || !bar.isConnected || !slot || !slot.isConnected || mutations.some(function(m){var node=m.target.nodeType===1?m.target:m.target.parentElement;return node&&node.closest('[data-testid="card-back-header"],[data-testid="card-back-header-actions"],header,[role="toolbar"]');})) {
+            if(timer){clearTimeout(timer);timer=null;}
+            mount();
+        } else if (!timer) timer = setTimeout(function () { timer = null; mount(); }, 100);
+    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes:true, attributeFilter:['hidden','aria-hidden','data-testid','aria-label','style','class'] });
     document.addEventListener('scroll', schedulePosition, true);
     window.addEventListener('resize', schedulePosition);
     window.addEventListener('popstate', mount);

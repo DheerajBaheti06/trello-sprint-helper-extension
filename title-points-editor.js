@@ -59,6 +59,22 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         mirror.style.borderColor = 'transparent';
         mirror.style.left = rect.left + 'px'; mirror.style.top = rect.top + 'px';
         mirror.style.width = rect.width + 'px'; mirror.style.height = rect.height + 'px';
+        // The body-mounted mirror must respect the title's native scroll containers.
+        var visible={top:Math.max(0,rect.top),right:Math.min(innerWidth,rect.right),bottom:Math.min(innerHeight,rect.bottom),left:Math.max(0,rect.left)};
+        for(var parent=input.parentElement;parent;parent=parent.parentElement){
+            var parentCss=getComputedStyle(parent),bounds=parent.getBoundingClientRect();
+            if(/auto|scroll|hidden|clip/.test(parentCss.overflowY)){
+                visible.top=Math.max(visible.top,bounds.top+parent.clientTop);
+                visible.bottom=Math.min(visible.bottom,bounds.top+parent.clientTop+parent.clientHeight);
+            }
+            if(/auto|scroll|hidden|clip/.test(parentCss.overflowX)){
+                visible.left=Math.max(visible.left,bounds.left+parent.clientLeft);
+                visible.right=Math.min(visible.right,bounds.left+parent.clientLeft+parent.clientWidth);
+            }
+        }
+        mirror.style.clipPath='inset('+Math.max(0,visible.top-rect.top)+'px '+Math.max(0,rect.right-visible.right)+'px '+Math.max(0,rect.bottom-visible.bottom)+'px '+Math.max(0,visible.left-rect.left)+'px)';
+        mirror.style.visibility=visible.bottom<=visible.top||visible.right<=visible.left?'hidden':'visible';
+
         var fragment = document.createDocumentFragment(), pattern = /\(\s*(?:\?|\d*\.?\d*)\s*\)|\[\s*(?:\?|\d*\.?\d*)\s*\]/g;
         var text = viewing ? s4tTitlePointSlots(input.value, true) : input.value, last = 0, match;
         while ((match = pattern.exec(text))) {
