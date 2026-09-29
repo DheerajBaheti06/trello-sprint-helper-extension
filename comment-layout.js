@@ -153,7 +153,7 @@
     document.addEventListener('pointerup', finishStroke, true); document.addEventListener('pointercancel', finishStroke, true);
     document.addEventListener('lostpointercapture', finishStroke, true);
     document.addEventListener('scroll', clearInk, true); window.addEventListener('resize', clearInk);
-    document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && markerEnabled) { event.preventDefault(); event.stopImmediatePropagation(); setMarker(false); } }, true);
+    document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && markerEnabled) { event.preventDefault(); event.stopImmediatePropagation(); setMarker(false); if(typeof s4tCardToast==='function')s4tCardToast(markerButton,'Laser pointer off'); } }, true);
     function restore() {
         setMarker(false);
         if (collapsed) { collapsed.left.classList.remove('s4t-comment-left-hidden'); collapsed.comments.classList.remove('s4t-comment-column-wide', 's4t-review-no-selection', 's4t-review-mouse-on'); collapsed.parent.classList.remove('s4t-comment-columns-wide'); collapsed = null; }
@@ -198,12 +198,13 @@
                 collapsed = found; found.left.classList.add('s4t-comment-left-hidden'); found.comments.classList.add('s4t-comment-column-wide'); found.parent.classList.add('s4t-comment-columns-wide'); setMarker(enabled('laserPointer')); syncEditor(); updateLabel();
             }
             document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
+            if(typeof s4tCardToast==='function')s4tCardToast(toggle,collapsed?'Review mode on':'Review mode off');
             window.dispatchEvent(new Event('resize'));
         });
         markerButton = document.createElement('button'); markerButton.type = 'button'; markerButton.className = 's4t-comment-layout-toggle s4t-review-marker'; markerButton.hidden = false;
         markerButton.setAttribute('aria-label', 'Temporary red laser pointer'); markerButton.setAttribute('aria-pressed', 'false'); markerButton.setAttribute('data-tooltip', 'Temporary red laser pointer');
         markerButton.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 14 9-9 5 5-9 9-5-5Zm-1 1-2 6 6-2M13 6l5 5"/><path d="M13 21h8" stroke="#ef3340" stroke-width="3"/></svg>';
-        markerButton.onclick = function (event) { event.preventDefault(); event.stopPropagation(); setMarker(!markerEnabled); document.dispatchEvent(new Event('s4t-dismiss-tooltip')); };
+        markerButton.onclick = function (event) { event.preventDefault(); event.stopPropagation(); setMarker(!markerEnabled); if(typeof s4tCardToast==='function')s4tCardToast(markerButton,markerEnabled?'Laser pointer on':'Laser pointer off'); document.dispatchEvent(new Event('s4t-dismiss-tooltip')); };
         slot.prepend(toggle, markerButton); updateLabel();
     }
     document.addEventListener('s4t-card-toolbar-mounted', mount);

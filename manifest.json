@@ -10,6 +10,7 @@
             "workflow-rules.js",
             "sprint-helper.js",
             "title-points-editor.js",
+            "card-copy.js",
             "comment-layout.js",
             "charts.js",
             "eow-update.js",

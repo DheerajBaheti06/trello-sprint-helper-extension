@@ -1642,3 +1642,100 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 .s4t-comment-jumps button:hover,.s4t-comment-jumps button:focus-visible { opacity:1; background:var(--ds-background-selected,#e9f2ff); color:var(--ds-link,#0c66e4); box-shadow:0 2px 8px #0005; }
 
 .s4t-comment-jumps button[hidden] { visibility:hidden; pointer-events:none; }
+
+/* Compact checklist action stays in normal flow beside the native Delete action. */
+.s4t-checklist-actions { position:static; transform:none; display:inline-flex; vertical-align:middle; margin:0 6px 0 0; align-items:center; }
+.s4t-checklist-actions > input.s4t-checklist-action { width:16px; min-width:16px; height:16px; padding:0; margin:0; accent-color:var(--ds-background-brand-bold,#0c66e4); }
+.s4t-card-copy { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; padding:4px; border:0; border-radius:6px; background:var(--ds-surface-overlay,#fff); color:var(--ds-text-subtle,#626f86); cursor:pointer; flex-shrink:0; }
+.s4t-card-copy:hover { color:var(--ds-text,#172b4d); background:var(--ds-background-neutral-hovered,#dcdfe4); }
+.s4t-card-copy[data-copied] { color:var(--ds-text-success,#216e4e); }
+.s4t-card-copy-title { position:fixed; z-index:100; }
+
+.s4t-card-copy-share { width:30px; height:30px; flex:0 0 30px; border:1px solid var(--ds-border,#dcdfe4); transition:background .15s,color .15s,transform .15s; }
+.s4t-card-copy-share:hover { transform:translateY(-1px); }
+.s4t-card-copy-share:active { transform:scale(.93); }
+.s4t-card-copy-share:focus-visible { outline:2px solid var(--ds-border-focused,#388bff); outline-offset:2px; }
+.s4t-card-copy-share[data-copied] { background:var(--ds-background-success,#dcfff1); animation:s4t-share-copied .3s ease-out; }
+@keyframes s4t-share-copied { 50% { transform:scale(1.14); } }
+@media(prefers-reduced-motion:reduce) { .s4t-card-copy-share { transition:none; } .s4t-card-copy-share[data-copied] { animation:none; } }
+
+/* Reserve room for the floating checkbox without moving Trello's Delete node. */
+.s4t-checklist-delete-anchor { margin-right:32px!important; }
+.s4t-checklist-actions { position:absolute; width:20px; height:20px; margin:0; transform:none; justify-content:center; }
+.s4t-card-copy[hidden] { display:none!important; }
+
+.s4t-card-copy-comment { position:fixed; z-index:100; width:28px; height:28px; padding:5px; border:1px solid var(--ds-border,#b3b9c4); border-radius:8px; box-shadow:0 2px 6px #0003; background:var(--ds-surface-overlay,#fff); color:var(--ds-text,#172b4d); opacity:.85; transition:opacity .15s,background .15s,box-shadow .15s,transform .15s; }
+.s4t-card-copy-comment:hover,.s4t-card-copy-comment:focus-visible { opacity:1; background:var(--ds-background-selected,#e9f2ff); color:var(--ds-link,#0c66e4); box-shadow:0 2px 8px #0005; }
+.s4t-card-copy-comment:active { transform:scale(.93); }
+.s4t-card-copy-comment[data-copied] { color:var(--ds-text-success,#216e4e); background:var(--ds-background-success,#dcfff1); animation:s4t-share-copied .3s ease-out; }
+@media(prefers-reduced-motion:reduce) { .s4t-card-copy-comment { transition:none; animation:none; } }
+
+/* Shared card-tool design: compact controls with stable geometry in either theme. */
+.s4t-card-copy.s4t-card-copy,
+.s4t-comment-layout-toggle.s4t-comment-layout-toggle,
+.s4t-comment-jumps button {
+    box-sizing:border-box; width:30px; height:30px; min-width:30px; flex:0 0 30px;
+    padding:6px; border:1px solid var(--ds-border,#dcdfe4); border-radius:8px;
+    background:var(--ds-surface-overlay,#fff); color:var(--ds-text-subtle,#44546f);
+    box-shadow:0 1px 3px #00000014; opacity:1;
+    transition:background-color .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+.s4t-card-copy.s4t-card-copy:hover,
+.s4t-comment-layout-toggle.s4t-comment-layout-toggle:hover,
+.s4t-comment-jumps button:hover {
+    background:var(--ds-background-selected,#e9f2ff); color:var(--ds-text-selected,#0055cc);
+    border-color:var(--ds-border-selected,#0c66e4); box-shadow:0 2px 6px #00000020;
+}
+.s4t-card-copy.s4t-card-copy:active,
+.s4t-comment-layout-toggle.s4t-comment-layout-toggle:active,
+.s4t-comment-jumps button:active { transform:scale(.94); }
+.s4t-card-copy.s4t-card-copy:focus-visible,
+.s4t-comment-layout-toggle.s4t-comment-layout-toggle:focus-visible,
+.s4t-comment-jumps button:focus-visible { outline:2px solid var(--ds-border-focused,#388bff); outline-offset:2px; }
+.s4t-card-copy svg,.s4t-comment-layout-toggle svg,.s4t-comment-jumps svg { width:16px; height:16px; flex-shrink:0; }
+.s4t-comment-layout-toggle.s4t-comment-layout-toggle[aria-pressed="true"] {
+    color:var(--ds-text-selected,#0055cc); background:var(--ds-background-selected,#e9f2ff);
+    border-color:var(--ds-border-selected,#0c66e4); box-shadow:inset 0 0 0 1px var(--ds-border-selected,#0c66e4);
+}
+.s4t-review-marker.s4t-review-marker[aria-pressed="true"] {
+    color:var(--ds-text-danger,#ae2a19); background:var(--ds-background-danger,#ffedeb); border-color:var(--ds-border-danger,#f87462); box-shadow:none;
+}
+.s4t-card-copy.s4t-card-copy[data-copied] {
+    color:var(--ds-text-success,#216e4e); background:var(--ds-background-success,#dcfff1);
+    border-color:var(--ds-border-success,#4bce97); animation:s4t-share-copied .28s ease-out;
+}
+.s4t-card-copy.s4t-card-copy:disabled,.s4t-comment-layout-toggle.s4t-comment-layout-toggle:disabled { opacity:.5; cursor:wait; transform:none; }
+.s4t-comment-navigator { border-radius:8px; transition:border-color .16s,box-shadow .16s; }
+.s4t-comment-navigator:focus-within { border-color:var(--ds-border-focused,#388bff); box-shadow:0 0 0 2px var(--ds-background-selected,#e9f2ff); }
+.s4t-comment-navigator button { border-radius:6px; transition:color .16s,background .16s; }
+.s4t-checklist-action { transition:box-shadow .16s,opacity .16s; }
+.s4t-checklist-action:hover { box-shadow:0 0 0 4px var(--ds-background-selected,#e9f2ff); }
+.s4t-card-toast {
+    position:fixed; z-index:120; box-sizing:border-box; max-width:min(320px,80vw);
+    padding:9px 14px; border-radius:10px; border:1px solid var(--ds-border-success,#4bce97);
+    color:var(--ds-text-success,#216e4e); background:var(--ds-background-success,#dcfff1);
+    box-shadow:0 4px 16px #0003; font:500 13px/1.4 system-ui,sans-serif; pointer-events:none;
+    animation:s4t-card-toast-in .18s ease-out;
+}
+.s4t-card-toast-error { color:var(--ds-text-danger,#ae2a19); background:var(--ds-background-danger,#ffedeb); border-color:var(--ds-border-danger,#f87462); }
+@keyframes s4t-card-toast-in { from { opacity:0; } to { opacity:1; } }
+@media(prefers-reduced-motion:reduce) {
+    .s4t-card-copy.s4t-card-copy,.s4t-comment-layout-toggle.s4t-comment-layout-toggle,.s4t-comment-jumps button,
+    .s4t-comment-navigator,.s4t-comment-navigator button,.s4t-checklist-action,.s4t-card-toast { animation:none!important; transition:none!important; }
+}
+
+#s4t-preferences-dialog header { justify-content:flex-start; flex-wrap:wrap; }
+#s4t-preferences-dialog header [aria-label="Close settings"] { margin-left:auto; }
+#s4t-preferences-dialog #s4t-preferences-rules { margin:0; font-size:12px; color:var(--ds-text-selected,#0055cc); background:var(--ds-background-selected,#e9f2ff); }
+#s4t-preferences-dialog .s4t-preferences-compact { display:grid; gap:12px; align-content:start; min-width:0; }
+#s4t-preferences-dialog .s4t-preferences-card-tools { grid-column:1/-1; }
+#s4t-preferences-dialog .s4t-preferences-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+#s4t-preferences-dialog .s4t-preferences-card-grid section { min-width:0; }
+#s4t-preferences-dialog .s4t-preferences-card-grid h3 { margin:0 0 6px; font-size:13px; color:var(--ds-text-subtle,#626f86); }
+@media(max-width:650px) {
+    #s4t-preferences-dialog .s4t-preferences-card-grid { grid-template-columns:1fr; gap:12px; }
+}
+
+/* A stable overlay origin keeps scroll geometry independent of button animations. */
+.s4t-comment-copy-layer { position:fixed; inset:0; z-index:100; pointer-events:none; overflow:hidden; }
+.s4t-comment-copy-layer > .s4t-card-copy-comment { position:absolute; margin:0; pointer-events:auto; }

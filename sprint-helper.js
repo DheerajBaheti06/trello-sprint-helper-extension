@@ -4116,7 +4116,7 @@ var s4tOpenCardsList = (function () {
 /* Shared tooltips stay outside scroll containers and dismiss on pointer down. */
 (function () {
     if (typeof document === 'undefined') return;
-    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-checklist-action, #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
+    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-comment-layout-toggle[data-tooltip], .s4t-checklist-action, .s4t-card-copy[data-tooltip], #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
     var tip, owner, timer, leaveTimer, pinned = false;
     function hide() {
         clearTimeout(timer); clearTimeout(leaveTimer); pinned = false;
@@ -4129,6 +4129,8 @@ var s4tOpenCardsList = (function () {
         if (tip) tip.hidden = true;
     }
     function toastVisible(node) {
+        var card=node.closest('[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window,[role="dialog"],dialog');
+        if(card&&card.querySelector('.s4t-card-toast:not([hidden])'))return true;
         var dialog = node && node.closest('#s4t-cards-dialog');
         return dialog && dialog.querySelector('.s4t-cards-copy-toast:not([hidden]), .s4t-cards-status:not([hidden])');
     }
@@ -4251,10 +4253,15 @@ async function s4tCompleteChecklist(adapter) {
     function positionAction(actions) {
         var remove = actions._nativeDelete;
         if (!remove || !remove.isConnected) return;
-        var width = Math.max(remove.offsetWidth, 104);
-        actions.style.left = Math.max(0, remove.offsetLeft + remove.offsetWidth - width) + 'px';
-        actions.style.top = remove.offsetTop + 'px';
-        actions.style.width = width + 'px';
+        remove.classList.add('s4t-checklist-delete-anchor');
+        actions.style.left=(remove.offsetLeft+remove.offsetWidth+6)+'px';
+        actions.style.top=(remove.offsetTop+(remove.offsetHeight-20)/2)+'px';
+        var action=actions.querySelector('input');
+        var root=actions.closest(roots), items=root&&controls(root);
+        if(action&&items&&!action.disabled){
+            action.checked=items.length>0&&items.every(checked);
+            action.indeterminate=items.some(checked)&&!action.checked;
+        }
     }
     function mount() {
         document.querySelectorAll(roots).forEach(function (root) {
@@ -4267,8 +4274,8 @@ async function s4tCompleteChecklist(adapter) {
             // Never mount on a wrapper containing more than one checklist's Delete action.
             if (deletes.length !== 1) return;
             var remove = deletes[0];
-            var action = document.createElement('button');
-            action.type = 'button'; action.className = 's4t-checklist-action'; action.textContent = 'Check all';
+            var action = document.createElement('input');
+            action.type = 'checkbox'; action.className = 's4t-checklist-action';
             action.setAttribute('aria-label', 'Check all items in this checklist');
             action.setAttribute('data-tooltip', 'Checks only this checklist on this card');
             action.addEventListener('click', async function (event) {
@@ -4318,21 +4325,22 @@ async function s4tCompleteChecklist(adapter) {
                             }
                         }
                     });
+                action.dispatchEvent(new CustomEvent('s4t-card-success',{bubbles:true,detail:'Checklist completed'}));
                 } catch (_) {
                     // Stop immediately and quietly; another click can resume unchecked items.
-                    action.textContent = 'Check all';
+                    action.checked = false;
                     action.setAttribute('data-tooltip', 'Checks only this checklist on this card');
                 } finally {
                     running.delete(runKey);
                     action.disabled = false;
                     var mountedAction = liveRoot() && root.querySelector('.s4t-checklist-action');
-                    if (mountedAction) { mountedAction.disabled = false; mountedAction.textContent = action.textContent; }
+                    if (mountedAction) { mountedAction.disabled = false; positionAction(mountedAction.parentElement); }
                     document.dispatchEvent(new Event('s4t-checklist-updated'));
                 }
             });
             var actions = document.createElement('div');
             actions.className = 's4t-checklist-actions';
-            remove.before(actions);
+            remove.after(actions);
             actions.append(action);
             actions._nativeDelete = remove;
             remove.parentElement.classList.add('s4t-checklist-native-actions');
@@ -4343,6 +4351,7 @@ async function s4tCompleteChecklist(adapter) {
         if (mutations.every(function (m) { var t = m.target.nodeType === 1 ? m.target : m.target.parentElement; if (!t || !t.closest) return false; if (t.closest('.s4t-checklist-actions')) return true; if (t.closest(roots)) return false; return !!t.closest('[id^="s4t-"], [class*="s4t-"]'); })) return;
         if (!pending) pending = setTimeout(function () { pending = null; mount(); }, 120);
     }).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('change',function(event){if(event.target.closest&&event.target.closest(roots)&&!pending)pending=setTimeout(function(){pending=null;mount();},0);});
     window.addEventListener('resize', mount);
     mount();
 })();
@@ -4561,7 +4570,7 @@ function s4tCommentSearchSpans(text, query) {
 
         jumps.style.left='0px';jumps.style.top='0px';
         var origin=jumps.getBoundingClientRect();
-        jumps.style.left=(right-42-origin.left)+'px';
+        jumps.style.left=(right-27-origin.left)+'px';
         jumps.style.top=(bottom-76-origin.top)+'px';
     }
     function jumpComments(bottom) {

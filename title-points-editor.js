@@ -25,7 +25,21 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
 (function () {
     function enabled() { return typeof s4tPreferences === 'undefined' || s4tPreferences.enabled('titlePoints'); }
     var selector = s4tTitleEditorSelector;
-    var highlighted, mirror, viewStyle;
+    var highlighted, mirror, viewStyle, observedInput;
+    var layoutObserver=typeof ResizeObserver!=='undefined'?new ResizeObserver(function(){if(highlighted)highlight(highlighted);}):null;
+    var motionFrame, motionUntil=0;
+    function followLayout(){
+        motionFrame=null;
+        if(highlighted)highlight(highlighted);
+        if(highlighted&&performance.now()<motionUntil)motionFrame=requestAnimationFrame(followLayout);
+    }
+    function trackLayout(){
+        if(!highlighted)return;
+        motionUntil=performance.now()+500;
+        if(!motionFrame)motionFrame=requestAnimationFrame(followLayout);
+    }
+    document.addEventListener('transitionrun',function(event){if(highlighted&&event.target.contains(highlighted))trackLayout();},true);
+    document.addEventListener('transitionend',function(event){if(highlighted&&event.target.contains(highlighted))highlight(highlighted);},true);
     function restoreView() {
         if (viewStyle) {
             viewStyle.input.style.setProperty('-webkit-text-fill-color', viewStyle.value, viewStyle.priority);
@@ -36,7 +50,9 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
     function removeHighlight() {
         restoreView();
         if (mirror) mirror.remove();
-        mirror = null; highlighted = null;
+        mirror = null; highlighted = null; observedInput=null;
+        if(layoutObserver)layoutObserver.disconnect();
+        if(motionFrame)cancelAnimationFrame(motionFrame);motionFrame=null;
     }
     function highlight(input) {
         if (!enabled()) { removeHighlight(); return; }
@@ -48,6 +64,10 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
             mirror.setAttribute('aria-hidden', 'true'); document.body.appendChild(mirror);
         }
         highlighted = input;
+        if(layoutObserver&&observedInput!==input){
+            layoutObserver.disconnect();observedInput=input;
+            for(var ancestor=input;ancestor&&ancestor!==document.body;ancestor=ancestor.parentElement)layoutObserver.observe(ancestor);
+        }
         var rect = input.getBoundingClientRect(), css = getComputedStyle(input);
         if (viewing && !viewStyle) {
             viewStyle = { input: input, value: input.style.getPropertyValue('-webkit-text-fill-color'), priority: input.style.getPropertyPriority('-webkit-text-fill-color') };
@@ -147,19 +167,21 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
     // Board badges and popup updates cannot change a card-title mirror.
     // Coalesce relevant card layout mutations; typing still updates immediately.
     var viewTimer;
-    var cardScope='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window';
+    var cardScope='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window,[role="dialog"],dialog';
     new MutationObserver(function (mutations) {
         var relevant=mutations.some(function(mutation){
             var target=mutation.target.nodeType===1?mutation.target:mutation.target.parentElement;
-            if(target&&target.closest('#s4t-title-point-highlight,#s4t-review-ink-layer'))return false;
+            if(target&&target.closest('#s4t-title-point-highlight,#s4t-review-ink-layer,.s4t-card-copy,.s4t-card-toast,.s4t-comment-search-slot'))return false;
+            if(mutation.type==='attributes'&&target===highlighted&&mutation.attributeName==='style')return false;
+            if(target&&highlighted&&target.contains(highlighted))return true;
             var nodes=Array.from(mutation.addedNodes||[]).concat(Array.from(mutation.removedNodes||[]));
             if(nodes.length&&nodes.every(function(node){return node.nodeType===1&&(node.id==='s4t-title-point-highlight'||node.id==='s4t-review-ink-layer');}))return false;
             if(highlighted&&!highlighted.isConnected)return true;
             if(target&&(target.matches(selector)||target.closest(cardScope)))return true;
             return nodes.some(function(node){return node.nodeType===1&&(node.matches(selector)||node.querySelector(selector));});
         });
-        if(relevant&&!viewTimer)viewTimer=setTimeout(function(){viewTimer=null;syncView();},32);
-    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['readonly', 'data-testid'] });
+        if(relevant&&!viewTimer)viewTimer=requestAnimationFrame(function(){viewTimer=null;syncView();trackLayout();});
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['readonly', 'data-testid', 'class', 'style', 'hidden', 'aria-hidden'] });
     document.addEventListener('s4t-preferences-changed', function () {
         if (!enabled()) {
             document.querySelectorAll(selector).forEach(function (input) { finish(input, false); });

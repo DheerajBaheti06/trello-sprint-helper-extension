@@ -16,6 +16,10 @@ var s4tPreferences = (function () {
         ]],
         ['Card tools', [
             ['checkAll', 'Check All', 'Complete every item in a checklist.', '.s4t-checklist-actions'],
+            ['commentScroll', 'Comment scroll arrows', 'Move to the top or bottom of comments.', '.s4t-comment-jumps'],
+            ['cardCopy', 'Copy title and description', 'Copy the title without points or description.', '.s4t-card-copy-title, .s4t-card-copy-description'],
+            ['commentCopy', 'Copy comments', 'Copy a comment with formatting in one click.', '.s4t-card-copy-comment'],
+            ['cardShare', 'Share card link', 'Copy the card link from the button after comment search.', '.s4t-card-copy-share'],
             ['commentSearch', 'Comment search', 'Find text inside card comments.', '.s4t-comment-navigator'],
             ['titlePoints', 'Quick point editing', 'Highlighted assigned/completed brackets in the card title.'],
             ['reviewMode', 'Review mode', 'Expand comments by hiding the left card section.', '.s4t-comment-layout-toggle:not(.s4t-review-marker)'],
@@ -50,14 +54,24 @@ var s4tPreferences = (function () {
         modal = document.createElement('div'); modal.id = 's4t-preferences-overlay';
         var dialog = document.createElement('section'); dialog.id = 's4t-preferences-dialog'; dialog.setAttribute('role','dialog'); dialog.setAttribute('aria-modal','true'); dialog.setAttribute('aria-labelledby','s4t-preferences-title');
         dialog.innerHTML = '<header><h2 id="s4t-preferences-title">Settings</h2><button type="button" aria-label="Close settings">✕</button></header><p>Choose the features you want to see. Saved in this browser for all Trello boards. If Members Burndown is hidden, use the Settings button on the board.</p><div class="s4t-preferences-groups"></div><footer><span role="status"></span><button type="button">Reset to defaults</button></footer>';
-        var rules = document.createElement('button'); rules.type = 'button'; rules.id = 's4t-preferences-rules'; rules.textContent = 'Sprint Helper workflow rules'; rules.onclick = function () { s4tWorkflowRules.open(rules); }; dialog.querySelector('p').after(rules);
+        var rules = document.createElement('button'); rules.type = 'button'; rules.id = 's4t-preferences-rules'; rules.textContent = 'Sprint Helper · Workflow rules'; rules.onclick = function () { s4tWorkflowRules.open(rules); }; dialog.querySelector('h2').after(rules);
         var container = dialog.querySelector('.s4t-preferences-groups'), status = dialog.querySelector('[role="status"]');
         function close() { modal.remove(); modal = null; if (previous && previous.isConnected) previous.focus(); }
-        dialog.querySelector('header button').onclick = close;
+        dialog.querySelector('[aria-label="Close settings"]').onclick = close;
         function render() {
             container.textContent = '';
+            var compact=document.createElement('div');compact.className='s4t-preferences-compact';
             groups.forEach(function (group) {
                 var field = document.createElement('fieldset'), legend = document.createElement('legend'); legend.textContent = group[0]; field.appendChild(legend);
+                var sections={};
+                if(group[0]==='Card tools'){
+                    field.className='s4t-preferences-card-tools';
+                    var grid=document.createElement('div');grid.className='s4t-preferences-card-grid';field.append(grid);
+                    ['Topbar','Left container','Right container'].forEach(function(name){
+                        var section=document.createElement('section'),heading=document.createElement('h3');
+                        heading.textContent=name;section.append(heading);grid.append(section);sections[name]=section;
+                    });
+                }
                 group[1].forEach(function (entry) {
                     var label = document.createElement('label'), input = document.createElement('input'), text = document.createElement('span');
                     input.type = 'checkbox'; input.checked = enabled(entry[0]); input.dataset.featurePreference = entry[0]; text.textContent = entry[1];
@@ -67,8 +81,13 @@ var s4tPreferences = (function () {
                         if (save(next)) status.textContent = 'Preferences saved.';
                         else { input.checked = enabled(entry[0]); status.textContent = 'Could not save preferences. Try again.'; }
                     };
-                    label.append(input,text); field.appendChild(label);
-                }); container.appendChild(field);
+                    label.append(input,text);
+                    var area=['commentSearch','cardShare','reviewMode','laserPointer'].includes(entry[0])?'Topbar':['checkAll','cardCopy','titlePoints'].includes(entry[0])?'Left container':'Right container';
+                    (sections[area]||field).appendChild(label);
+                });
+                if(group[0]==='Charts'||group[0]==='Special'){
+                    compact.appendChild(field);if(!compact.isConnected)container.appendChild(compact);
+                }else container.appendChild(field);
             });
         }
         dialog.querySelector('footer button').onclick = function () { if (save({})) { render(); status.textContent = 'Features enabled; native filter hiding off.'; } else status.textContent = 'Could not save preferences. Try again.'; };
