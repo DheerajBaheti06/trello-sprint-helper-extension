@@ -20,8 +20,8 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
 /* Read-only card copying. Native title/description nodes are never moved. */
 (function () {
     var card, titleButton, descriptionButton, shareButton, timer;
-    var commentButtons=new Map(), commentLayer, positionFrame;
-    function schedulePosition(){if(!positionFrame)positionFrame=setTimeout(function(){positionFrame=null;position();},16);}
+    var commentButtons=new Map(), positionFrame;
+    function schedulePosition(){if(!positionFrame)positionFrame=requestAnimationFrame(function(){positionFrame=null;positionComments();position();});}
     var commentResize=typeof ResizeObserver!=='undefined'?new ResizeObserver(schedulePosition):null;
     var icon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>';
     function titleNode(){return card&&card.querySelector(typeof s4tTitleEditorSelector==='string'?s4tTitleEditorSelector+', [data-testid="card-back-title"],.card-detail-title h2':'[data-testid="card-back-title-input"],[data-testid="card-back-title"],.js-card-detail-title-input,.card-detail-title textarea,.card-detail-title h2');}
@@ -44,7 +44,7 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
     }
     function commentPayload(source){
         var clone=source.cloneNode(true);
-        clone.querySelectorAll('.s4t-card-copy,button,input,textarea,script,style,iframe,object,embed').forEach(function(node){node.remove();});
+        clone.querySelectorAll('.s4t-comment-copy-dock,.s4t-card-copy,button,input,textarea,script,style,iframe,object,embed').forEach(function(node){node.remove();});
         clone.querySelectorAll('*').forEach(function(node){
             Array.from(node.attributes).forEach(function(attr){
                 if(!/^(href|src|alt|title|colspan|rowspan|style)$/.test(attr.name))node.removeAttribute(attr.name);
@@ -68,50 +68,37 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         return {html:clone.innerHTML,text:plain(clone).trim()};
     }
     function mountComments(){
-        if(!commentLayer||!commentLayer.isConnected){
-            commentLayer=document.createElement('div');commentLayer.className='s4t-comment-copy-layer';card.append(commentLayer);
-        }
         var selector='.comment-container,.phenom-comment,.current-comment,.action-comment,[data-testid="comment-text"],[data-testid="comment-content"],[data-testid="card-back-comment"],[data-testid="card-back-action-comment"],[data-testid="action-comment"],[data-testid*="comment"] .ak-renderer-document,[data-testid*="activity"] .ak-renderer-document,.list-actions .ak-renderer-document';
         var sources=Array.from(card.querySelectorAll(selector)).map(function(root){
             return root.querySelector('.ak-renderer-document,.markeddown,[data-testid="comment-text"]')||root;
         });
         sources=Array.from(new Set(sources)).filter(function(root){return !sources.some(function(other){return other!==root&&root.contains(other);})&&!root.closest('[contenteditable="true"],.ProseMirror');});
         commentButtons.forEach(function(copy,source){
-            if(!sources.includes(source)){copy.remove();commentButtons.delete(source);if(commentResize)commentResize.unobserve(source);}
+            if(!sources.includes(source)){if(copy._dock)copy._dock.remove();commentButtons.delete(source);if(commentResize)commentResize.unobserve(source);}
         });
         sources.forEach(function(source){
-            if(commentButtons.has(source))return;
-            var copy=button('comment');copy._commentSource=source;
-            commentButtons.set(source,copy);commentLayer.append(copy);
+            if(commentButtons.has(source)&&commentButtons.get(source).isConnected)return;
+            var copy=button('comment');copy._commentSource=source;copy.style.visibility='hidden';
+            var dock=document.createElement('span');dock.className='s4t-comment-copy-dock';
+            copy._dock=dock;dock.append(copy);
+            // Preserve renderer > :first-child rules (Trello removes the first
+            // paragraph/heading's top margin). Never prepend a sibling before it.
+            var textBlock=source.querySelector('p,h1,h2,h3,h4,h5,h6,li,blockquote');
+            (textBlock||source).append(dock);
+            commentButtons.set(source,copy);
             if(commentResize)commentResize.observe(source);
         });
-        schedulePosition();
+        positionComments();
     }
     function positionComments(){
-        if(!card||!commentLayer)return;
-        var origin=commentLayer.getBoundingClientRect(),bounds=card.getBoundingClientRect();
-        var scaleX=commentLayer.offsetWidth?origin.width/commentLayer.offsetWidth:1;
-        var scaleY=commentLayer.offsetHeight?origin.height/commentLayer.offsetHeight:1;
-        var updates=[];
         commentButtons.forEach(function(copy,source){
-            if(!source.isConnected){copy.hidden=true;return;}
-            var rect=source.getBoundingClientRect();
-            var top=Math.max(bounds.top,0),bottom=Math.min(bounds.bottom,innerHeight),left=Math.max(bounds.left,0),right=Math.min(bounds.right,innerWidth);
-            for(var parent=source.parentElement;parent&&parent!==card;parent=parent.parentElement){
-                var css=getComputedStyle(parent),box=parent.getBoundingClientRect();
-                if(/auto|scroll|hidden|clip/.test(css.overflowY)){top=Math.max(top,box.top+parent.clientTop);bottom=Math.min(bottom,box.top+parent.clientTop+parent.clientHeight);}
-                if(/auto|scroll|hidden|clip/.test(css.overflowX)){left=Math.max(left,box.left+parent.clientLeft);right=Math.min(right,box.left+parent.clientLeft+parent.clientWidth);}
-            }
-            var x=rect.right-30,y=rect.top+4;
-            var hidden=!source.getClientRects().length||y+30<=top||y>=bottom||x+30<=left||x>=right;
-            updates.push({copy:copy,hidden:hidden,x:(x-origin.left)/scaleX,y:(y-origin.top)/scaleY,
-                clip:'inset('+Math.max(0,top-y)/scaleY+'px '+Math.max(0,x+30-right)/scaleX+'px '+Math.max(0,y+30-bottom)/scaleY+'px '+Math.max(0,left-x)/scaleX+'px)'});
-        });
-        updates.forEach(function(update){
-            var copy=update.copy;
-            if(copy.hidden!==update.hidden)copy.hidden=update.hidden;
-            if(update.hidden)return;
-            copy.style.left=update.x+'px';copy.style.top=update.y+'px';copy.style.clipPath=update.clip;
+            if(!source.isConnected||!copy._dock.isConnected)return;
+            // Only layout/resizing needs coordinates. The zero-size dock scrolls
+            // with its comment in the browser's own scrolling layer.
+            var rect=source.getBoundingClientRect(),origin=copy._dock.getBoundingClientRect();
+            copy.style.left=(rect.right-origin.left-30)+'px';
+            copy.style.top=(rect.top-origin.top+4)+'px';
+            copy.style.visibility='visible';
         });
     }
 
@@ -149,7 +136,6 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         return node;
     }
     function position(){
-        positionComments();
         if(!titleButton||!card)return;
         var title=titleNode();
         var circle=Array.from(card.querySelectorAll('button,[role="checkbox"],input[type="checkbox"]')).find(function(node){
@@ -179,7 +165,7 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         if(!next)next=Array.from(document.querySelectorAll(cardSelector)).find(function(node){
             return node.getClientRects().length&&node.querySelector('[data-testid="card-back-title"],[data-testid="card-back-title-input"],.card-detail-title');
         });
-        if(card!==next){if(commentLayer)commentLayer.remove();commentLayer=null;commentButtons.forEach(function(copy){copy.remove();});commentButtons.clear();if(commentResize)commentResize.disconnect();if(titleButton)titleButton.remove();if(descriptionButton)descriptionButton.remove();if(shareButton)shareButton.remove();titleButton=descriptionButton=shareButton=null;card=next;}
+        if(card!==next){commentButtons.forEach(function(copy){if(copy._dock)copy._dock.remove();});commentButtons.clear();if(commentResize)commentResize.disconnect();if(titleButton)titleButton.remove();if(descriptionButton)descriptionButton.remove();if(shareButton)shareButton.remove();titleButton=descriptionButton=shareButton=null;card=next;}
         if(!card)return;
         if(!titleButton||!titleButton.isConnected){titleButton=button('title');card.append(titleButton);}
         var heading=Array.from(card.querySelectorAll('h2,h3,h4,[role="heading"],[data-testid="card-back-description-title"]')).find(function(node){return /^description$/i.test(node.textContent.trim());});
@@ -193,10 +179,12 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         position();
     }
     new MutationObserver(function(records){
-        if(records.every(function(m){return m.target.nodeType===1&&m.target.closest('.s4t-card-copy,.s4t-card-toast,.s4t-comment-copy-layer');}))return;
+        if(records.every(function(m){return m.target.nodeType===1&&m.target.closest('.s4t-card-copy,.s4t-card-toast,.s4t-comment-copy-dock');}))return;
         if(!timer)timer=setTimeout(mount,80);
     }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','aria-hidden','data-testid']});
     document.addEventListener('s4t-card-toolbar-mounted',mount);
-    document.addEventListener('scroll',schedulePosition,true);window.addEventListener('resize',schedulePosition);
+    // Only the title copy control needs scroll positioning; comments scroll natively.
+    document.addEventListener('scroll',position,true);
+    window.addEventListener('resize',schedulePosition);
     mount();
 })();

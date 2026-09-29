@@ -1736,6 +1736,7 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
     #s4t-preferences-dialog .s4t-preferences-card-grid { grid-template-columns:1fr; gap:12px; }
 }
 
-/* A stable overlay origin keeps scroll geometry independent of button animations. */
-.s4t-comment-copy-layer { position:fixed; inset:0; z-index:100; pointer-events:none; overflow:hidden; }
-.s4t-comment-copy-layer > .s4t-card-copy-comment { position:absolute; margin:0; pointer-events:auto; }
+
+/* Zero-size float does not reserve text width or alter native comment styles. */
+.s4t-comment-copy-dock { float:right; position:relative; display:block; width:0; height:0; min-width:0; min-height:0; margin:0; padding:0; border:0; overflow:visible; pointer-events:none; }
+.s4t-comment-copy-dock > .s4t-card-copy-comment { position:absolute; margin:0; z-index:2; pointer-events:auto; }
