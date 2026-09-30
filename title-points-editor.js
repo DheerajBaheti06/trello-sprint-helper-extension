@@ -25,7 +25,7 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
 (function () {
     function enabled() { return typeof s4tPreferences === 'undefined' || s4tPreferences.enabled('titlePoints'); }
     var selector = s4tTitleEditorSelector;
-    var highlighted, mirror, viewStyle, observedInput;
+    var highlighted, mirror, viewStyle, observedInput, renderKey;
     var layoutObserver=typeof ResizeObserver!=='undefined'?new ResizeObserver(function(){if(highlighted)highlight(highlighted);}):null;
     var motionFrame, motionUntil=0;
     function followLayout(){
@@ -50,7 +50,7 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
     function removeHighlight() {
         restoreView();
         if (mirror) mirror.remove();
-        mirror = null; highlighted = null; observedInput=null;
+        mirror = null; highlighted = null; observedInput=null;renderKey=null;
         if(layoutObserver)layoutObserver.disconnect();
         if(motionFrame)cancelAnimationFrame(motionFrame);motionFrame=null;
     }
@@ -80,9 +80,12 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         mirror.style.left = rect.left + 'px'; mirror.style.top = rect.top + 'px';
         mirror.style.width = rect.width + 'px'; mirror.style.height = rect.height + 'px';
         // The body-mounted mirror must respect the title's native scroll containers.
+        var opacity=1;
         var visible={top:Math.max(0,rect.top),right:Math.min(innerWidth,rect.right),bottom:Math.min(innerHeight,rect.bottom),left:Math.max(0,rect.left)};
         for(var parent=input.parentElement;parent;parent=parent.parentElement){
             var parentCss=getComputedStyle(parent),bounds=parent.getBoundingClientRect();
+            opacity*=Number(parentCss.opacity);
+            if(parentCss.visibility==='hidden'||parentCss.display==='none')opacity=0;
             if(/auto|scroll|hidden|clip/.test(parentCss.overflowY)){
                 visible.top=Math.max(visible.top,bounds.top+parent.clientTop);
                 visible.bottom=Math.min(visible.bottom,bounds.top+parent.clientTop+parent.clientHeight);
@@ -92,9 +95,13 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
                 visible.right=Math.min(visible.right,bounds.left+parent.clientLeft+parent.clientWidth);
             }
         }
+        mirror.style.opacity=String(opacity);
         mirror.style.clipPath='inset('+Math.max(0,visible.top-rect.top)+'px '+Math.max(0,rect.right-visible.right)+'px '+Math.max(0,rect.bottom-visible.bottom)+'px '+Math.max(0,visible.left-rect.left)+'px)';
         mirror.style.visibility=visible.bottom<=visible.top||visible.right<=visible.left?'hidden':'visible';
 
+        var nextRenderKey=JSON.stringify([input.value,viewing,css.color]);
+        if(renderKey===nextRenderKey){mirror.scrollTop=input.scrollTop;mirror.scrollLeft=input.scrollLeft;return;}
+        renderKey=nextRenderKey;
         var fragment = document.createDocumentFragment(), pattern = /\(\s*(?:\?|\d*\.?\d*)\s*\)|\[\s*(?:\?|\d*\.?\d*)\s*\]/g;
         var text = viewing ? s4tTitlePointSlots(input.value, true) : input.value, last = 0, match;
         while ((match = pattern.exec(text))) {
@@ -169,18 +176,20 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
     var viewTimer;
     var cardScope='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window,[role="dialog"],dialog';
     new MutationObserver(function (mutations) {
+        if(highlighted&&!highlighted.isConnected)removeHighlight();
         var relevant=mutations.some(function(mutation){
             var target=mutation.target.nodeType===1?mutation.target:mutation.target.parentElement;
             if(target&&target.closest('#s4t-title-point-highlight,#s4t-review-ink-layer,.s4t-card-copy,.s4t-card-toast,.s4t-comment-search-slot'))return false;
             if(mutation.type==='attributes'&&target===highlighted&&mutation.attributeName==='style')return false;
-            if(target&&highlighted&&target.contains(highlighted))return true;
+
             var nodes=Array.from(mutation.addedNodes||[]).concat(Array.from(mutation.removedNodes||[]));
-            if(nodes.length&&nodes.every(function(node){return node.nodeType===1&&(node.id==='s4t-title-point-highlight'||node.id==='s4t-review-ink-layer');}))return false;
+            if(nodes.length&&nodes.every(function(node){return node.nodeType===1&&node.matches('[id^="s4t-"],.s4t-card-copy,.s4t-comment-copy-dock,.s4t-card-toast');}))return false;
+            if(target&&highlighted&&target.contains(highlighted))return true;
             if(highlighted&&!highlighted.isConnected)return true;
             if(target&&(target.matches(selector)||target.closest(cardScope)))return true;
             return nodes.some(function(node){return node.nodeType===1&&(node.matches(selector)||node.querySelector(selector));});
         });
-        if(relevant&&!viewTimer)viewTimer=requestAnimationFrame(function(){viewTimer=null;syncView();trackLayout();});
+        if(relevant&&!viewTimer)viewTimer=requestAnimationFrame(function(){viewTimer=null;syncView();});
     }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['readonly', 'data-testid', 'class', 'style', 'hidden', 'aria-hidden'] });
     document.addEventListener('s4t-preferences-changed', function () {
         if (!enabled()) {

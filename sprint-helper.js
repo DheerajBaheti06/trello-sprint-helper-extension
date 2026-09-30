@@ -82,8 +82,8 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
     pointsDoneUrl = chrome.runtime.getURL('images/points-done.png');
     flameUrl = chrome.runtime.getURL('images/burndown-icon_12x12.png');
     flame18Url = chrome.runtime.getURL('images/burndown-icon_18x18.png');
-    scrumLogoUrl = chrome.runtime.getURL('images/sprint-helper-icon_12x12.png');
-    scrumLogo18Url = chrome.runtime.getURL('images/sprint-helper-icon_18x18.png');
+    scrumLogoUrl = chrome.runtime.getURL('sprint-helper-icon.png');
+    scrumLogo18Url = chrome.runtime.getURL('sprint-helper-icon.png');
 }
 
 refreshSettings(); // get the settings right away (may take a little bit if using Chrome cloud storage)
@@ -2060,6 +2060,43 @@ function s4tCompactAttentionLists(enabled) {
     });
 }
 
+// Keep Trello-owned counters untouched so React can update them normally.
+function s4tUpdateAttentionListCounts(enabled) {
+    if(!enabled){
+        document.querySelectorAll('[data-s4t-list-count]').forEach(function(node){node.remove();});
+        document.querySelectorAll('.s4t-native-list-count').forEach(function(node){node.classList.remove('s4t-native-list-count');});
+        return;
+    }
+    document.querySelectorAll(S4T_LIST_SEL).forEach(function(list){
+        var header=list.querySelector('[data-testid="list-header"],.list-header');
+        if(!header)return;
+        var original=header.querySelector('.s4t-native-list-count,[data-testid="list-card-count"],[data-testid="list-cards-count"],[data-testid="list-count"],.list-header-num-cards');
+        if(!original)original=Array.from(header.querySelectorAll('span,div')).find(function(node){
+            return !node.children.length&&/^\d+$/.test(node.textContent.trim())&&
+                !node.closest('[data-s4t-list-count],.list-total,button,[role="button"],[data-testid="list-name"],[data-testid="list-title"]');
+        });
+        if(!original)return;
+        var ids=new Set();
+        list.querySelectorAll(S4T_CARD_SEL).forEach(function(card){
+            if(card.closest('.s4t-attention-hidden,[hidden],.s4t-attention-row-hidden'))return;
+            var link=card.matches('a[href*="/c/"]')?card:card.querySelector('a[href*="/c/"]');
+            var match=link&&(link.getAttribute('href')||'').match(/\/c\/([a-zA-Z0-9]+)/);
+            ids.add(match?match[1]:card);
+        });
+        var counter=header.querySelector('[data-s4t-list-count]');
+        if(!counter){
+            counter=document.createElement('span');counter.className=original.className;
+            counter.classList.remove('s4t-native-list-count');counter.setAttribute('data-s4t-list-count','');
+            original.after(counter);
+        }
+        if(!original.classList.contains('s4t-native-list-count'))original.classList.add('s4t-native-list-count');
+        var text=String(ids.size);
+        if(counter.textContent!==text)counter.textContent=text;
+        var label=text+' cards matching Attention filters';
+        if(counter.getAttribute('aria-label')!==label)counter.setAttribute('aria-label',label);
+    });
+}
+
 // Hide in place: never remove or reinsert Trello's list nodes.
 function s4tHideEmptyAttentionLists(enabled) {
     var wanted = new Set();
@@ -2348,7 +2385,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         var ids = result.ids.filter(function (id) { return !hiddenIds.has(id); });
         return { index: index, ids: ids, count: ids.length };
     }
-    var request = 0, loading = false, error = '', refreshed = '';
+    var request = 0, loading = false, error = '', refreshed = '', lastDataRefresh=0, lastResumeAttempt=0, unknownRefreshTimer;
     var commentLoading = false, commentRequest = 0, commentCache = new Map(), commentError = '';
     var panel, button, controls, cardsButton, clearButton, observerTimer, layoutKey = '', savedState = '';
 
@@ -2390,7 +2427,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         board = current;
         dataWaiters.splice(0).forEach(function (callback) { callback(new Error('Board changed')); });
         request++; commentRequest++; commentLoading = false; commentError = ''; commentCache.clear();
-        data = null; selected = []; excluded = []; hideEmptyLists = false; loading = false; error = ''; refreshed = '';
+        data = null; selected = []; excluded = []; hideEmptyLists = false; loading = false; error = ''; refreshed = '';lastDataRefresh=0;lastResumeAttempt=0;clearTimeout(unknownRefreshTimer);unknownRefreshTimer=null;
         memberFilters = []; labelFilters = [];
         matchAll = false;
         savedState = '';
@@ -2413,6 +2450,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         });
         compactLists(false);
         s4tHideEmptyAttentionLists(false);
+        s4tUpdateAttentionListCounts(false);
     }
 
     function close() {
@@ -2713,8 +2751,9 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         (filterActive ? document.querySelectorAll(S4T_CARD_SEL) : []).forEach(function (el) {
             var link = el.matches('a[href*="/c/"]') ? el : el.querySelector('a[href*="/c/"]');
             var match = link && link.getAttribute('href').match(/\/c\/([A-Za-z0-9]+)/);
-            // Unknown/new cards remain visible until refreshed; never guess from truncated DOM data.
-            var hide = !!(match && index[match[1]] === false);
+            // Keep unverified cards out of filtered results until fresh board data arrives.
+            if(match&&index[match[1]]===undefined)scheduleUnknownRefresh();
+            var hide = !!(match && index[match[1]] !== true);
             if (hide) cardLayoutNodes(el).forEach(function (node) { hiddenNodes.add(node); });
         });
         // Reconcile previous wrappers too: Trello can move/reuse them after edits.
@@ -2731,6 +2770,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             }
         });
         compactLists(filterActive);
+        s4tUpdateAttentionListCounts(filterActive);
         s4tHideEmptyAttentionLists(filterActive && hideEmptyLists);
         document.body.classList.toggle('s4t-attention-active-filter', filterActive);
         if (changed) calcListPoints();
@@ -2820,6 +2860,25 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             });
     }
 
+    function scheduleUnknownRefresh(){
+        if(unknownRefreshTimer||loading||document.hidden||Date.now()-lastResumeAttempt<10000)return;
+        unknownRefreshTimer=setTimeout(function(){
+            unknownRefreshTimer=null;
+            if(!active()||loading||document.hidden||nativeBlocked)return;
+            lastResumeAttempt=Date.now();fetchData();
+        },150);
+    }
+    function resumeAttention(){
+        if(document.hidden)return;
+        sync(); // Reapply saved choices immediately to Trello's restored DOM.
+        if(active()&&!nativeBlocked&&!loading&&Date.now()-lastDataRefresh>60000&&Date.now()-lastResumeAttempt>10000){
+            lastResumeAttempt=Date.now();fetchData();
+        }
+    }
+    document.addEventListener('visibilitychange',resumeAttention);
+    window.addEventListener('focus',resumeAttention);
+    window.addEventListener('pageshow',resumeAttention);
+
     function fetchData(forceComments) {
         if (!board || loading) return;
         if (forceComments === true) commentCache.clear();
@@ -2830,7 +2889,7 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
             loading = false;
             if (validate(result)) {
                 result.s4tForceCommentRead = forceComments === true;
-                data = result;
+                data = result;lastDataRefresh=Date.now();
                 refreshed = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             } else {
                 error = 'Could not load complete card/checklist data. ' +
@@ -3205,7 +3264,8 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
                     cards.forEach(function (card) {
                         var link = card.matches('a[href*="/c/"]') ? card : card.querySelector('a[href*="/c/"]');
                         var match = link && (link.getAttribute('href') || '').match(/\/c\/([A-Za-z0-9]+)/);
-                        var hidden = !!(match && index[match[1]] === false);
+                        if(match&&index[match[1]]===undefined)scheduleUnknownRefresh();
+                        var hidden = !!(match && index[match[1]] !== true);
                         if (card.classList.contains('s4t-attention-hidden') !== hidden) { card.classList.toggle('s4t-attention-hidden', hidden); visibilityChanged = true; }
                     });
                 });
@@ -4650,7 +4710,17 @@ function s4tCommentSearchSpans(text, query) {
         update();
     }
     new MutationObserver(function (mutations) {
-        if (mutations.every(function (m) { var node = m.target.nodeType === 1 ? m.target : m.target.parentElement; return node && node.closest && node.closest('[id^="s4t-"], .s4t-comment-navigator, .s4t-comment-search-slot, .s4t-comment-jumps'); })) return;
+        var cardSelector='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window,[role="dialog"],dialog';
+        var own='[id^="s4t-"],.s4t-card-copy,.s4t-card-toast,.s4t-comment-copy-dock,.s4t-comment-navigator,.s4t-comment-search-slot,.s4t-comment-jumps';
+        var relevant=(scope&&!scope.isConnected)||mutations.some(function(m){
+            var node=m.target.nodeType===1?m.target:m.target.parentElement;
+            if(node&&node.closest(own))return false;
+            var nodes=Array.from(m.addedNodes||[]).concat(Array.from(m.removedNodes||[]));
+            if(nodes.length&&nodes.every(function(child){return child.nodeType===1&&child.matches(own);}))return false;
+            if(scope&&node&&(scope.contains(node)||node.contains(scope)))return true;
+            return nodes.some(function(child){return child.nodeType===1&&(child.matches(cardSelector)||child.querySelector(cardSelector));});
+        });
+        if(!relevant)return;
         indexDirty = true;
         // Mount/remount before the next paint when a card or its navbar appears.
         if (!bar || !bar.isConnected || !slot || !slot.isConnected || mutations.some(function(m){var node=m.target.nodeType===1?m.target:m.target.parentElement;return node&&node.closest('[data-testid="card-back-header"],[data-testid="card-back-header-actions"],header,[role="toolbar"]');})) {

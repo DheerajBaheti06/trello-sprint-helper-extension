@@ -179,8 +179,17 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         position();
     }
     new MutationObserver(function(records){
-        if(records.every(function(m){return m.target.nodeType===1&&m.target.closest('.s4t-card-copy,.s4t-card-toast,.s4t-comment-copy-dock');}))return;
-        if(!timer)timer=setTimeout(mount,80);
+        var selector='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window,[role="dialog"],dialog';
+        var own='[id^="s4t-"],.s4t-card-copy,.s4t-card-toast,.s4t-comment-copy-dock,.s4t-comment-search-slot,.s4t-comment-jumps';
+        var relevant=(card&&!card.isConnected)||records.some(function(m){
+            var target=m.target.nodeType===1?m.target:m.target.parentElement;
+            if(target&&target.closest(own))return false;
+            var nodes=Array.from(m.addedNodes||[]).concat(Array.from(m.removedNodes||[]));
+            if(nodes.length&&nodes.every(function(node){return node.nodeType===1&&node.matches(own);}))return false;
+            if(card&&target&&card.contains(target))return true;
+            return nodes.some(function(node){return node.nodeType===1&&(node.matches(selector)||node.querySelector(selector));});
+        });
+        if(relevant&&!timer)timer=setTimeout(mount,80);
     }).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','aria-hidden','data-testid']});
     document.addEventListener('s4t-card-toolbar-mounted',mount);
     // Only the title copy control needs scroll positioning; comments scroll natively.

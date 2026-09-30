@@ -1077,7 +1077,7 @@
 .s4t-comments-heading-row { display: flex !important; align-items: center !important; flex-wrap: nowrap !important; gap: 8px; }
 .s4t-comments-heading-title, .s4t-comments-heading-details { flex: 0 0 auto; white-space: nowrap; margin-block: 0 !important; }
 .s4t-comment-search-slot { display: block; min-width: 0; flex: 1 1 180px; margin: 0; box-sizing: border-box; }
-.s4t-comment-navigator { display: flex; align-items: center; flex-wrap: nowrap; gap: 2px; width: 100%; min-width: 0; margin: 0; padding: 2px 4px; border: 1px solid var(--ds-border, #e4e4e7); border-radius: 8px; background: var(--ds-surface-overlay, #fff); color: var(--ds-text, #27272a); font: 12px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; box-sizing: border-box; }
+.s4t-comment-navigator { display: flex; align-items: center; flex-wrap: nowrap; gap: 2px; width: 100%; min-width: 0; margin: 0; padding: 2px 4px; border: 1px solid var(--ds-border, #e4e4e7); border-radius: 8px; background: var(--ds-surface-overlay, #fff); color: var(--ds-text, #27272a); font: 14px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; box-sizing: border-box; }
 .s4t-comment-navigator-pinned { position: fixed; z-index: 100; box-shadow: 0 3px 12px #18181b18; }
 .s4t-comment-navigator input { flex: 1 1 0; width: 0; min-width: 0; height: 26px; padding: 4px 6px; margin: 0; border: 0; box-shadow: none; border-radius: 4px; background: transparent; color: inherit; font: inherit; box-sizing: border-box; }
 .s4t-comment-navigator button { flex: 0 0 24px; display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; margin: 0; padding: 2px 4px; border: 0; border-radius: 5px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
@@ -1740,3 +1740,20 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 /* Zero-size float does not reserve text width or alter native comment styles. */
 .s4t-comment-copy-dock { float:right; position:relative; display:block; width:0; height:0; min-width:0; min-height:0; margin:0; padding:0; border:0; overflow:visible; pointer-events:none; }
 .s4t-comment-copy-dock > .s4t-card-copy-comment { position:absolute; margin:0; z-index:2; pointer-events:auto; }
+
+/* The whole comment search control is one surface, including focused input. */
+.s4t-comment-navigator input[type="search"],
+.s4t-comment-navigator input[type="search"]:hover,
+.s4t-comment-navigator input[type="search"]:focus {
+    appearance:none; background:transparent!important; border:0!important;
+    box-shadow:none!important; outline:none!important; border-radius:0;
+    color:inherit; font-size:14px!important; line-height:20px; padding:3px 6px;
+}
+.s4t-comment-navigator input[type="search"]::placeholder { color:var(--ds-text-subtle,#626f86); opacity:1; }
+.s4t-comment-navigator .s4t-comment-match-count { font-size:12px; background:transparent; }
+.s4t-comment-navigator button,.s4t-comment-navigator button:hover {
+    background:transparent!important; box-shadow:none;
+}
+.s4t-comment-navigator button:hover { color:var(--ds-text-selected,#0055cc); }
+
+.s4t-native-list-count { display:none!important; }

@@ -23,7 +23,7 @@
    ],
    "description": "Sprint Helper by Dheeraj. Built on TrelloScrum: points, members burndown, Attention filters, weekly updates and Slack previews.",
    "icons": {
-      "128": "sprint-helper-icon.png"
+      "164": "sprint-helper-icon.png"
    },
    "manifest_version": 3,
    "name": "Sprint Helper",
@@ -41,9 +41,8 @@
             "images/points-done.png",
             "images/burndown-icon_12x12.png",
             "images/burndown-icon_18x18.png",
-            "images/sprint-helper-icon_12x12.png",
-            "images/sprint-helper-icon_18x18.png",
-            "WORKFLOW-RULES.md"
+            "WORKFLOW-RULES.md",
+            "sprint-helper-icon.png"
          ]
       }
    ]
