@@ -4663,6 +4663,12 @@ function s4tCommentSearchSpans(text, query) {
                 a.getBoundingClientRect().top - b.getBoundingClientRect().top;
         });
         var cover = covers[0];
+        // Preserve a working mount when hover adds/removes native tooltip nodes.
+        // Do not climb to a broader header or discard it because it contains a title.
+        if(cover&&slot&&slot.isConnected&&scope===card){
+            var existing=slot.nextElementSibling;
+            if(existing&&(existing===cover||existing.contains(cover)))return {host:slot.parentElement,anchor:existing};
+        }
         if (!cover) {
             var toolbar=card.querySelector('[data-testid="card-back-header-actions"], [role="toolbar"], [data-testid="card-back-header"], header');
             cover=toolbar&&Array.from(toolbar.querySelectorAll('button, [role="button"]')).find(function(node){return !node.closest('.s4t-comment-search-slot');});
