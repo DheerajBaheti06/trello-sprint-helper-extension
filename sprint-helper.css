@@ -1757,3 +1757,11 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 .s4t-comment-navigator button:hover { color:var(--ds-text-selected,#0055cc); }
 
 .s4t-native-list-count { display:none!important; }
+
+/* Reveal only the hovered comment's compact copy control. */
+.s4t-card-copy.s4t-card-copy-comment { width:20px; height:20px; min-width:20px; flex-basis:20px; padding:3px; border-radius:5px; opacity:0; pointer-events:none; transition:opacity .15s ease,background-color .15s ease,color .15s ease; }
+.s4t-card-copy.s4t-card-copy-comment svg { width:12px; height:12px; }
+[data-s4t-comment-copy-source]:hover .s4t-card-copy.s4t-card-copy-comment { opacity:.7; pointer-events:auto; }
+[data-s4t-comment-copy-source] .s4t-card-copy.s4t-card-copy-comment:hover,
+[data-s4t-comment-copy-source] .s4t-card-copy.s4t-card-copy-comment:focus-visible,
+[data-s4t-comment-copy-source]:hover .s4t-card-copy.s4t-card-copy-comment[data-copied] { opacity:1; pointer-events:auto; }

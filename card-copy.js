@@ -74,10 +74,11 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         });
         sources=Array.from(new Set(sources)).filter(function(root){return !sources.some(function(other){return other!==root&&root.contains(other);})&&!root.closest('[contenteditable="true"],.ProseMirror');});
         commentButtons.forEach(function(copy,source){
-            if(!sources.includes(source)){if(copy._dock)copy._dock.remove();commentButtons.delete(source);if(commentResize)commentResize.unobserve(source);}
+            if(!sources.includes(source)){source.removeAttribute('data-s4t-comment-copy-source');if(copy._dock)copy._dock.remove();commentButtons.delete(source);if(commentResize)commentResize.unobserve(source);}
         });
         sources.forEach(function(source){
             if(commentButtons.has(source)&&commentButtons.get(source).isConnected)return;
+            source.setAttribute('data-s4t-comment-copy-source','');
             var copy=button('comment');copy._commentSource=source;copy.style.visibility='hidden';
             var dock=document.createElement('span');dock.className='s4t-comment-copy-dock';
             copy._dock=dock;dock.append(copy);
@@ -96,7 +97,7 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
             // Only layout/resizing needs coordinates. The zero-size dock scrolls
             // with its comment in the browser's own scrolling layer.
             var rect=source.getBoundingClientRect(),origin=copy._dock.getBoundingClientRect();
-            copy.style.left=(rect.right-origin.left-30)+'px';
+            copy.style.left=(rect.right-origin.left-20)+'px';
             copy.style.top=(rect.top-origin.top+4)+'px';
             copy.style.visibility='visible';
         });

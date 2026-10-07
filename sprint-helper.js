@@ -3307,6 +3307,28 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
     sync();
 })();
 
+// Clipboard HTML uses semantic lists so editors receive list items, not dot text.
+function s4tCardsClipboardHtml(text) {
+    function inline(value){
+        var safe=s4tEscapeHtml(value);
+        safe=safe.replace(/https?:\/\/[^\s<>]+/g,function(url){return '<a href="'+url+'">'+url+'</a>';});
+        return safe.replace(/\*([^*\n]+)\*/g,'<strong>$1</strong>');
+    }
+    var html=[],list=false;
+    String(text||'').replace(/\r\n?/g,'\n').split('\n').forEach(function(line){
+        var bullet=line.match(/^\s*(?:•|[-*]\s)\s*(.*)$/);
+        if(bullet){
+            if(!list){html.push('<ul>');list=true;}
+            html.push('<li>'+inline(bullet[1])+'</li>');
+        }else{
+            if(list){html.push('</ul>');list=false;}
+            html.push(line.trim()?'<p>'+inline(line)+'</p>':'<p><br></p>');
+        }
+    });
+    if(list)html.push('</ul>');
+    return html.join('');
+}
+
 // Group selected cards only; multi-member and multi-label cards appear in each matching group.
 function s4tGroupCards(cards, board, mode) {
     var groups = [], index = new Map();
@@ -3491,11 +3513,26 @@ var s4tOpenCardsList = (function () {
     async function copyMessage() {
         var text = state.hasUserEditedPreview ? extractPlainTextFromRichEditor(editor) : generateMissingEstimatesSlackText();
         if (!text.trim()) { showSheetSuccessToast('The message is empty. Select cards or write a message first.'); return; }
-        try { await navigator.clipboard.writeText(text); copied(); }
+        try {
+            if(typeof ClipboardItem==='undefined'||!navigator.clipboard.write)throw new Error('Rich clipboard unavailable');
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html':new Blob([s4tCardsClipboardHtml(text)],{type:'text/html'}),
+                'text/plain':new Blob([text],{type:'text/plain'})
+            })]);
+            copied();
+        }
         catch (_) {
             var field = $('<textarea>').val(text).css({ position: 'fixed', left: '-9999px' }).appendTo(overlay);
             field[0].select(); var ok = false;
+            function richCopy(event){
+                if(!event.clipboardData)return;
+                event.preventDefault();
+                event.clipboardData.setData('text/html',s4tCardsClipboardHtml(text));
+                event.clipboardData.setData('text/plain',text);
+            }
+            document.addEventListener('copy',richCopy);
             try { ok = document.execCommand('copy'); } catch (_) { }
+            finally {document.removeEventListener('copy',richCopy);}
             field.remove(); if (ok) copied(); else showSheetSuccessToast('Copy was blocked. Select the preview text and copy it manually.');
         }
     }
