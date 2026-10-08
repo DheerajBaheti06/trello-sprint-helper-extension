@@ -1,4 +1,4 @@
-/* Point slots exist only while editing the card title. Never rewrite view-mode DOM. */
+/* Inline point slots with a highlight layer kept in the native title container. */
 function s4tTitlePointSlots(value, editing) {
     var assigned = '', completed = '';
     var title = String(value || '').replace(/\([^()]*\)|\[[^\[\]]*\]|\{[^{}]*\}/g, function (token) {
@@ -61,8 +61,10 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         if (!input.isConnected) { removeHighlight(); return; }
         if (!mirror) {
             mirror = document.createElement('div'); mirror.id = 's4t-title-point-highlight';
-            mirror.setAttribute('aria-hidden', 'true'); document.body.appendChild(mirror);
+            mirror.setAttribute('aria-hidden', 'true');
         }
+        // Stay in the card's stacking/scroll context, below native popovers.
+        if (mirror.parentElement !== input.parentElement) input.after(mirror);
         highlighted = input;
         if(layoutObserver&&observedInput!==input){
             layoutObserver.disconnect();observedInput=input;
@@ -73,13 +75,17 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
             viewStyle = { input: input, value: input.style.getPropertyValue('-webkit-text-fill-color'), priority: input.style.getPropertyPriority('-webkit-text-fill-color') };
             input.style.setProperty('-webkit-text-fill-color', 'transparent', 'important');
         }
-        mirror.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;overflow:hidden;color:transparent;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:break-word;';
+        mirror.style.cssText = 'position:absolute;pointer-events:none;z-index:1;overflow:hidden;color:transparent;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:break-word;';
         ['fontFamily','fontSize','fontWeight','fontStyle','lineHeight','letterSpacing','textAlign','textIndent','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderStyle','borderRadius','wordSpacing','tabSize'].forEach(function (key) { mirror.style[key] = css[key]; });
         mirror.style.color = viewing ? css.color : 'transparent';
         mirror.style.borderColor = 'transparent';
-        mirror.style.left = rect.left + 'px'; mirror.style.top = rect.top + 'px';
+        var containing = mirror.offsetParent;
+        var origin = containing ? containing.getBoundingClientRect() : { left: 0, top: 0 };
+        var rootOrigin = !containing || (containing === document.body && getComputedStyle(containing).position === 'static');
+        mirror.style.left = (rootOrigin ? rect.left + window.scrollX : rect.left - origin.left - containing.clientLeft + containing.scrollLeft) + 'px';
+        mirror.style.top = (rootOrigin ? rect.top + window.scrollY : rect.top - origin.top - containing.clientTop + containing.scrollTop) + 'px';
         mirror.style.width = rect.width + 'px'; mirror.style.height = rect.height + 'px';
-        // The body-mounted mirror must respect the title's native scroll containers.
+        // Clip the highlight to the same visible area as the native title.
         var opacity=1;
         var visible={top:Math.max(0,rect.top),right:Math.min(innerWidth,rect.right),bottom:Math.min(innerHeight,rect.bottom),left:Math.max(0,rect.left)};
         for(var parent=input.parentElement;parent;parent=parent.parentElement){
