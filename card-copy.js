@@ -31,16 +31,101 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
             return points.assigned!==null||points.completed!==null||/^[([{]\s*\??\s*[)\]}]$/.test(token)?'':token;
         }).replace(/\s+/g,' ').trim();
     }
+    function findDescriptionHeading(){
+        if(!card)return null;
+        var direct=card.querySelector('[data-testid="card-back-description-title"],[data-testid="description-title"],#card-back-description-title');
+        if(direct)return direct;
+        var headings=Array.from(card.querySelectorAll('h2,h3,h4,[role="heading"],.window-module-title h3,.window-module-title'));
+        return headings.find(function(node){
+            var text=(node.textContent||'').replace(/[\u200b-\u200d\ufeff]/g,'').trim();
+            return /^description$/i.test(text);
+        }) || headings.find(function(node){
+            var firstText=Array.from(node.childNodes).filter(function(n){return n.nodeType===3;}).map(function(n){return n.textContent.trim();}).filter(Boolean).join(' ');
+            if(/^description$/i.test(firstText))return true;
+            var text=(node.textContent||'').replace(/[\u200b-\u200d\ufeff]/g,'').trim();
+            return /\bdescription\b/i.test(text)&&!/activity|comment|attachment|checklist|custom fields|members|labels/i.test(text);
+        }) || null;
+    }
     function descriptionNode(){
         if(!card)return null;
-        var direct=card.querySelector('[data-testid="card-back-description"] .ak-renderer-document,[data-testid="description-content"],.description-content .markeddown,.description-content,[data-testid="card-back-description"]');
-        if(direct)return direct;
-        var heading=Array.from(card.querySelectorAll('h2,h3,h4,[role="heading"]')).find(function(node){return /^description$/i.test(node.textContent.trim());});
+        var editor=card.querySelector('textarea[data-testid*="description"], [data-testid*="description"] textarea, .description-edit textarea, textarea.js-description-draft, [data-testid="card-back-description"] textarea, [data-testid="card-back-description"] .ProseMirror');
+        if(editor)return editor;
+
+        var direct=card.querySelector('[data-testid="card-back-description"] .ak-renderer-document,[data-testid="card-back-description-content"],[data-testid="description-content"],.description-content .markeddown,.description-content .js-card-desc,.description-content');
+        if(direct&&!direct.closest('[data-testid*="comment"],[data-testid*="activity"],.comment-container'))return direct;
+
+        var heading=findDescriptionHeading();
         for(var section=heading&&heading.parentElement;section&&section!==card;section=section.parentElement){
-            var rendered=section.querySelector('.ak-renderer-document,.markeddown,[data-testid="description-content"]');
+            var rendered=section.querySelector('.ak-renderer-document,.markeddown,[data-testid="description-content"],[data-testid="card-back-description-content"],.js-card-desc');
             if(rendered&&!rendered.closest('[data-testid*="comment"],[data-testid*="activity"],.comment-container'))return rendered;
         }
+
+        var container=card.querySelector('[data-testid="card-back-description"],[data-testid="card-description"]');
+        if(container){
+            var inner=container.querySelector('.ak-renderer-document,.markeddown,[data-testid*="content"]');
+            return inner||container;
+        }
         return null;
+    }
+    function extractStructuredText(source){
+        if(!source)return '';
+        if(source.tagName==='TEXTAREA'||source.tagName==='INPUT'||source.value!==undefined){
+            return String(source.value||'').trim();
+        }
+        var clone=source.cloneNode(true);
+        clone.querySelectorAll('.s4t-comment-copy-dock,.s4t-card-copy,button,input,textarea,script,style,iframe,object,embed,[data-testid*="edit-button"]').forEach(function(node){node.remove();});
+
+        function plain(node, listDepth, isOrdered, itemIndex){
+            listDepth = listDepth || 0;
+            if(node.nodeType===3)return node.textContent;
+            if(node.nodeType!==1)return '';
+            var tag=node.tagName.toUpperCase();
+            if(tag==='BR')return '\n';
+            if(/^(BUTTON|INPUT|TEXTAREA|SCRIPT|STYLE)$/.test(tag))return '';
+
+            var childText='';
+            if(tag==='UL'||tag==='OL'){
+                var ordered=(tag==='OL');
+                var idx=1;
+                for(var i=0;i<node.childNodes.length;i++){
+                    var child=node.childNodes[i];
+                    if(child.nodeType===1&&child.tagName.toUpperCase()==='LI'){
+                        childText+=plain(child,listDepth+1,ordered,idx++);
+                    } else {
+                        childText+=plain(child,listDepth,false,0);
+                    }
+                }
+                return childText;
+            }
+
+            if(tag==='LI'){
+                var indent='  '.repeat(Math.max(0,listDepth-1));
+                var prefix=isOrdered?(itemIndex+'. '):'- ';
+                var textContent='';
+                var nestedText='';
+                for(var j=0;j<node.childNodes.length;j++){
+                    var ch=node.childNodes[j];
+                    if(ch.nodeType===1&&(ch.tagName.toUpperCase()==='UL'||ch.tagName.toUpperCase()==='OL')){
+                        nestedText+=plain(ch,listDepth,false,0);
+                    } else {
+                        textContent+=plain(ch,listDepth,false,0);
+                    }
+                }
+                var line=indent+prefix+textContent.trim();
+                return nestedText ? (line+'\n'+nestedText) : (line+'\n');
+            }
+
+            for(var k=0;k<node.childNodes.length;k++){
+                childText+=plain(node.childNodes[k],listDepth,false,0);
+            }
+
+            if(/^(P|DIV|H[1-6]|PRE|BLOCKQUOTE|TR)$/.test(tag)){
+                return childText.trim() ? (childText.trim()+'\n') : (childText+'\n');
+            }
+            return childText;
+        }
+
+        return plain(clone).trim();
     }
     function commentPayload(source){
         var clone=source.cloneNode(true);
@@ -58,14 +143,7 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
                 }
             });
         });
-        function plain(node){
-            if(node.nodeType===3)return node.textContent;
-            if(node.nodeType!==1)return '';
-            if(node.tagName==='BR')return '\n';
-            var value=Array.from(node.childNodes).map(plain).join('');
-            return /^(P|DIV|H[1-6]|LI|PRE|BLOCKQUOTE|TR)$/.test(node.tagName)?value+'\n':value;
-        }
-        return {html:clone.innerHTML,text:plain(clone).trim()};
+        return {html:clone.innerHTML,text:extractStructuredText(clone)};
     }
     function mountComments(){
         var selector='.comment-container,.phenom-comment,.current-comment,.action-comment,[data-testid="comment-text"],[data-testid="comment-content"],[data-testid="card-back-comment"],[data-testid="card-back-action-comment"],[data-testid="action-comment"],[data-testid*="comment"] .ak-renderer-document,[data-testid*="activity"] .ak-renderer-document,.list-actions .ak-renderer-document';
@@ -113,10 +191,12 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         node.addEventListener('click',async function(e){
             e.preventDefault();e.stopPropagation();
             var source=kind==='comment'?node._commentSource:kind==='title'?titleNode():descriptionNode();
-            var text=source&&(source.value!==undefined?source.value:source.innerText);
-            if(kind==='title')text=cleanTitle(text);
-            if(kind==='share')text=s4tCardShareUrl(window.location.pathname);
-            var payload=kind==='comment'&&source?commentPayload(source):null;
+            var text='';
+            if(kind==='title')text=cleanTitle(source&&(source.value!==undefined?source.value:source.innerText));
+            else if(kind==='share')text=s4tCardShareUrl(window.location.pathname);
+            else if(kind==='description')text=extractStructuredText(source);
+            else text=source&&(source.value!==undefined?source.value:source.innerText);
+            var payload=(kind==='comment'||kind==='description')&&source?commentPayload(source):null;
             if(payload)text=payload.text;
             if(!text){s4tCardToast(node,'No text available to copy.',true);return;}
             document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
@@ -169,7 +249,7 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         if(card!==next){commentButtons.forEach(function(copy){if(copy._dock)copy._dock.remove();});commentButtons.clear();if(commentResize)commentResize.disconnect();if(titleButton)titleButton.remove();if(descriptionButton)descriptionButton.remove();if(shareButton)shareButton.remove();titleButton=descriptionButton=shareButton=null;card=next;}
         if(!card)return;
         if(!titleButton||!titleButton.isConnected){titleButton=button('title');card.append(titleButton);}
-        var heading=Array.from(card.querySelectorAll('h2,h3,h4,[role="heading"],[data-testid="card-back-description-title"]')).find(function(node){return /^description$/i.test(node.textContent.trim());});
+        var heading=findDescriptionHeading();
         if(heading&&(!descriptionButton||!descriptionButton.isConnected)){descriptionButton=button('description');heading.after(descriptionButton);}
         var search=card.querySelector('.s4t-comment-search-slot');
         if(search){
@@ -196,5 +276,13 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
     // Only the title copy control needs scroll positioning; comments scroll natively.
     document.addEventListener('scroll',position,true);
     window.addEventListener('resize',schedulePosition);
+    if(typeof module!=='undefined'&&module.exports){
+        module.exports={
+            findDescriptionHeading:findDescriptionHeading,
+            descriptionNode:descriptionNode,
+            extractStructuredText:extractStructuredText,
+            commentPayload:commentPayload
+        };
+    }
     mount();
 })();

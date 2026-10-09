@@ -6,7 +6,8 @@ html='<html><head><style>.ak-renderer-document > :first-child { margin-top:0!imp
 test=r"""document.querySelector('[role="dialog"]').append(document.querySelector('[data-testid="card-back-action-comment"]'));const comment=document.querySelector('[data-testid="card-back-action-comment"] .ak-renderer-document');const originalMarkup=comment.innerHTML,originalWidth=comment.getBoundingClientRect().width,originalHeight=comment.getBoundingClientRect().height;let rich=[];let copied=[];Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>copied.push(text),write:async items=>rich.push(items[0])}});setTimeout(async()=>{try{
 const title=document.querySelector('.s4t-card-copy-title'),desc=document.querySelector('.s4t-card-copy-description');
 await title.click();await new Promise(r=>setTimeout(r,0));desc.click();await new Promise(r=>setTimeout(r,0));
-if(copied[0]!=='Sample (UI)'||copied[1]!=='Scope text')throw Error(JSON.stringify(copied));
+const descText=copied[1]||(rich[0]&&await (await rich[0].getType('text/plain')).text());
+if(copied[0]!=='Sample (UI)'||descText!=='Scope text')throw Error(JSON.stringify(copied));
 if(title.hasAttribute('data-tooltip')||!title.hasAttribute('data-copied'))throw Error('copy feedback');
 if(title.hidden)throw Error('title button hidden');
 if(!document.querySelector('.s4t-card-toast[role="status"]'))throw Error('accessible success toast missing');
@@ -15,14 +16,14 @@ const share=document.querySelector('.s4t-card-copy-share');
 if(share.previousElementSibling.className!=='s4t-comment-navigator')throw Error('share placement');
 s4tCardShareUrl=()=> 'https://trello.com/c/AbC123';
 share.click();await new Promise(r=>setTimeout(r,0));
-if(copied[2]!=='https://trello.com/c/AbC123'||!share.hasAttribute('data-copied')||share.hasAttribute('data-tooltip'))throw Error('share copy feedback');
+if((copied[2]||copied[1])!=='https://trello.com/c/AbC123'||!share.hasAttribute('data-copied')||share.hasAttribute('data-tooltip'))throw Error('share copy feedback');
 const commentCopy=document.querySelector('.s4t-card-copy-comment');if(!commentCopy)throw Error('comment copy missing');
 const clone=comment.cloneNode(true);clone.querySelectorAll('.s4t-comment-copy-dock').forEach(n=>n.remove());if(clone.innerHTML!==originalMarkup||comment.getBoundingClientRect().width!==originalWidth||comment.getBoundingClientRect().height!==originalHeight)throw Error('native comment layout changed');
 if(!commentCopy.closest('.s4t-comment-copy-dock'))throw Error('native scroll dock missing');
 const down=new MouseEvent('mousedown',{bubbles:true,cancelable:true});commentCopy.dispatchEvent(down);if(!down.defaultPrevented)throw Error('mouse focus scroll not prevented');
 const scrollBefore=document.scrollingElement.scrollTop;commentCopy.click();await new Promise(r=>setTimeout(r,30));
 if(document.scrollingElement.scrollTop!==scrollBefore)throw Error('copy scrolled page');
-if(rich.length){const html=await (await rich[0].getType('text/html')).text();const plain=await (await rich[0].getType('text/plain')).text();if(!html.includes('<strong>Bold text</strong>')||!html.includes('<h3>')||!html.includes('<li>')||html.includes('s4t-card-copy')||!plain.includes('Tech Design\n'))throw Error('rich comment content');}else if(!copied.some(text=>text.includes('Tech Design')))throw Error('comment fallback');
+if(rich.length){const targetItem=rich[rich.length-1];const html=await (await targetItem.getType('text/html')).text();const plain=await (await targetItem.getType('text/plain')).text();if(!html.includes('<strong>Bold text</strong>')||!html.includes('<h3>')||!html.includes('<li>')||html.includes('s4t-card-copy')||!plain.includes('Tech Design\n'))throw Error('rich comment content');}else if(!copied.some(text=>text.includes('Tech Design')))throw Error('comment fallback');
 await new Promise(r=>setTimeout(r,1500));
 const pane=document.createElement('div');pane.style.cssText='position:fixed;top:150px;left:200px;width:500px;height:300px;overflow:auto';document.querySelector('[role="dialog"]').append(pane);
 const lead=document.createElement('div');lead.style.height='180px';pane.append(lead);pane.append(comment.parentElement);const tail=document.createElement('div');tail.style.height='800px';pane.append(tail);await new Promise(r=>setTimeout(r,100));

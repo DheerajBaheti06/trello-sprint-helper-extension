@@ -14,7 +14,8 @@
             "comment-layout.js",
             "charts.js",
             "eow-update.js",
-            "hover-selectors.js"
+            "hover-selectors.js",
+            "card-peek.js"
          ],
          "matches": [
             "https://trello.com/*"

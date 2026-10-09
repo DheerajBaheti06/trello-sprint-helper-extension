@@ -23,7 +23,8 @@ var s4tPreferences = (function () {
             ['commentSearch', 'Comment search', 'Find text inside card comments.', '.s4t-comment-navigator'],
             ['titlePoints', 'Quick point editing', 'Highlighted assigned/completed brackets in the card title.'],
             ['reviewMode', 'Review mode', 'Expand comments by hiding the left card section.', '.s4t-comment-layout-toggle:not(.s4t-review-marker)'],
-            ['laserPointer', 'Laser pointer', 'Temporary highlights over the title, description and comments.', '.s4t-review-marker']
+            ['laserPointer', 'Laser pointer', 'Temporary highlights over the title, description and comments.', '.s4t-review-marker'],
+            ['cardPeek', 'Quick view on hover', 'Hover icon to preview card scope, checklists, and comment status.', '.s4t-card-peek-btn']
         ]]
     ];
     var ids = new Set(groups.flatMap(function (group) { return group[1].map(function (entry) { return entry[0]; }); }));
@@ -82,7 +83,7 @@ var s4tPreferences = (function () {
                         else { input.checked = enabled(entry[0]); status.textContent = 'Could not save preferences. Try again.'; }
                     };
                     label.append(input,text);
-                    var area=['commentSearch','cardShare','reviewMode','laserPointer'].includes(entry[0])?'Topbar':['checkAll','cardCopy','titlePoints'].includes(entry[0])?'Left container':'Right container';
+                    var area=['commentSearch','cardShare','reviewMode','laserPointer'].includes(entry[0])?'Topbar':['checkAll','cardCopy','titlePoints','cardPeek'].includes(entry[0])?'Left container':'Right container';
                     (sections[area]||field).appendChild(label);
                 });
                 if(group[0]==='Charts'||group[0]==='Special'){
