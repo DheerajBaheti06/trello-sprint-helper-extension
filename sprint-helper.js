@@ -4213,7 +4213,7 @@ var s4tOpenCardsList = (function () {
 /* Shared tooltips stay outside scroll containers and dismiss on pointer down. */
 (function () {
     if (typeof document === 'undefined') return;
-    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-comment-layout-toggle[data-tooltip], .s4t-checklist-action, .s4t-card-copy[data-tooltip], #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
+    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-comment-layout-toggle[data-tooltip], .s4t-checklist-action, .s4t-card-copy[data-tooltip], .s4t-card-peek-copy-btn[data-tooltip], #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
     var tip, owner, timer, leaveTimer, pinned = false;
     function hide() {
         clearTimeout(timer); clearTimeout(leaveTimer); pinned = false;

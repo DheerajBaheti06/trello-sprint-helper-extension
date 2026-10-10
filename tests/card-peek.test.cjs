@@ -253,6 +253,8 @@ test('createCopyDescriptionButton creates styled copy button and handles copy fe
         assert.ok(btn.classList.contains('s4t-card-copy'), 'Must have .s4t-card-copy class');
         assert.ok(btn.classList.contains('s4t-card-peek-copy-btn'), 'Must have .s4t-card-peek-copy-btn class');
         assert.equal(btn.getAttribute('aria-label'), 'Copy description');
+        assert.equal(btn.getAttribute('title'), null, 'Must NOT have title attribute to prevent browser native tooltip');
+        assert.equal(btn.getAttribute('data-tooltip'), 'Copy description', 'Must have data-tooltip attribute for custom tooltip');
 
         // Simulate click
         btn.click();
@@ -455,6 +457,60 @@ test('sprint-helper.css styles peek button box, right margin, and screen toast',
     assert.ok(css.includes('.s4t-peek-bullet {'), 'Must include description bullet styling');
 });
 
+test('feature-preferences.js includes Quick View (Peek Out) under Card listing with feature icons', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const content = fs.readFileSync(path.join(__dirname, '../feature-preferences.js'), 'utf8');
 
+    assert.ok(content.includes("'Card listing'"), 'Must define Card listing group');
+    assert.ok(content.includes("'cardPeek'"), 'Must define cardPeek feature id');
+    assert.ok(content.includes("'Quick View (Peek Out)'"), 'Must use Quick View (Peek Out) as title');
+    assert.ok(content.includes("'titlePoints'"), 'Must define titlePoints feature id under Card listing');
+    assert.ok(content.includes("'View points (Quick editing)'"), 'Must use View points (Quick editing) as title');
+    assert.ok(content.includes('.s4t-card-peek-btn'), 'Must include button selector');
+    assert.ok(content.includes('.s4t-card-peek-popover'), 'Must include popover selector');
+    assert.ok(content.includes('.s4t-card-peek-backdrop'), 'Must include backdrop selector');
+    assert.ok(content.includes('featureIcons'), 'Must define featureIcons map');
+    assert.ok(content.includes("['checkAll','cardCopy']"), 'Card tools Left container must only include modal controls');
 
+    // Verify icons appear after names
+    const appendTitleIndex = content.indexOf('heading.appendChild(title);');
+    const appendIconIndex = content.indexOf('heading.appendChild(icon);');
+    assert.ok(appendTitleIndex !== -1 && appendIconIndex !== -1, 'Must append title and icon to heading');
+    assert.ok(appendTitleIndex < appendIconIndex, 'Title must be appended before icon so icon appears after name');
+
+    // Verify Card listing is at the bottom of groups
+    const cardToolsIndex = content.indexOf("['Card tools'");
+    const cardListingIndex = content.indexOf("['Card listing'");
+    assert.ok(cardToolsIndex !== -1 && cardListingIndex !== -1, 'Must define Card tools and Card listing groups');
+    assert.ok(cardToolsIndex < cardListingIndex, 'Card listing must be positioned after Card tools at the bottom');
+});
+
+test('documentation and manifest mention Quick View and version 1.108', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../manifest.json'), 'utf8'));
+    const readme = fs.readFileSync(path.join(__dirname, '../README.md'), 'utf8');
+    const changelog = fs.readFileSync(path.join(__dirname, '../CHANGELOG.md'), 'utf8');
+    const workflowRules = fs.readFileSync(path.join(__dirname, '../WORKFLOW-RULES.md'), 'utf8');
+
+    assert.equal(manifest.version, '1.108', 'Manifest version must be 1.108');
+    assert.ok(manifest.content_scripts[0].js.includes('card-peek.js'), 'card-peek.js must be in manifest content scripts');
+
+    assert.ok(readme.includes('Quick View (Peek Out)'), 'README must mention Quick View (Peek Out)');
+    assert.ok(changelog.includes('## 1.108'), 'CHANGELOG must have 1.108 entry');
+    assert.ok(changelog.includes('Quick View (Peek Out)'), 'CHANGELOG must mention Quick View (Peek Out)');
+    assert.ok(workflowRules.includes('## Quick View (Peek Out)'), 'WORKFLOW-RULES must have Quick View section');
+});
+
+test('tooltip z-index is higher than peek popover and selector covers peek copy button', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const css = fs.readFileSync(path.join(__dirname, '../sprint-helper.css'), 'utf8');
+    const sprintHelper = fs.readFileSync(path.join(__dirname, '../sprint-helper.js'), 'utf8');
+
+    // Popover has z-index: 2147483510, tooltip must have higher z-index so it renders in front
+    assert.ok(css.includes('#s4t-icon-tooltip {\n    position: fixed; z-index: 2147483647 !important;'), 'Tooltip must have max z-index to show in front of popover');
+    assert.ok(sprintHelper.includes('.s4t-card-peek-copy-btn[data-tooltip]'), 'Tooltip selector must explicitly match peek copy button');
+});
 

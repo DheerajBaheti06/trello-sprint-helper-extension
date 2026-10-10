@@ -583,7 +583,6 @@ var s4tCardPeek = (function () {
         btn.className = 's4t-card-copy s4t-card-peek-copy-btn';
         btn.setAttribute('aria-label', 'Copy description');
         btn.setAttribute('data-tooltip', 'Copy description');
-        btn.setAttribute('title', 'Copy description');
         var copyIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg>';
         btn.innerHTML = copyIcon;
 
@@ -806,6 +805,9 @@ var s4tCardPeek = (function () {
         if (backdrop) {
             backdrop.classList.remove('s4t-active');
             backdrop.style.display = 'none';
+        }
+        if (typeof document !== 'undefined') {
+            document.dispatchEvent(new Event('s4t-dismiss-tooltip'));
         }
     }
 

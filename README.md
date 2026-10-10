@@ -11,11 +11,12 @@ Built on [Scrum for Trello](https://github.com/Q42/TrelloScrum) by Q42, it exten
 | Workflow | What you can do |
 | --- | --- |
 | **Members Burndown** | Review completed and remaining hours, card completion and individual workloads in one sprint overview. Charts opens interactive developer-points and label-distribution pies with a pop-out view. |
-| **Settings** | Open Members Burndown → Settings to control the four board features, charts, Check All, comment search, quick point editing, Review mode and the laser pointer. Choices apply across boards in this browser. All features start enabled; hiding Trello’s native filter is optional. Reset to defaults restores these choices. |
+| **Settings** | Open Members Burndown → Settings to control board features, card listing features (view points and Quick View peek out), charts, and card tools (Check All, comment search, card copying, Review mode and laser pointer). Each feature displays its matching icon for quick recognition. Choices apply across boards in this browser. All features start enabled; hiding Trello’s native filter is optional. Reset to defaults restores these choices. |
 | **Attention** | Combine scope, points, hotfix and checklist checks with member, label and list filters. Preserve selections and import native Trello filters. |
 | **Cards List & Slack Preview** | Select filtered cards, group them by developer, label or list, choose title/link formats, optionally append developer names when grouping by labels, and copy from the preview panel. |
 | **EOW Update** | Build weekly reports with task categories, drag-and-drop organization, list exclusions, points display and editable Slack previews. |
-| **Card productivity** | Search and navigate comments, complete an individual checklist in one action, and manage estimated/completed story points. |
+| **Quick View (Peek Out)** | Hover the registration paper icon on any board card to preview its Description / Scope, checklist completion, and required comment statuses without opening the card modal. Copy formatted markdown descriptions with nested sub-bullets directly from the popover. |
+| **Card productivity** | Search and navigate comments, complete an individual checklist in one action, copy card titles and formatted descriptions with nested sub-bullets, and manage estimated/completed story points. |
 
 The four main popups follow Trello’s theme and include contextual **info help**. Slack previews remain editable and are copied manually for review and sharing.
 

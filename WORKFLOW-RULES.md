@@ -35,3 +35,11 @@ Only the rules that can change your results. Match these conventions when settin
 | **Category priority** | First match wins: **Hotfix label → Dev-Ops title ending → UI/UX → Client Requests/Critical label → Release Tasks**. You can edit the draft. | A card labelled Hotfix and UI goes under **Hotfix**. |
 | **Category examples** | Dev-Ops checks the title ending. UI/UX checks title, labels or list. Features checks labels. | `Fix pipeline #dev-ops` → Dev-Ops; `UI` label → Stabilization; `Critical` label → Features. |
 | **Previous release work** | EOW loads the current board. Add previous-board tasks manually; dated board names do not import them. | A week spans two release boards → review the older board and add its tasks to the draft. |
+
+## Quick View (Peek Out)
+
+| Feature | Matching rule | Example |
+| --- | --- | --- |
+| **Description / Scope** | Renders full markdown formatting with nested list indentation. The copy button in the top-right copies the structured scope directly to your clipboard. | Nested `-` or `*` bullets preserve indentation level in plain text and rich clipboard. |
+| **Checklists & Comments** | Mirrors the Attention filter rules, showing green checkmarks when all required comment headings (`Tech Design, Test Cases, Branch`) and checklists are present, or amber when missing. | A card missing the `Branch` comment heading is flagged before opening the card. |
+
