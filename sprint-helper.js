@@ -1054,9 +1054,9 @@ function renderMembersHtml(members, excludeNotSure) {
             '</div>',
             '</div>',
             '<div class="s4t-member-pills">',
-            '<span class="s4t-pill s4t-pill-assigned" role="button" tabindex="0" data-tooltip="Double-click to copy assigned points" data-copy-value="' + assigned + '">' + assigned + ' assigned</span>',
-            '<span class="s4t-pill s4t-pill-done" role="button" tabindex="0" data-tooltip="Double-click to copy completed points" data-copy-value="' + completed + '">✓ ' + completed + ' done</span>',
-            '<span class="s4t-pill s4t-pill-pending" role="button" tabindex="0" data-tooltip="Double-click to copy remaining points" data-copy-value="' + remaining + '">' + remaining + ' remaining</span>',
+            '<span class="s4t-pill s4t-pill-assigned" role="button" tabindex="0" data-tooltip="Double-click to copy assigned points" data-copy-value="' + assigned + '"><span class="s4t-point-value">' + assigned + '</span> <span class="s4t-point-label">assigned</span></span>',
+            '<span class="s4t-pill s4t-pill-done" role="button" tabindex="0" data-tooltip="Double-click to copy completed points" data-copy-value="' + completed + '"><span class="s4t-point-value">✓ ' + completed + '</span> <span class="s4t-point-label">done</span></span>',
+            '<span class="s4t-pill s4t-pill-pending" role="button" tabindex="0" data-tooltip="Double-click to copy remaining points" data-copy-value="' + remaining + '"><span class="s4t-point-value">' + remaining + '</span> <span class="s4t-point-label">remaining</span></span>',
             '</div>',
             '</div>'
         ].join('');
@@ -4730,14 +4730,20 @@ function s4tCommentSearchSpans(text, query) {
             return node.getClientRects().length && !node.closest('#s4t-cards-overlay, #s4t-attention-panel') &&
                 /^(?:comments?\s*(?:&|and)\s*activity|activity)$/i.test(node.textContent.trim());
         });
-        var nextScope = title && title.closest('[role="dialog"], .window, [data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window');
-        if (!nextScope) nextScope = Array.from(document.querySelectorAll('[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window, [role="dialog"]')).find(function (node) {
+        var cardSelector = '[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window, [role="dialog"], dialog';
+        var nextScope = title && title.closest(cardSelector);
+        if (!nextScope) nextScope = Array.from(document.querySelectorAll(cardSelector)).find(function (node) {
             return !node.closest('#s4t-cards-overlay, #s4t-attention-panel, #s4t-modal-overlay') &&
-                (node.matches('[data-testid="card-back"], [data-testid="card-back-container"], .card-detail-window, .window') || !!node.querySelector('[data-testid="card-back-title"], [data-testid="card-back-header"], .card-detail-title'));
+                (node.matches(cardSelector) || !!node.querySelector('[data-testid="card-back-title"], [data-testid="card-back-header"], .card-detail-title'));
         });
-        if (!nextScope) { removeBar(); clearHighlights(); matches = []; active = -1; return; }
-        var placement = nextScope && searchPlacement(nextScope);
-        if (!placement) { removeBar(); clearHighlights(); matches = []; active = -1; return; }
+        if (!nextScope) { removeBar(); clearHighlights(); matches = []; active = -1; scope = null; return; }
+        scope = nextScope;
+        var placement = searchPlacement(nextScope);
+        if (!placement) {
+            removeBar(); clearHighlights(); matches = []; active = -1;
+            if (!timer) timer = setTimeout(function () { timer = null; mount(); }, 50);
+            return;
+        }
         if (bar && bar.isConnected && nextScope === scope && slot.parentElement === placement.host && slot.nextElementSibling === placement.anchor) { header = title; update(); return; }
         var savedQuery = input && nextScope === scope ? input.value : '';
         removeBar(); clearHighlights(); matches = []; active = -1;
@@ -4759,24 +4765,55 @@ function s4tCommentSearchSpans(text, query) {
     new MutationObserver(function (mutations) {
         var cardSelector='[data-testid="card-back"],[data-testid="card-back-container"],.card-detail-window,.window,[role="dialog"],dialog';
         var own='[id^="s4t-"],.s4t-card-copy,.s4t-card-toast,.s4t-comment-copy-dock,.s4t-comment-navigator,.s4t-comment-search-slot,.s4t-comment-jumps';
-        var relevant=(scope&&!scope.isConnected)||mutations.some(function(m){
+        var cardPresent=!!document.querySelector(cardSelector);
+        var needsMount=(!bar||!bar.isConnected||!slot||!slot.isConnected)&&cardPresent;
+        var relevant=(scope&&!scope.isConnected)||needsMount||mutations.some(function(m){
             var node=m.target.nodeType===1?m.target:m.target.parentElement;
             if(node&&node.closest(own))return false;
             var nodes=Array.from(m.addedNodes||[]).concat(Array.from(m.removedNodes||[]));
             if(nodes.length&&nodes.every(function(child){return child.nodeType===1&&child.matches(own);}))return false;
-            if(scope&&node&&(scope.contains(node)||node.contains(scope)))return true;
-            return nodes.some(function(child){return child.nodeType===1&&(child.matches(cardSelector)||child.querySelector(cardSelector));});
+            if(node&&(node.closest(cardSelector)||(scope&&(scope.contains(node)||node.contains(scope)))))return true;
+            return nodes.some(function(child){return child.nodeType===1&&(child.matches(cardSelector)||child.querySelector(cardSelector)||child.closest(cardSelector));});
         });
         if(!relevant)return;
         indexDirty = true;
         // Mount/remount before the next paint when a card or its navbar appears.
-        if (!bar || !bar.isConnected || !slot || !slot.isConnected || mutations.some(function(m){var node=m.target.nodeType===1?m.target:m.target.parentElement;return node&&node.closest('[data-testid="card-back-header"],[data-testid="card-back-header-actions"],header,[role="toolbar"]');})) {
+        if (needsMount || !bar || !bar.isConnected || !slot || !slot.isConnected || mutations.some(function(m){var node=m.target.nodeType===1?m.target:m.target.parentElement;return node&&(node.closest('[data-testid="card-back-header"],[data-testid="card-back-header-actions"],header,[role="toolbar"]')||(node.matches&&node.matches('button,a,[role="button"]'))||node.querySelector('button,a,[role="button"]'));})) {
             if(timer){clearTimeout(timer);timer=null;}
             mount();
         } else if (!timer) timer = setTimeout(function () { timer = null; mount(); }, 100);
     }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes:true, attributeFilter:['hidden','aria-hidden','data-testid','aria-label','style','class'] });
+    function onUrlChange() {
+        if (timer) { clearTimeout(timer); timer = null; }
+        mount();
+        setTimeout(mount, 50);
+        setTimeout(mount, 150);
+        setTimeout(mount, 350);
+    }
     document.addEventListener('scroll', schedulePosition, true);
     window.addEventListener('resize', schedulePosition);
-    window.addEventListener('popstate', mount);
+    window.addEventListener('popstate', onUrlChange);
+    try {
+        if (typeof history !== 'undefined') {
+            var origPush = history.pushState;
+            if (typeof origPush === 'function' && !origPush._s4t) {
+                history.pushState = function () {
+                    var ret = origPush.apply(this, arguments);
+                    onUrlChange();
+                    return ret;
+                };
+                history.pushState._s4t = true;
+            }
+            var origReplace = history.replaceState;
+            if (typeof origReplace === 'function' && !origReplace._s4t) {
+                history.replaceState = function () {
+                    var ret = origReplace.apply(this, arguments);
+                    onUrlChange();
+                    return ret;
+                };
+                history.replaceState._s4t = true;
+            }
+        }
+    } catch (_) {}
     mount();
 })();

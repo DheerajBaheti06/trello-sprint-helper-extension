@@ -51,12 +51,19 @@ var s4tPreferences = (function () {
     function clean(saved) {
         var next = {};
         if (saved && typeof saved === 'object' && !Array.isArray(saved)) ids.forEach(function (id) { if (typeof saved[id] === 'boolean') next[id] = saved[id]; });
+        if (saved && ['native', 'times', 'georgia'].includes(saved.fontFamily)) next.fontFamily = saved.fontFamily;
         return next;
     }
     try { values = clean(JSON.parse(localStorage.getItem(key) || '{}')); } catch (_) {}
     // All features start checked; only an explicit saved opt-out disables one.
     function enabled(id) { return id === 'hideNativeFilter' ? values[id] === true : values[id] !== false; }
+    function fontFamily() {
+        if (values.fontFamily === 'times') return '"Times New Roman", Times, serif';
+        if (values.fontFamily === 'georgia') return 'Georgia, "Times New Roman", serif';
+        return document.body ? getComputedStyle(document.body).fontFamily : 'system-ui, sans-serif';
+    }
     function apply() {
+        document.documentElement.style.setProperty('--s4t-font-family', fontFamily());
         if (!style) { style = document.createElement('style'); style.id = 's4t-preference-styles'; (document.head || document.documentElement).appendChild(style); }
         var rules = [];
         groups.forEach(function (group) { group[1].forEach(function (entry) { if (!enabled(entry[0]) && entry[3]) rules.push(entry[3] + '{display:none!important}'); }); });
@@ -81,6 +88,20 @@ var s4tPreferences = (function () {
         dialog.querySelector('[aria-label="Close settings"]').onclick = close;
         function render() {
             container.textContent = '';
+            var appearance = document.createElement('fieldset'), legend = document.createElement('legend');
+            appearance.className = 's4t-preferences-font'; legend.textContent = 'Appearance'; appearance.append(legend);
+            var fontLabel = document.createElement('label'), fontSelect = document.createElement('select');
+            fontLabel.textContent = 'Font family'; fontSelect.setAttribute('aria-label', 'Extension font family');
+            [['native','Match Trello Native'],['times','Times New Roman'],['georgia','Georgia']].forEach(function (entry) {
+                var option = document.createElement('option'); option.value = entry[0]; option.textContent = entry[1]; fontSelect.append(option);
+            });
+            fontSelect.value = values.fontFamily || 'native';
+            fontSelect.onchange = function () {
+                var next = Object.assign({}, values, {fontFamily: fontSelect.value});
+                if (save(next)) status.textContent = 'Font saved.';
+                else { fontSelect.value = values.fontFamily || 'native'; status.textContent = 'Could not save font. Try again.'; }
+            };
+            fontLabel.append(fontSelect); appearance.append(fontLabel); container.append(appearance);
             var compact=document.createElement('div');compact.className='s4t-preferences-compact';
             groups.forEach(function (group) {
                 var field = document.createElement('fieldset'), legend = document.createElement('legend'); legend.textContent = group[0]; field.appendChild(legend);
@@ -125,13 +146,13 @@ var s4tPreferences = (function () {
                 }else container.appendChild(field);
             });
         }
-        dialog.querySelector('footer button').onclick = function () { if (save({})) { render(); status.textContent = 'Features enabled; native filter hiding off.'; } else status.textContent = 'Could not save preferences. Try again.'; };
+        dialog.querySelector('footer button').onclick = function () { if (save({})) { render(); status.textContent = 'Defaults restored. Font matches Trello.'; } else status.textContent = 'Could not save preferences. Try again.'; };
         modal.appendChild(dialog); document.body.appendChild(modal); render(); dialog.querySelector('button').focus();
         modal.onmousedown = function (event) { if (event.target === modal) close(); };
         modal.onkeydown = function (event) {
             if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
             if (event.key === 'Tab') {
-                var controls = Array.from(dialog.querySelectorAll('button,input')), first = controls[0], last = controls[controls.length-1];
+                var controls = Array.from(dialog.querySelectorAll('button,input,select')), first = controls[0], last = controls[controls.length-1];
                 if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
                 if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
             }
@@ -142,5 +163,5 @@ var s4tPreferences = (function () {
         try { var next = JSON.parse(localStorage.getItem(key) || '{}'); if (!next || typeof next !== 'object' || Array.isArray(next)) return; values = clean(next); apply(); } catch (_) {}
     });
     apply();
-    return {enabled:enabled,open:open};
+    return {enabled:enabled,open:open,fontFamily:fontFamily};
 })();

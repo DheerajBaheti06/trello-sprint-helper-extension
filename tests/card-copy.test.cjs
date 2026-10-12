@@ -362,3 +362,16 @@ test('commentPayload on description node generates rich HTML and structured sub-
     assert.ok(payload.text.includes('- Primary feature'), 'Plain text must include dash bullet');
     assert.ok(payload.text.includes('  - Sub-feature A'), 'Plain text must include indented sub-bullet');
 });
+
+test('cleanTitle strips points and question marks while retaining non-point brackets', () => {
+    assert.equal(cardCopy.cleanTitle('(4.5) Sample (UI) [2]'), 'Sample (UI)');
+    assert.equal(cardCopy.cleanTitle('(3) Fix header bug'), 'Fix header bug');
+    assert.equal(cardCopy.cleanTitle('[1] Task [DONE]'), 'Task [DONE]');
+    assert.equal(cardCopy.cleanTitle('{2.5} Investigation task'), 'Investigation task');
+    assert.equal(cardCopy.cleanTitle('(1/3) Story implementation'), 'Story implementation');
+    assert.equal(cardCopy.cleanTitle('( ? ) Research spike [?]'), 'Research spike');
+    assert.equal(cardCopy.cleanTitle('Card with no points'), 'Card with no points');
+    assert.equal(cardCopy.cleanTitle(''), '');
+    assert.equal(cardCopy.cleanTitle(null), '');
+});
+

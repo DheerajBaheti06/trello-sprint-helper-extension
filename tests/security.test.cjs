@@ -16,12 +16,12 @@ test('member markup treats names, usernames and initials as text and metrics as 
     assert.ok(!html.includes('<svg'));
     assert.ok(!html.includes('<img'));
     assert.ok(html.includes('&quot;&gt;&lt;svg'));
-    assert.ok(html.includes('0 assigned'));
+    assert.ok(html.replace(/<[^>]*>/g,'').includes('0 assigned'));
     assert.ok(html.includes('width:0%;'));
     const normal = ctx.renderMembersHtml([{name:'A & B', avatar:'https://trello-members.s3.amazonaws.com/avatar.png',
         assigned:8, completed:3, remaining:5, completionPercentage:37.5, cardsTotal:2}], false);
     assert.ok(normal.includes('alt="A &amp; B"'));
-    assert.ok(normal.includes('8 assigned'));
+    assert.ok(normal.replace(/<[^>]*>/g,'').includes('8 assigned'));
 });
 
 test('avatar URLs reject executable schemes, credentials and lookalike hosts', () => {
