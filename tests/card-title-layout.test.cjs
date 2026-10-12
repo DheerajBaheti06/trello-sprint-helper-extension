@@ -19,8 +19,8 @@ test('comment toolbar uses flexible responsive layout in comment-layout.js', () 
     const js = fs.readFileSync(jsPath, 'utf8');
 
     assert.ok(js.includes('flex:0 1 auto'), 'allows toolbar to shrink with flex:0 1 auto');
-    assert.ok(js.includes('max-width:320px'), 'caps toolbar max-width to protect title space');
-    assert.ok(js.includes('min-width:120px'), 'allows navigator to shrink to 120px min-width');
+    assert.ok(js.includes('max-width:calc(100vw - 220px)'), 'caps toolbar max-width to protect title space');
+    assert.ok(js.includes('max-width:240px'), 'caps navigator max-width to 240px');
 });
 
 test('sprint-helper.js prevents showPointPicker from attaching to title container on card open', () => {
