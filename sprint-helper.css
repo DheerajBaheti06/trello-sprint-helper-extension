@@ -1843,12 +1843,6 @@ textarea[data-testid="card-name-input"],
 .s4t-card-peek-btn.s4t-lead-alone {
     margin-right: auto !important;
 }
-.s4t-card-peek-btn.s4t-at-member-slot {
-    float: right !important;
-    margin-right: 0 !important;
-    margin-left: auto !important;
-    align-self: flex-end !important;
-}
 .s4t-card-peek-btn:hover,
 .s4t-card-peek-btn:focus-visible {
     background: var(--ds-background-neutral-hovered, #091e4224);
@@ -1876,13 +1870,12 @@ textarea[data-testid="card-name-input"],
 .s4t-card-peek-footer {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     padding: 0;
     margin-top: 4px;
     min-height: 20px;
     width: 100%;
     box-sizing: border-box;
-    clear: both;
 }
 
 /* Dimmed backdrop for focus mode */

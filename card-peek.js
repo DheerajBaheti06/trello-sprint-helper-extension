@@ -873,34 +873,20 @@ var s4tCardPeek = (function () {
         var cards = document.querySelectorAll(cardSelector);
         cards.forEach(function (card) {
             var cardSurface = getCardSurface(card);
-            if (!cardSurface) return;
-
-            var badgesTarget = cardSurface.querySelector('[data-testid="card-front-badges"], .badges, [data-testid="badges"], .js-badges');
-            var membersTarget = cardSurface.querySelector('[data-testid="card-front-members"], .list-card-members');
-            var avatarEl = cardSurface.querySelector(
-                '[data-testid="card-front-avatar"], [data-testid="card-front-member"], [data-testid*="member-avatar"], ' +
-                '[data-testid="card-front-members"] [data-testid*="avatar"], [data-testid="card-front-members"] [data-testid*="member"], ' +
-                '.list-card-members .member, .js-card-members .js-member, ' +
-                'img[src*="trello-members"], img[src*="avatar.trello"], img[src*="atlassian"]'
-            );
-            if (!membersTarget && avatarEl) {
-                membersTarget = avatarEl.closest('[data-testid="card-front-members"], .list-card-members') || avatarEl;
-            }
-            var hasMembers = !!avatarEl || !!(membersTarget && (membersTarget.children.length > 0 || membersTarget.textContent.trim().length > 0));
-
-            var existingBtn = cardSurface.querySelector('.s4t-card-peek-btn');
-            if (existingBtn) {
-                var wasAtMemberSlot = existingBtn.classList.contains('s4t-at-member-slot');
-                if ((hasMembers && wasAtMemberSlot) || (!hasMembers && !wasAtMemberSlot)) {
-                    existingBtn.remove();
-                } else {
-                    return;
-                }
-            }
+            if (!cardSurface || cardSurface.querySelector('.s4t-card-peek-btn')) return;
 
             var btn = createPeekButton(card);
 
-            if (hasMembers && membersTarget && membersTarget.parentElement && cardSurface.contains(membersTarget.parentElement)) {
+            var badgesTarget = cardSurface.querySelector('[data-testid="card-front-badges"], .badges, [data-testid="badges"], .js-badges');
+            var membersTarget = cardSurface.querySelector('[data-testid="card-front-members"], .list-card-members');
+            if (!membersTarget) {
+                var avatarEl = cardSurface.querySelector('[data-testid="card-front-avatar"], [data-testid="card-front-member"], [data-testid*="member-avatar"], .list-card-members .member');
+                if (avatarEl) {
+                    membersTarget = avatarEl.closest('[data-testid="card-front-members"], .list-card-members') || avatarEl;
+                }
+            }
+
+            if (membersTarget && membersTarget.parentElement && cardSurface.contains(membersTarget.parentElement)) {
                 var memberRow = membersTarget.parentElement;
                 if (!isCardContainer(memberRow, cardSurface)) {
                     // Modern Trello bottom row container that houses members (and optionally badges)
@@ -914,36 +900,23 @@ var s4tCardPeek = (function () {
                     if (anchor === membersTarget) btn.classList.add('s4t-lead-alone');
                     anchor.parentElement.insertBefore(btn, anchor);
                 }
-            } else {
-                // Card has NO member assigned: show peek button at the member assigned place
-                btn.classList.add('s4t-at-member-slot');
-
-                if (membersTarget && membersTarget.parentElement && cardSurface.contains(membersTarget.parentElement)) {
-                    // If an empty members container exists, place right at that position
-                    membersTarget.parentElement.insertBefore(btn, membersTarget);
-                } else if (badgesTarget && badgesTarget.parentElement && cardSurface.contains(badgesTarget.parentElement)) {
-                    var badgeRow = badgesTarget.parentElement;
-                    if (!isCardContainer(badgeRow, cardSurface)) {
-                        // Modern Trello bottom row container: append as trailing element on the right (member position)
-                        badgeRow.appendChild(btn);
-                    } else {
-                        // Classic Trello float container (.list-card-details): place after badges, floats right
-                        if (badgesTarget.nextSibling) {
-                            badgeRow.insertBefore(btn, badgesTarget.nextSibling);
-                        } else {
-                            badgeRow.appendChild(btn);
-                        }
-                    }
+            } else if (badgesTarget && badgesTarget.parentElement && cardSurface.contains(badgesTarget.parentElement)) {
+                // Card has badges but no assigned members
+                var badgeRow = badgesTarget.parentElement;
+                if (!isCardContainer(badgeRow, cardSurface)) {
+                    badgeRow.insertBefore(btn, badgeRow.firstChild);
                 } else {
-                    // Neither badges nor members: dedicated bottom row inside the card surface, right-aligned
-                    var footer = cardSurface.querySelector('.s4t-card-peek-footer');
-                    if (!footer) {
-                        footer = document.createElement('div');
-                        footer.className = 's4t-card-peek-footer';
-                        cardSurface.appendChild(footer);
-                    }
-                    footer.appendChild(btn);
+                    badgeRow.insertBefore(btn, badgesTarget);
                 }
+            } else {
+                // Neither badges nor members: dedicated bottom-left row inside the card surface
+                var footer = cardSurface.querySelector('.s4t-card-peek-footer');
+                if (!footer) {
+                    footer = document.createElement('div');
+                    footer.className = 's4t-card-peek-footer';
+                    cardSurface.appendChild(footer);
+                }
+                footer.prepend(btn);
             }
         });
     }
