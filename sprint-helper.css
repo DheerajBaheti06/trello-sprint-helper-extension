@@ -1098,8 +1098,8 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 .s4t-comment-text-current { outline: 2px solid var(--ds-border-warning, #e2b203); outline-offset: 2px; }
 
 /* Compact comment search directly before the card toolbar's Cover action. */
-.s4t-card-header-search { display: block; flex: 0 1 auto; width: auto; max-width: 280px; min-width: 0; margin: 0 8px 0 auto; align-self: center; }
-.s4t-card-header-search .s4t-comment-navigator { flex: 1 1 180px; min-width: 120px; max-width: 240px; width: auto; height: 32px; }
+.s4t-card-header-search { display: flex; flex: 0 1 auto; width: max-content; max-width: calc(100vw - 220px); min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 6px; margin: 0 8px 0 auto; align-self: center; }
+.s4t-card-header-search .s4t-comment-navigator { flex: 0 0 240px; min-width: 240px; max-width: 240px; width: 240px; height: 32px; }
 
 /* Card title & header: protect title width and eliminate vertical scrollbar in title textarea */
 [data-testid="card-back-header"],
@@ -1687,7 +1687,7 @@ textarea[data-testid="card-name-input"],
 .s4t-card-copy { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; padding:4px; border:0; border-radius:6px; background:var(--ds-surface-overlay,#fff); color:var(--ds-text-subtle,#626f86); cursor:pointer; flex-shrink:0; }
 .s4t-card-copy:hover { color:var(--ds-text,#172b4d); background:var(--ds-background-neutral-hovered,#dcdfe4); }
 .s4t-card-copy[data-copied] { color:var(--ds-text-success,#216e4e); }
-.s4t-card-copy-title { position:fixed; z-index:100; }
+.s4t-card-copy-title { position:absolute; z-index:1; }
 
 .s4t-card-copy-share { width:30px; height:30px; flex:0 0 30px; border:1px solid var(--ds-border,#dcdfe4); transition:background .15s,color .15s,transform .15s; }
 .s4t-card-copy-share:hover { transform:translateY(-1px); }

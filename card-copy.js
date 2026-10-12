@@ -223,7 +223,7 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
             return !node.closest('.s4t-checklist-actions')&&/mark.*(?:complete|incomplete|read)|card.*complete/i.test((node.getAttribute('aria-label')||'')+' '+(node.getAttribute('data-testid')||''));
         });
         var anchor=circle||title;
-        if(!anchor)return;
+        if(!anchor||!anchor.getClientRects().length||!card.isConnected){titleButton.style.visibility='hidden';return;}
         var rect=anchor.getBoundingClientRect(),bounds=card.getBoundingClientRect();
         var x=circle?rect.left+(rect.width-26)/2:rect.right-28,y=rect.top-29;
         var clipTop=bounds.top;
@@ -232,10 +232,13 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         }
         if(y<clipTop){y=rect.top;x=circle?rect.left-30:rect.right-28;}
         x=Math.max(bounds.left+2,Math.min(x,bounds.right-28));
-        titleButton.hidden=rect.bottom<=clipTop||rect.top>=bounds.bottom;
-        titleButton.style.left='0px';titleButton.style.top='0px';
-        var origin=titleButton.getBoundingClientRect();
-        titleButton.style.left=x-origin.left+'px';titleButton.style.top=y-origin.top+'px';
+        // Position within the native card, so opening/closing animations carry
+        // the button with it instead of leaving a viewport-fixed control behind.
+        var parent=titleButton.offsetParent, origin=parent&&parent.getBoundingClientRect();
+        var root=!parent||(parent===document.body&&getComputedStyle(parent).position==='static');
+        titleButton.style.left=(root?x+window.scrollX:x-origin.left-parent.clientLeft+parent.scrollLeft)+'px';
+        titleButton.style.top=(root?y+window.scrollY:y-origin.top-parent.clientTop+parent.scrollTop)+'px';
+        titleButton.style.visibility=rect.bottom<=clipTop||rect.top>=bounds.bottom?'hidden':'visible';
     }
     function mount(){
         timer=null;
@@ -248,7 +251,7 @@ document.addEventListener('s4t-card-success',function(event){s4tCardToast(event.
         });
         if(card!==next){commentButtons.forEach(function(copy){if(copy._dock)copy._dock.remove();});commentButtons.clear();if(commentResize)commentResize.disconnect();if(titleButton)titleButton.remove();if(descriptionButton)descriptionButton.remove();if(shareButton)shareButton.remove();titleButton=descriptionButton=shareButton=null;card=next;}
         if(!card)return;
-        if(!titleButton||!titleButton.isConnected){titleButton=button('title');card.append(titleButton);}
+        if(!titleButton||!titleButton.isConnected){titleButton=button('title');titleButton.style.visibility='hidden';card.append(titleButton);if(commentResize)commentResize.observe(card);}
         var heading=findDescriptionHeading();
         if(heading&&(!descriptionButton||!descriptionButton.isConnected)){descriptionButton=button('description');heading.after(descriptionButton);}
         var search=card.querySelector('.s4t-comment-search-slot');
