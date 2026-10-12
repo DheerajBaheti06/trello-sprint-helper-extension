@@ -196,10 +196,12 @@ var recalcTotalsObserver = new CrossBrowser.MutationObserver(function (mutations
         } else if (!updateBurndownLink.toolbar || !updateBurndownLink.toolbar[0].isConnected) {
             updateBurndownLink();
         }
+        // Clean up any rogue pickers accidentally inserted into title container
+        $('[data-testid="card-back-title-container"] > .picker, [data-testid="card-back-title-container"] > .picker-consumed').remove();
 
         var $editControls = $(".card-detail-title .edit-controls"); // old selector
         if ($editControls.length == 0) {
-            $editControls = $(".js-card-detail-title-input.is-editing, textarea[data-testid='card-back-title']").closest('.window-header, [data-testid="card-back-title-container"]'); // new selector
+            $editControls = $(".js-card-detail-title-input.is-editing").closest('.window-header');
         }
         if ($editControls.length > 0) {
             showPointPicker($editControls.get(0));
@@ -1750,16 +1752,18 @@ function ListCard(el, identifier) {
 function showPointPicker(targetEl) {
     if (!targetEl || targetEl === window || targetEl === window.location || !targetEl.nodeType || targetEl.nodeType !== 1) return;
     var $loc = $(targetEl);
+    if ($loc.is('[data-testid="card-back-title-container"]') || $loc.closest('[data-testid="card-back-title-container"]').length) return;
     if ($loc.find('.picker').length) return;
 
-    // Try to allow this to work with old card style (with save button) or new style (where title is always a textarea).
+    // Try to allow this to work with old card style (with save button).
     var $elementToAddPickerTo = $('.card-detail-title .edit-controls');
     if ($elementToAddPickerTo.length == 0) {
-        $elementToAddPickerTo = $(".js-card-detail-title-input.is-editing, textarea[data-testid='card-back-title']").closest('.window-header, [data-testid="card-back-title-container"]');
+        $elementToAddPickerTo = $(".js-card-detail-title-input.is-editing").closest('.window-header');
     }
     if ($elementToAddPickerTo.length == 0) {
         $elementToAddPickerTo = $loc;
     }
+    if ($elementToAddPickerTo.is('[data-testid="card-back-title-container"]') || $elementToAddPickerTo.closest('[data-testid="card-back-title-container"]').length) return;
 
     var $picker = $('<div/>', { class: "picker" }).appendTo($elementToAddPickerTo.get(0));
     $picker.append($('<span>', { class: "picker-title" }).text("Estimated Points"));

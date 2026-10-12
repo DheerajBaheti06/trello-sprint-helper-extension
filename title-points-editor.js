@@ -70,6 +70,9 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
             layoutObserver.disconnect();observedInput=input;
             for(var ancestor=input;ancestor&&ancestor!==document.body;ancestor=ancestor.parentElement)layoutObserver.observe(ancestor);
         }
+        if (viewing && input.scrollHeight > input.clientHeight) {
+            input.style.height = input.scrollHeight + 'px';
+        }
         var rect = input.getBoundingClientRect(), css = getComputedStyle(input);
         if (viewing && !viewStyle) {
             viewStyle = { input: input, value: input.style.getPropertyValue('-webkit-text-fill-color'), priority: input.style.getPropertyPriority('-webkit-text-fill-color') };
@@ -156,6 +159,7 @@ var s4tTitleEditorSelector = '.card-detail-title .edit textarea, textarea.js-car
         if (!edit) return;
         edits.delete(input);
         if (highlighted === input) removeHighlight();
+        input.style.height = '';
         // Focusing then leaving must not change the saved title at all.
         s4tSetTitleValue(input, cancel || input.value === edit.prepared ? edit.original : s4tTitlePointSlots(input.value, false));
     }

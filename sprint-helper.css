@@ -1098,8 +1098,40 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 .s4t-comment-text-current { outline: 2px solid var(--ds-border-warning, #e2b203); outline-offset: 2px; }
 
 /* Compact comment search directly before the card toolbar's Cover action. */
-.s4t-card-header-search { display: block; flex: 1 1 240px; width: 240px; max-width: 280px; min-width: 140px; margin: 0 8px 0 auto; align-self: center; }
-.s4t-card-header-search .s4t-comment-navigator { height: 32px; }
+.s4t-card-header-search { display: block; flex: 0 1 auto; width: auto; max-width: 280px; min-width: 0; margin: 0 8px 0 auto; align-self: center; }
+.s4t-card-header-search .s4t-comment-navigator { flex: 1 1 180px; min-width: 120px; max-width: 240px; width: auto; height: 32px; }
+
+/* Card title & header: protect title width and eliminate vertical scrollbar in title textarea */
+[data-testid="card-back-header"],
+header.window-header {
+	min-width: 0 !important;
+}
+
+[data-testid="card-back-title-container"],
+.card-detail-title {
+	flex: 1 1 auto !important;
+	min-width: 0 !important;
+}
+
+[data-testid="card-back-title-container"] textarea,
+textarea[data-testid="card-back-title"],
+textarea[data-testid="card-back-title-input"],
+textarea[data-testid="card-name-input"],
+.js-card-detail-title-input,
+.card-detail-title textarea {
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box !important;
+	overflow-y: hidden !important;
+	overflow-x: hidden !important;
+	resize: none !important;
+}
+
+/* Story point pickers must never render inside modern Trello's title container */
+[data-testid="card-back-title-container"] > .picker,
+[data-testid="card-back-title-container"] > .picker-consumed {
+	display: none !important;
+}
 
 /* Consistent native surfaces for Burndown, Attention and Cards List. */
 #s4t-members-modal {
