@@ -624,3 +624,27 @@ test('Attention point totals count matching cards once and preserve explicit com
     assert.equal(totals.assigned,4.9);assert.equal(totals.completed,4.25);
     assert.equal(context.s4tAttentionPointTotals(cards,[]).assigned,0);
 });
+
+test('Members Burndown counts actual completed points and preserves assigned points for cards in Done', () => {
+    const result = context.computeBurndownFromBoardData({
+        name: 'Sprint',
+        members: [{ id: 'member', fullName: 'Dheeraj' }],
+        lists: [{ id: 'done', name: 'Done' }],
+        cards: [card({ name: '(3) Fix bug', idList: 'done' })]
+    });
+    assert.equal(result.members[0].assigned, 3);
+    assert.equal(result.members[0].completed, 0);
+    assert.equal(result.members[0].remaining, 3);
+    assert.equal(result.members[0].cardsCompleted, 1);
+    assert.equal(result.team.assigned, 3);
+    assert.equal(result.team.completed, 0);
+    assert.equal(result.team.remaining, 3);
+    assert.equal(result.team.cardsCompleted, 1);
+
+    const html = context.renderMembersHtml(result.members, false);
+    assert.match(html.replace(/<[^>]*>/g, ''), /3 assigned/);
+    assert.match(html.replace(/<[^>]*>/g, ''), /✓ 0 done/);
+    assert.match(html.replace(/<[^>]*>/g, ''), /3 remaining/);
+    assert.match(html, /1 cards \(1 done, 0 pending\)/);
+});
+

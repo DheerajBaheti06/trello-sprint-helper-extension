@@ -477,16 +477,7 @@ function computeBurndownFromBoardData(boardData) {
         }
 
         var isDone = !!doneLists[card.idList] || !!card.dueComplete;
-        var cardRemaining = 0;
-        if (isDone) {
-            if (cardCompleted === 0 && cardAssigned > 0) {
-                cardCompleted = cardAssigned;
-            }
-            cardRemaining = 0;
-        } else {
-            cardRemaining = Math.max(0, cardAssigned - cardCompleted);
-            cardRemaining = Math.round(cardRemaining * 100) / 100;
-        }
+        var cardRemaining = isDone ? 0 : Math.round(Math.max(0, cardAssigned - cardCompleted) * 100) / 100;
 
         var isCardComplete = isDone || (cardRemaining === 0 && cardAssigned > 0);
 
@@ -641,10 +632,19 @@ function s4tLoadMembers(force) {
     } else finish(null, null);
 }
 
+var s4tBurndownCurrentMember = null;
 function showMembersBurndown() {
+    s4tBurndownCurrentMember = null;
     readAllCardsSynchronously();
     renderMembersBurndownModal(collectMembersBurndownData());
     s4tLoadMembers(false);
+    var modal = document.getElementById('s4t-members-modal');
+    $.ajax({url:'/1/members/me', data:{fields:'id,username'}, dataType:'json', timeout:10000, xhrFields:{withCredentials:true}})
+        .done(function (member) {
+            if (!modal || !modal.isConnected || document.getElementById('s4t-members-modal') !== modal) return;
+            s4tBurndownCurrentMember = member && typeof member.id === 'string' ? member : null;
+            s4tRenderMemberRows($(modal).data('members'), $('#s4t-exclude-not-sure').prop('checked'));
+        });
 }
 
 function hideMembersBurndown() {
@@ -850,16 +850,7 @@ function collectMembersBurndownData() {
             var isCardDueComplete = $card.find("[data-testid='due-date-badge-with-state-complete'], .is-due-complete").length > 0;
             var isDone = isDoneList || isCardDueComplete;
 
-            var cardRemaining = 0;
-            if (isDone) {
-                if (cardCompleted === 0 && cardAssigned > 0) {
-                    cardCompleted = cardAssigned;
-                }
-                cardRemaining = 0;
-            } else {
-                cardRemaining = Math.max(0, cardAssigned - cardCompleted);
-                cardRemaining = Math.round(cardRemaining * 100) / 100;
-            }
+            var cardRemaining = isDone ? 0 : Math.round(Math.max(0, cardAssigned - cardCompleted) * 100) / 100;
 
             var isCardComplete = isDone || (cardRemaining === 0 && cardAssigned > 0);
 
@@ -1015,8 +1006,17 @@ function renderMembersHtml(members, excludeNotSure) {
     if (!members || members.length === 0) {
         return '<div class="s4t-empty-state">No members with cards found on this board. Make sure cards have members assigned and points in parenthesis (assigned) and braces {completed}.</div>';
     }
+    var current = typeof s4tBurndownCurrentMember === 'undefined' ? null : s4tBurndownCurrentMember;
+    function isCurrent(member) {
+        return !!(current && (member.key === current.id || member.id === current.id ||
+            (current.username && member.username && current.username.toLowerCase() === member.username.replace(/^@/, '').toLowerCase())));
+    }
+    var ordered = members.slice().sort(function (a, b) {
+        return Number(isCurrent(b)) - Number(isCurrent(a)) ||
+            String(a.name || a.username || '').localeCompare(String(b.name || b.username || ''), undefined, {sensitivity:'base', numeric:true});
+    });
     var html = '';
-    members.forEach(function (m) {
+    ordered.forEach(function (m) {
         var number = function (value) { return Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0; };
         var assigned = number(m.assigned), completed = number(m.completed), remaining = number(m.remaining), progress = Math.min(100, number(m.completionPercentage));
         var cardsTotal = number(m.cardsTotal), cardsCompleted = number(m.cardsCompleted), cardsPending = number(m.cardsPending);
@@ -1029,6 +1029,8 @@ function renderMembersHtml(members, excludeNotSure) {
             remaining = Math.round(Math.max(0, assigned - completed) * 100) / 100;
             progress = assigned > 0 ? Math.min(100, Math.round(completed / assigned * 100)) : (cardsTotal > 0 ? Math.round(cardsCompleted / cardsTotal * 100) : 0);
         }
+        var pinned = isCurrent(m);
+        var pin = pinned ? '<span class="s4t-member-pin" role="img" aria-label="Your account, pinned first" data-tooltip="Your account · Pinned first"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4-1-7ZM12 16v5"/></svg></span>' : '';
         var avatar = s4tSafeAvatarUrl(m.avatar);
         var name = s4tEscapeHtml(m.name), username = s4tEscapeHtml(m.username);
         var avatarMarkup = avatar
@@ -1036,11 +1038,11 @@ function renderMembersHtml(members, excludeNotSure) {
             : '<div class="s4t-avatar">' + s4tEscapeHtml(m.initials || '👤') + '</div>';
 
         html += [
-            '<div class="s4t-member-card">',
+            '<div class="s4t-member-card' + (pinned ? ' s4t-member-pinned' : '') + '">',
             '<div class="s4t-member-info">',
             avatarMarkup,
             '<div class="s4t-member-meta">',
-            '<div class="s4t-member-name" title="' + name + (m.username && m.username !== m.name ? ' (@' + username + ')' : '') + '">' + name + (m.username && m.username !== m.name ? ' <span class="s4t-member-username">(@' + username + ')</span>' : '') + '</div>',
+            '<div class="s4t-member-name" title="' + name + (m.username && m.username !== m.name ? ' (@' + username + ')' : '') + '">' + pin + name + (m.username && m.username !== m.name ? ' <span class="s4t-member-username">(@' + username + ')</span>' : '') + '</div>',
             '<div class="s4t-member-cards-count">' + cardsTotal + ' cards (' + cardsCompleted + ' done, ' + cardsPending + ' pending)</div>',
             '</div>',
             '</div>',

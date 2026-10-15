@@ -7,7 +7,7 @@ Only the rules that can change your results. Match these conventions when settin
 | Feature | What you need to know | Example |
 | --- | --- | --- |
 | **List-top points** | Reads assigned points from `( )` and completed points from `[ ]` in card titles. Assigned appears first. | `(5) Fix login [2]` → **5 assigned / 2 completed**. |
-| **Members Burndown** | Done-list cards count as fully completed, even if their title shows fewer completed points. Marking the due date complete has the same effect. | The same `(5) Fix login [2]` in `Done-Accepted in Test` counts as **5 completed** here, but **2** in list-top totals. |
+| **Members Burndown** | Counts actual completed points from `[ ]` or `{ }` in card titles. Done-list cards count toward card completion without altering point totals. | A card `(3) Fix login` in a Done list counts as **1 completed card**, but **0 completed points** until points are logged. |
 | **Done-list detection** | Uses name matching, not a Trello status. Avoid `Not Done` and `Incomplete` for active work—they also match. | Recognized names include `Done`, `Done-Closed`, `Done-Accepted in Test`, `Verified` and `Released`. |
 | **Not Sure exclusion** | Use `Not Sure` in list names. Members Burndown excludes these lists by default **only from member rows**, not the four summary cards. | `Dheeraj Not Sure`, `Ishan Not Sure`. Uncheck the option to include them. |
 | **Shared-card points** | Each assigned member gets the card’s full points; they are not divided between members. | A 5-point card assigned to two developers contributes **5 to each**, but only **5 to the team total**. |

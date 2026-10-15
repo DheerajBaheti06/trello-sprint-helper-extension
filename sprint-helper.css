@@ -2251,3 +2251,18 @@ textarea[data-testid="card-name-input"],
 #s4t-members-modal .s4t-point-value { font-weight:600; font-variant-numeric:tabular-nums; }
 #s4t-members-modal .s4t-stat-value { overflow-wrap:anywhere; }
 #s4t-members-modal .s4t-members-list { margin-bottom:8px; }
+
+/* A subtle accent identifies the signed-in member without changing row geometry. */
+#s4t-members-modal .s4t-member-card.s4t-member-pinned {
+    background: color-mix(in srgb, var(--ds-background-selected, #cce0ff) 35%, transparent) !important;
+    border-bottom-color: var(--ds-border-selected, #85b8ff) !important;
+}
+#s4t-members-modal .s4t-member-pin {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:14px; height:14px; margin-right:5px; vertical-align:-2px;
+    color:var(--ds-text-selected, #0c66e4);
+}
+#s4t-members-modal .s4t-member-pin svg { display:block; }
+
+/* Keep a real scrollable end gutter for the Share hover/copy animation. */
+.s4t-card-header-search::after { content:""; display:block; flex:0 0 4px; width:4px; height:1px; pointer-events:none; }
