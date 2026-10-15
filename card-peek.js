@@ -247,8 +247,13 @@ var s4tCardPeek = (function () {
         try {
             raw = localStorage.getItem('s4t-attention-comment-names-' + board) || '';
         } catch (_) {}
-        if (!raw.trim()) raw = 'Tech Design\nTest Cases\nBranch';
-        return raw.split(/[\r\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+        if (!raw.trim()) raw = 'Tech Design\nBranch';
+        return raw.split(/[\r\n,]+/)
+            .map(function (s) { return s.trim(); })
+            .filter(function (s) {
+                // In Quick Peek row-2 column-2, exclude Test Cases since it is tracked as a checklist in column-1
+                return Boolean(s) && normalizeCommentKey(s) !== 'test cases';
+            });
     }
 
     function computePosition(cardRect, popoverWidth, popoverHeight, winWidth, winHeight) {
@@ -1136,7 +1141,8 @@ var s4tCardPeek = (function () {
         mount: mountCards,
         invalidate: invalidateCache,
         fetchCardData: fetchCardData,
-        formatBullets: formatBullets
+        formatBullets: formatBullets,
+        getRequiredCommentNames: getRequiredCommentNames
     };
 })();
 

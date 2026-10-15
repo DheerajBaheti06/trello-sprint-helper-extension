@@ -738,4 +738,32 @@ test('mountCards positions quick view button at member slot when no member is as
     }
 });
 
+test('quick peek row-2 column-2 excludes Test Cases from required comment names', () => {
+    const prevLocalStorage = global.localStorage;
+    try {
+        let store = {};
+        global.localStorage = {
+            getItem: (k) => store[k] || null,
+            setItem: (k, v) => { store[k] = String(v); },
+            removeItem: (k) => { delete store[k]; },
+            clear: () => { store = {}; }
+        };
+
+        // 1. Default required names must be Tech Design and Branch (excluding Test Cases)
+        const defaults = cardPeek.getRequiredCommentNames();
+        assert.deepEqual(defaults, ['Tech Design', 'Branch']);
+        assert.ok(!defaults.includes('Test Cases'));
+
+        // 2. Even if localStorage contains Test Cases, it must be filtered out for quick peek column-2
+        global.localStorage.setItem('s4t-attention-comment-names-', 'Tech Design\nTest Cases\nBranch\nTESTCASES');
+        const filtered = cardPeek.getRequiredCommentNames();
+        assert.deepEqual(filtered, ['Tech Design', 'Branch']);
+        assert.ok(!filtered.includes('Test Cases'));
+        assert.ok(!filtered.includes('TESTCASES'));
+    } finally {
+        global.localStorage = prevLocalStorage;
+    }
+});
+
+
 

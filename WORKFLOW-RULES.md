@@ -41,5 +41,5 @@ Only the rules that can change your results. Match these conventions when settin
 | Feature | Matching rule | Example |
 | --- | --- | --- |
 | **Description / Scope** | Renders full markdown formatting with nested list indentation. The copy button in the top-right copies the structured scope directly to your clipboard. | Nested `-` or `*` bullets preserve indentation level in plain text and rich clipboard. |
-| **Checklists & Comments** | Mirrors the Attention filter rules, showing green checkmarks when all required comment headings (`Tech Design, Test Cases, Branch`) and checklists are present, or amber when missing. | A card missing the `Branch` comment heading is flagged before opening the card. |
+| **Checklists & Comments** | Shows card checklists in column 1 (including Test Cases) and required comment headings (`Tech Design, Branch`) in column 2, with status checkmarks. | A card missing the `Branch` comment heading is flagged before opening the card. |
 
