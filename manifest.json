@@ -1,50 +1,43 @@
 {
-   "content_scripts": [
-      {
-         "css": [
-            "sprint-helper.css"
-         ],
-         "js": [
-            "jquery-2.1.4.min.js",
-            "feature-preferences.js",
-            "workflow-rules.js",
-            "sprint-helper.js",
-            "title-points-editor.js",
-            "card-copy.js",
-            "comment-layout.js",
-            "charts.js",
-            "eow-update.js",
-            "hover-selectors.js",
-            "card-peek.js"
-         ],
-         "matches": [
-            "https://trello.com/*"
-         ]
-      }
-   ],
-   "description": "Sprint Helper by Dheeraj. Built on TrelloScrum: points, members burndown, Attention filters, weekly updates, Slack previews and card quick view.",
-   "icons": {
-      "164": "sprint-helper-icon.png"
-   },
-   "manifest_version": 3,
-   "name": "Sprint Helper",
-   "permissions": [
-      "storage"
-   ],
-   "version": "1.108",
-   "web_accessible_resources": [
-      {
-         "matches": [
-            "https://trello.com/*"
-         ],
-         "resources": [
-            "images/storypoints-icon.png",
-            "images/points-done.png",
-            "images/burndown-icon_12x12.png",
-            "images/burndown-icon_18x18.png",
-            "WORKFLOW-RULES.md",
-            "sprint-helper-icon.png"
-         ]
-      }
-   ]
+  "content_scripts": [
+    {
+      "css": ["sprint-helper.css"],
+      "js": [
+        "jquery-2.1.4.min.js",
+        "feature-preferences.js",
+        "workflow-rules.js",
+        "sprint-helper.js",
+        "sprint-memory-mvp.js",
+        "title-points-editor.js",
+        "card-copy.js",
+        "comment-layout.js",
+        "charts.js",
+        "eow-update.js",
+        "hover-selectors.js",
+        "card-peek.js"
+      ],
+      "matches": ["https://trello.com/*"]
+    }
+  ],
+  "description": "Sprint Helper by Dheeraj. Built on TrelloScrum: points, members burndown, Attention filters, weekly updates, Slack previews and card quick view.",
+  "icons": {
+    "164": "sprint-helper-icon.png"
+  },
+  "manifest_version": 3,
+  "name": "Sprint Helper",
+  "permissions": ["storage"],
+  "version": "1.108",
+  "web_accessible_resources": [
+    {
+      "matches": ["https://trello.com/*"],
+      "resources": [
+        "images/storypoints-icon.png",
+        "images/points-done.png",
+        "images/burndown-icon_12x12.png",
+        "images/burndown-icon_18x18.png",
+        "WORKFLOW-RULES.md",
+        "sprint-helper-icon.png"
+      ]
+    }
+  ]
 }
