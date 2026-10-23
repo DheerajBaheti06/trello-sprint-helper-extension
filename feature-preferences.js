@@ -21,7 +21,7 @@ var s4tPreferences = (function () {
     };
     var groups = [
         ['Board features', [
-            ['members', 'Members Burndown', 'Team and member points, progress and card counts.', '#membersBurndownLink, #s4t-modal-overlay'],
+            // ['members', 'Members Burndown', 'Team and member points, progress and card counts.', '#membersBurndownLink, #s4t-modal-overlay'],
             ['attention', 'Attention filters', 'Find cards needing updates.', '#s4t-attention-controls, #s4t-attention-panel'],
             ['cardsList', 'Cards List', 'Select cards and create Slack messages.', '#s4t-cards-launch, #s4t-cards-overlay'],
             ['eow', 'EOW Update', 'Create weekly task reports.', '#s4t-eow-launch, #s4t-eow-overlay']
