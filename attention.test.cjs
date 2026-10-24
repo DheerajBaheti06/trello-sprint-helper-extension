@@ -481,13 +481,13 @@ test('Not Sure exclusion updates member points and progress without changing tea
     assert.match(filtered.replace(/<[^>]*>/g,''),/✓ 2 done/);
     assert.match(filtered.replace(/<[^>]*>/g,''),/3 remaining/);
     assert.match(filtered,/width:40%/);
-    assert.match(filtered,/1 cards \(0 done, 1 pending\)/);
+    assert.match(filtered.replace(/<[^>]*>/g, ''), /1 cards \(1 pending, 0 doing, 0 done\)/);
     assert.equal(result.team.cardsTotal,2);
     const unfiltered=context.renderMembersHtml(result.members,false);
     assert.match(unfiltered.replace(/<[^>]*>/g,''),/7.5 assigned/);
     assert.match(unfiltered.replace(/<[^>]*>/g,''),/✓ 3.5 done/);
     assert.match(unfiltered.replace(/<[^>]*>/g,''),/4 remaining/);
-    assert.match(unfiltered,/2 cards \(0 done, 2 pending\)/);
+    assert.match(unfiltered.replace(/<[^>]*>/g, ''), /2 cards \(2 pending, 0 doing, 0 done\)/);
     assert.equal(result.team.assigned,7.5);
     assert.equal(JSON.stringify(result),original);
     const allExcluded=context.renderMembersHtml([{...result.members[0],notSureAssigned:7.5,notSureCompleted:3.5}],true);
@@ -500,9 +500,9 @@ test('Not Sure exclusion updates member points and progress without changing tea
 test('Not Sure card counts include completed and unestimated cards', () => {
     const result = context.computeBurndownFromBoardData({name:'Sprint',members:[{id:'member',fullName:'Alex'}],lists:[{id:'todo',name:'Todo'},{id:'maybe',name:'Not Sure'}],cards:[card({name:'Keep',dueComplete:true}),card({name:'Optional',idList:'maybe'}),card({name:'Completed optional',idList:'maybe',dueComplete:true})]});
     const filtered=context.renderMembersHtml(result.members,true);
-    assert.match(filtered,/1 cards \(1 done, 0 pending\)/);
+    assert.match(filtered.replace(/<[^>]*>/g, ''), /1 cards \(0 pending, 0 doing, 1 done\)/);
     assert.match(filtered,/width:100%/);
-    assert.match(context.renderMembersHtml(result.members,false),/3 cards \(2 done, 1 pending\)/);
+    assert.match(context.renderMembersHtml(result.members,false).replace(/<[^>]*>/g, ''), /3 cards \(1 pending, 0 doing, 2 done\)/);
     assert.equal(result.team.cardsTotal,3);
     assert.equal(result.team.cardsCompleted,2);
 });
@@ -645,6 +645,84 @@ test('Members Burndown counts actual completed points and preserves assigned poi
     assert.match(html.replace(/<[^>]*>/g, ''), /3 assigned/);
     assert.match(html.replace(/<[^>]*>/g, ''), /✓ 0 done/);
     assert.match(html.replace(/<[^>]*>/g, ''), /3 remaining/);
-    assert.match(html, /1 cards \(1 done, 0 pending\)/);
+    assert.match(html.replace(/<[^>]*>/g, ''), /1 cards \(0 pending, 0 doing, 1 done\)/);
+});
+
+test('Members Burndown classifies cards into pending (before doing), doing, and done (after doing) lists with 4-number cards progress', () => {
+    vm.runInContext(main.slice(main.indexOf('function s4tSprintSummary('), main.indexOf('function s4tRefreshIcon(')), context);
+    const board = {
+        name: 'Sprint 42',
+        members: [
+            { id: 'm1', fullName: 'Alice' },
+            { id: 'm2', fullName: 'Bob' }
+        ],
+        lists: [
+            { id: 'l1', name: 'Backlog', pos: 10 },
+            { id: 'l2', name: 'Sprint Todo', pos: 20 },
+            { id: 'l3', name: 'In Progress (Doing)', pos: 30 },
+            { id: 'l4', name: 'Code Review', pos: 40 },
+            { id: 'l5', name: 'Done / Verified', pos: 50 }
+        ],
+        cards: [
+            // Alice cards
+            card({ id: 'c1', name: '(3) Alice Todo card', idList: 'l2', idMembers: ['m1'] }),
+            card({ id: 'c2', name: '(5) {2} Alice Doing card', idList: 'l3', idMembers: ['m1'] }),
+            card({ id: 'c3', name: '(2) {2} Alice Review card', idList: 'l4', idMembers: ['m1'] }),
+            card({ id: 'c4', name: '(4) {4} Alice Done card', idList: 'l5', idMembers: ['m1'] }),
+            // Bob cards
+            card({ id: 'c5', name: '(1) Bob Backlog card', idList: 'l1', idMembers: ['m2'] }),
+            card({ id: 'c6', name: '(6) Bob Doing card', idList: 'l3', idMembers: ['m2'] })
+        ]
+    };
+
+    const result = context.computeBurndownFromBoardData(board);
+
+    // Alice:
+    // l2 (pos 20 < doing pos 30) -> pending (1 card)
+    // l3 (doing) -> doing (1 card)
+    // l4 (pos 40 > doing pos 30) -> done (1 card)
+    // l5 (pos 50 > doing pos 30) -> done (1 card)
+    // Total for Alice: 4 cards (1 pending, 1 doing, 2 done)
+    const alice = result.members.find(m => m.name === 'Alice');
+    assert.equal(alice.cardsPending, 1);
+    assert.equal(alice.cardsDoing, 1);
+    assert.equal(alice.cardsDone, 2);
+    assert.equal(alice.cardsTotal, 4);
+
+    // Bob:
+    // l1 (pos 10 < doing pos 30) -> pending (1 card)
+    // l3 (doing) -> doing (1 card)
+    // Total for Bob: 2 cards (1 pending, 1 doing, 0 done)
+    const bob = result.members.find(m => m.name === 'Bob');
+    assert.equal(bob.cardsPending, 1);
+    assert.equal(bob.cardsDoing, 1);
+    assert.equal(bob.cardsDone, 0);
+    assert.equal(bob.cardsTotal, 2);
+
+    // Team totals:
+    // pending: 2, doing: 2, done: 2, total: 6
+    assert.equal(result.team.cardsPending, 2);
+    assert.equal(result.team.cardsDoing, 2);
+    assert.equal(result.team.cardsDone, 2);
+    assert.equal(result.team.cardsTotal, 6);
+
+    // Points intact:
+    // Alice assigned: 3+5+2+4 = 14, completed: 0+2+2+4 = 8, remaining = 6
+    assert.equal(alice.assigned, 14);
+    assert.equal(alice.completed, 8);
+    assert.equal(alice.remaining, 6);
+
+    // Render HTML for member listing
+    const html = context.renderMembersHtml(result.members, false);
+    assert.match(html.replace(/<[^>]*>/g, ''), /4 cards \(1 pending, 1 doing, 2 done\)/);
+    assert.match(html.replace(/<[^>]*>/g, ''), /2 cards \(1 pending, 1 doing, 0 done\)/);
+
+    // Stat card 3 ('Cards progress') summary:
+    const summary = context.s4tSprintSummary(result.team);
+    assert.equal(
+        summary.cards,
+        '<span class="s4t-count-pending" data-tooltip="pending" data-copy-value="2">2</span> <span class="s4t-sep">|</span> <span class="s4t-count-doing" data-tooltip="doing" data-copy-value="2">2</span> <span class="s4t-sep">|</span> <span class="s4t-count-done" data-tooltip="done" data-copy-value="2">2</span> <span class="s4t-sep">||</span> <span class="s4t-count-total" data-tooltip="total cards" data-copy-value="6">6</span>'
+    );
+    assert.equal(summary.cardsRaw, '2 | 2 | 2 || 6');
 });
 

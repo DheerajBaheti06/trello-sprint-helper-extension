@@ -431,8 +431,10 @@ function computeBurndownFromBoardData(boardData) {
         completed: 0,
         remaining: 0,
         cardsTotal: 0,
-        cardsCompleted: 0,
-        cardsPending: 0
+        cardsPending: 0,
+        cardsDoing: 0,
+        cardsDone: 0,
+        cardsCompleted: 0
     };
 
     var doneLists = {}, notSureLists = {};
@@ -442,6 +444,48 @@ function computeBurndownFromBoardData(boardData) {
             doneLists[l.id] = true;
         }
     });
+
+    var activeLists = (boardData.lists || [])
+        .filter(function (l) { return !l.closed; })
+        .sort(function (a, b) { return (a.pos != null && b.pos != null) ? a.pos - b.pos : 0; });
+
+    var isDoingName = function (name) {
+        return /\b(?:doing|in[\s_-]*progress|wip|in[\s_-]*dev(?:elopment)?)\b/i.test(name || '');
+    };
+
+    var doingIndices = [];
+    activeLists.forEach(function (l, idx) {
+        if (isDoingName(l.name)) doingIndices.push(idx);
+    });
+
+    var listCardState = {};
+    if (doingIndices.length > 0) {
+        var firstDoing = doingIndices[0];
+        var lastDoing = doingIndices[doingIndices.length - 1];
+        activeLists.forEach(function (l, idx) {
+            if (idx < firstDoing) {
+                listCardState[l.id] = 'pending';
+            } else if (idx > lastDoing) {
+                listCardState[l.id] = 'done';
+            } else {
+                listCardState[l.id] = isDoingName(l.name) ? 'doing' : (idx > firstDoing ? 'done' : 'pending');
+            }
+        });
+    } else {
+        var firstDone = -1;
+        activeLists.forEach(function (l, idx) {
+            if (firstDone === -1 && /done|closed|complete|completed|shipped|released|live|production|prod\b|deployed|verified|finished|resolved/i.test(l.name || '')) {
+                firstDone = idx;
+            }
+        });
+        activeLists.forEach(function (l, idx) {
+            if (firstDone !== -1 && idx >= firstDone) {
+                listCardState[l.id] = 'done';
+            } else {
+                listCardState[l.id] = 'pending';
+            }
+        });
+    }
 
     (boardData.members || []).forEach(function (m) {
         var fullName = m.fullName || m.username || 'Member';
@@ -457,8 +501,10 @@ function computeBurndownFromBoardData(boardData) {
             completed: 0,
             remaining: 0,
             cardsTotal: 0,
-            cardsCompleted: 0,
-            cardsPending: 0
+            cardsPending: 0,
+            cardsDoing: 0,
+            cardsDone: 0,
+            cardsCompleted: 0
         };
     });
 
@@ -481,9 +527,20 @@ function computeBurndownFromBoardData(boardData) {
 
         var isCardComplete = isDone || (cardRemaining === 0 && cardAssigned > 0);
 
+        var cardState = listCardState[card.idList] || 'pending';
+        if (doingIndices.length === 0 && card.dueComplete) {
+            cardState = 'done';
+        }
+
         teamStats.cardsTotal++;
-        if (isCardComplete) teamStats.cardsCompleted++;
-        else teamStats.cardsPending++;
+        if (cardState === 'doing') {
+            teamStats.cardsDoing++;
+        } else if (cardState === 'done') {
+            teamStats.cardsDone++;
+            teamStats.cardsCompleted++;
+        } else {
+            teamStats.cardsPending++;
+        }
 
         teamStats.assigned += cardAssigned;
         teamStats.completed += cardCompleted;
@@ -493,14 +550,27 @@ function computeBurndownFromBoardData(boardData) {
             var m = membersMap[memId];
             if (m) {
                 m.cardsTotal++;
-                if (isCardComplete) m.cardsCompleted++;
-                else m.cardsPending++;
+                if (cardState === 'doing') {
+                    m.cardsDoing++;
+                } else if (cardState === 'done') {
+                    m.cardsDone++;
+                    m.cardsCompleted++;
+                } else {
+                    m.cardsPending++;
+                }
                 m.assigned += cardAssigned;
                 if (notSureLists[card.idList]) {
                     m.notSureAssigned = (m.notSureAssigned || 0) + cardAssigned;
                     m.notSureCompleted = (m.notSureCompleted || 0) + cardCompleted;
                     m.notSureCardsTotal = (m.notSureCardsTotal || 0) + 1;
-                    m.notSureCardsCompleted = (m.notSureCardsCompleted || 0) + (isCardComplete ? 1 : 0);
+                    if (cardState === 'doing') {
+                        m.notSureCardsDoing = (m.notSureCardsDoing || 0) + 1;
+                    } else if (cardState === 'done') {
+                        m.notSureCardsDone = (m.notSureCardsDone || 0) + 1;
+                        m.notSureCardsCompleted = (m.notSureCardsCompleted || 0) + 1;
+                    } else {
+                        m.notSureCardsPending = (m.notSureCardsPending || 0) + 1;
+                    }
                 }
                 m.completed += cardCompleted;
             }
@@ -562,7 +632,7 @@ function updateModalContent(data) {
         $('#s4t-sum-assigned').attr('data-copy-value', summary.total).text(summary.total + ' total sprint hours');
         $('#s4t-sum-completed').attr('data-copy-value', summary.completed).text(summary.completed + ' / ' + summary.total + ' hrs');
         $('#s4t-sum-remaining').attr('data-copy-value', summary.remaining).text(summary.remaining + ' hrs');
-        $('#s4t-sum-cards').text(summary.cards);
+        $('#s4t-sum-cards').attr('data-copy-value', summary.cardsRaw || summary.cards).html(summary.cards);
         $('#s4t-sum-card-rate').text(summary.cardRate + '% completion rate');
         $('#s4t-sum-pct-text').text(summary.progress + '%');
         $('#s4t-sum-pct-fill').css('width', summary.progress + '%');
@@ -661,8 +731,10 @@ function collectMembersBurndownData() {
         completed: 0,
         remaining: 0,
         cardsTotal: 0,
-        cardsCompleted: 0,
-        cardsPending: 0
+        cardsPending: 0,
+        cardsDoing: 0,
+        cardsDone: 0,
+        cardsCompleted: 0
     };
 
     // Helper: Strict filtering out of UI buttons/controls
@@ -708,12 +780,63 @@ function collectMembersBurndownData() {
     if ($lists.length === 0) $lists = $("[data-testid='list-wrapper']");
     var seenCardKeys = {};
 
+    var isDoingName = function (name) {
+        return /\b(?:doing|in[\s_-]*progress|wip|in[\s_-]*dev(?:elopment)?)\b/i.test(name || '');
+    };
+
+    var listInfos = [];
     $lists.each(function () {
         var $list = $(this);
         var $titleClone = $list.find("[data-testid='list-name'], [data-testid='list-title'], textarea[data-testid='list-name-textarea'], .list-header-name-assist, .js-list-name-assist, .list-header-target-name, textarea.list-header-name, .list-header").first().clone();
         $titleClone.find('.list-total').remove();
         var listTitle = $titleClone.text().trim() || $list.find("[data-testid='list-name'], [data-testid='list-title']").text().trim() || '';
-        var isDoneList = /done|closed|complete|completed|shipped|released|live|production|prod\b|deployed|verified|finished|resolved/i.test(listTitle);
+        listInfos.push({
+            $list: $list,
+            title: listTitle,
+            isDoing: isDoingName(listTitle),
+            isDone: /done|closed|complete|completed|shipped|released|live|production|prod\b|deployed|verified|finished|resolved/i.test(listTitle),
+            isNotSure: /\bnot[\s_-]*sure\b/i.test(listTitle)
+        });
+    });
+
+    var doingIndices = [];
+    listInfos.forEach(function (info, idx) {
+        if (info.isDoing) doingIndices.push(idx);
+    });
+
+    if (doingIndices.length > 0) {
+        var firstDoing = doingIndices[0];
+        var lastDoing = doingIndices[doingIndices.length - 1];
+        listInfos.forEach(function (info, idx) {
+            if (idx < firstDoing) {
+                info.cardState = 'pending';
+            } else if (idx > lastDoing) {
+                info.cardState = 'done';
+            } else {
+                info.cardState = info.isDoing ? 'doing' : (idx > firstDoing ? 'done' : 'pending');
+            }
+        });
+    } else {
+        var firstDone = -1;
+        listInfos.forEach(function (info, idx) {
+            if (firstDone === -1 && info.isDone) {
+                firstDone = idx;
+            }
+        });
+        listInfos.forEach(function (info, idx) {
+            if (firstDone !== -1 && idx >= firstDone) {
+                info.cardState = 'done';
+            } else {
+                info.cardState = 'pending';
+            }
+        });
+    }
+
+    listInfos.forEach(function (info) {
+        var $list = info.$list;
+        var listTitle = info.title;
+        var isDoneList = info.isDone;
+        var listCardState = info.cardState;
 
         var $cards = $list.find(S4T_CARD_SEL);
 
@@ -854,9 +977,20 @@ function collectMembersBurndownData() {
 
             var isCardComplete = isDone || (cardRemaining === 0 && cardAssigned > 0);
 
+            var cardState = listCardState || 'pending';
+            if (doingIndices.length === 0 && isCardDueComplete) {
+                cardState = 'done';
+            }
+
             teamStats.cardsTotal++;
-            if (isCardComplete) teamStats.cardsCompleted++;
-            else teamStats.cardsPending++;
+            if (cardState === 'doing') {
+                teamStats.cardsDoing++;
+            } else if (cardState === 'done') {
+                teamStats.cardsDone++;
+                teamStats.cardsCompleted++;
+            } else {
+                teamStats.cardsPending++;
+            }
 
             teamStats.assigned += cardAssigned;
             teamStats.completed += cardCompleted;
@@ -920,8 +1054,10 @@ function collectMembersBurndownData() {
                         completed: 0,
                         remaining: 0,
                         cardsTotal: 0,
-                        cardsCompleted: 0,
-                        cardsPending: 0
+                        cardsPending: 0,
+                        cardsDoing: 0,
+                        cardsDone: 0,
+                        cardsCompleted: 0
                     };
                 }
                 if (avatarUrl && !membersMap[dedupKey].avatar) {
@@ -935,14 +1071,27 @@ function collectMembersBurndownData() {
                     var m = membersMap[mKey];
                     if (m) {
                         m.cardsTotal++;
-                        if (isCardComplete) m.cardsCompleted++;
-                        else m.cardsPending++;
+                        if (cardState === 'doing') {
+                            m.cardsDoing++;
+                        } else if (cardState === 'done') {
+                            m.cardsDone++;
+                            m.cardsCompleted++;
+                        } else {
+                            m.cardsPending++;
+                        }
                         m.assigned += cardAssigned;
-                        if (/\bnot[\s_-]*sure\b/i.test(listTitle)) {
+                        if (info.isNotSure) {
                             m.notSureAssigned = (m.notSureAssigned || 0) + cardAssigned;
                             m.notSureCompleted = (m.notSureCompleted || 0) + cardCompleted;
                             m.notSureCardsTotal = (m.notSureCardsTotal || 0) + 1;
-                            m.notSureCardsCompleted = (m.notSureCardsCompleted || 0) + (isCardComplete ? 1 : 0);
+                            if (cardState === 'doing') {
+                                m.notSureCardsDoing = (m.notSureCardsDoing || 0) + 1;
+                            } else if (cardState === 'done') {
+                                m.notSureCardsDone = (m.notSureCardsDone || 0) + 1;
+                                m.notSureCardsCompleted = (m.notSureCardsCompleted || 0) + 1;
+                            } else {
+                                m.notSureCardsPending = (m.notSureCardsPending || 0) + 1;
+                            }
                         }
                         m.completed += cardCompleted;
                     }
@@ -1020,10 +1169,14 @@ function renderMembersHtml(members, excludeNotSure) {
         var number = function (value) { return Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0; };
         var assigned = number(m.assigned), completed = number(m.completed), remaining = number(m.remaining), progress = Math.min(100, number(m.completionPercentage));
         var cardsTotal = number(m.cardsTotal), cardsCompleted = number(m.cardsCompleted), cardsPending = number(m.cardsPending);
+        var cardsDoing = number(m.cardsDoing);
+        var cardsDone = m.cardsDone !== undefined ? number(m.cardsDone) : cardsCompleted;
         if (excludeNotSure && (m.notSureAssigned || m.notSureCompleted || m.notSureCardsTotal)) {
             cardsTotal = Math.max(0, cardsTotal - (m.notSureCardsTotal || 0));
+            cardsPending = Math.max(0, cardsPending - (m.notSureCardsPending || 0));
+            cardsDoing = Math.max(0, cardsDoing - (m.notSureCardsDoing || 0));
+            cardsDone = Math.max(0, cardsDone - (m.notSureCardsDone !== undefined ? m.notSureCardsDone : (m.notSureCardsCompleted || 0)));
             cardsCompleted = Math.max(0, cardsCompleted - (m.notSureCardsCompleted || 0));
-            cardsPending = Math.max(0, cardsTotal - cardsCompleted);
             assigned = Math.round(Math.max(0, assigned - (m.notSureAssigned || 0)) * 100) / 100;
             completed = Math.round(Math.max(0, completed - (m.notSureCompleted || 0)) * 100) / 100;
             remaining = Math.round(Math.max(0, assigned - completed) * 100) / 100;
@@ -1043,7 +1196,7 @@ function renderMembersHtml(members, excludeNotSure) {
             avatarMarkup,
             '<div class="s4t-member-meta">',
             '<div class="s4t-member-name" title="' + name + (m.username && m.username !== m.name ? ' (@' + username + ')' : '') + '">' + pin + name + (m.username && m.username !== m.name ? ' <span class="s4t-member-username">(@' + username + ')</span>' : '') + '</div>',
-            '<div class="s4t-member-cards-count">' + cardsTotal + ' cards (' + cardsCompleted + ' done, ' + cardsPending + ' pending)</div>',
+            '<div class="s4t-member-cards-count"><span class="s4t-count-total">' + cardsTotal + ' cards</span> (<span class="s4t-count-pending">' + cardsPending + ' pending</span>, <span class="s4t-count-doing">' + cardsDoing + ' doing</span>, <span class="s4t-count-done">' + cardsDone + ' done</span>)</div>',
             '</div>',
             '</div>',
             '<div class="s4t-member-bar-area">',
@@ -1130,11 +1283,24 @@ function s4tSprintSummary(team) {
     var number = function (value) { return Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0; };
     var format = function (value, digits) { return String(Number(value.toFixed(digits))); };
     var total = number(team.assigned), completed = number(team.completed);
-    var cardsTotal = number(team.cardsTotal), cardsDone = number(team.cardsCompleted);
+    var cardsTotal = number(team.cardsTotal);
+    var cardsDone = team.cardsDone !== undefined ? number(team.cardsDone) : number(team.cardsCompleted);
+    var cardsDoing = number(team.cardsDoing);
+    var cardsPending = team.cardsPending !== undefined ? number(team.cardsPending) : Math.max(0, cardsTotal - cardsDone);
     var progress = total ? Math.min(100, completed / total * 100) : (cardsTotal ? cardsDone / cardsTotal * 100 : 0);
+    var cardsDisplay;
+    var cardsRaw;
+    if (team.cardsDoing !== undefined || team.cardsDone !== undefined) {
+        cardsRaw = cardsPending + ' | ' + cardsDoing + ' | ' + cardsDone + ' || ' + cardsTotal;
+        cardsDisplay = '<span class="s4t-count-pending" data-tooltip="pending" data-copy-value="' + cardsPending + '">' + cardsPending + '</span> <span class="s4t-sep">|</span> <span class="s4t-count-doing" data-tooltip="doing" data-copy-value="' + cardsDoing + '">' + cardsDoing + '</span> <span class="s4t-sep">|</span> <span class="s4t-count-done" data-tooltip="done" data-copy-value="' + cardsDone + '">' + cardsDone + '</span> <span class="s4t-sep">||</span> <span class="s4t-count-total" data-tooltip="total cards" data-copy-value="' + cardsTotal + '">' + cardsTotal + '</span>';
+    } else {
+        cardsRaw = cardsDone + ' / ' + cardsTotal;
+        cardsDisplay = cardsDone + ' / ' + cardsTotal;
+    }
     return {
         total: format(total, 2), completed: format(completed, 2), remaining: format(number(team.remaining), 2),
-        cards: cardsDone + ' / ' + cardsTotal,
+        cards: cardsDisplay,
+        cardsRaw: cardsRaw,
         cardRate: format(cardsTotal ? cardsDone / cardsTotal * 100 : 0, 2),
         progress: format(progress, 1),
         date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -1195,7 +1361,7 @@ function renderMembersBurndownModal(data) {
         '</div>',
         '<div class="s4t-stat-box">',
         '<div class="s4t-stat-label">Cards progress <span aria-hidden="true">☑</span></div>',
-        '<div class="s4t-stat-value" id="s4t-sum-cards">' + summary.cards + '</div>',
+        '<div class="s4t-stat-value" id="s4t-sum-cards" role="button" tabindex="0" data-copy-value="' + (summary.cardsRaw || summary.cards) + '">' + summary.cards + '</div>',
         '<div class="s4t-summary-detail" id="s4t-sum-card-rate">' + summary.cardRate + '% completion rate</div>',
         '</div>',
         '<div class="s4t-stat-box">',
