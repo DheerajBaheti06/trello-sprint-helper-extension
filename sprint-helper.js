@@ -722,6 +722,7 @@ function hideMembersBurndown() {
         $(this).remove();
     });
     $(document).off('keydown.s4tEsc');
+    $(document).off('s4t-sheets-verified-changed.s4tBurndown');
 }
 
 function collectMembersBurndownData() {
@@ -1371,7 +1372,15 @@ function renderMembersBurndownModal(data) {
         '</div>',
         '</div>',
         '</div>',
-        '<div class="s4t-members-options"><label data-tooltip="Exclude Not Sure list cards from member points, progress and card counts. Team summaries stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list</label></div>',
+        '<div class="s4t-members-options">',
+        ((typeof s4tIsSheetsVerified === 'function' ? s4tIsSheetsVerified() : (typeof s4tPreferences !== 'undefined' && typeof s4tPreferences.isSheetsVerified === 'function' ? s4tPreferences.isSheetsVerified() : false)) ? [
+            '<button type="button" id="s4t-push-sheets-btn" class="s4t-sheets-btn" data-tooltip="Push sprint story points to Google Sheets">',
+            '<svg class="s4t-sheets-btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>',
+            '<span>Push to Sheets</span>',
+            '</button>'
+        ].join('') : ''),
+        '<label data-tooltip="Exclude Not Sure list cards from member points, progress and card counts. Team summaries stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list</label>',
+        '</div>',
         '<div class="s4t-members-list" id="s4t-members-container">',
         membersHtml,
         '</div>',
@@ -1385,6 +1394,40 @@ function renderMembersBurndownModal(data) {
     $('#s4t-members-modal').data('members', data.members);
     $('#s4t-exclude-not-sure').on('change', function () {
         s4tRenderMemberRows($('#s4t-members-modal').data('members'), this.checked);
+    });
+
+    function bindPushSheetsAction() {
+        $('#s4t-push-sheets-btn').off('click.s4tPushSheets').on('click.s4tPushSheets', function () {
+            if (typeof s4tOpenGoogleSheetsModal === 'function') {
+                s4tOpenGoogleSheetsModal({
+                    members: $('#s4t-members-modal').data('members') || data.members,
+                    excludeNotSure: $('#s4t-exclude-not-sure').prop('checked'),
+                    boardName: (data && data.boardName) || $('.board-name span.text, [data-testid="board-name-display"]').text().trim(),
+                    boardId: typeof getBoardShortLink === 'function' ? getBoardShortLink() : ''
+                });
+            }
+        });
+    }
+
+    bindPushSheetsAction();
+
+    $(document).off('s4t-sheets-verified-changed.s4tBurndown').on('s4t-sheets-verified-changed.s4tBurndown', function () {
+        var isNowVerified = (typeof s4tIsSheetsVerified === 'function' ? s4tIsSheetsVerified() : (typeof s4tPreferences !== 'undefined' && typeof s4tPreferences.isSheetsVerified === 'function' ? s4tPreferences.isSheetsVerified() : false));
+        var $btn = $('#s4t-push-sheets-btn');
+        if (isNowVerified) {
+            if (!$btn.length) {
+                var btn = $(
+                    '<button type="button" id="s4t-push-sheets-btn" class="s4t-sheets-btn" data-tooltip="Push sprint story points to Google Sheets">' +
+                    '<svg class="s4t-sheets-btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>' +
+                    '<span>Push to Sheets</span>' +
+                    '</button>'
+                );
+                $('#s4t-members-modal .s4t-members-options').prepend(btn);
+                bindPushSheetsAction();
+            }
+        } else {
+            $btn.remove();
+        }
     });
 
     $('.s4t-modal-title').wrap('<div class="s4t-feature-title">').after(s4tFeatureHelp("Members Burndown", "Check team and member progress.", "• Assigned, completed and remaining points\n• Card counts and progress bars\n• Exclude Not Sure list\n• Interactive developer and label pie charts\n• View Full Dashboard", "Not Sure exclusion changes member rows only. Team summaries stay unchanged.", "Double-click a point value to copy it. Refresh to load current board data."));

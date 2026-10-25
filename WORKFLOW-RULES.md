@@ -43,3 +43,13 @@ Only the rules that can change your results. Match these conventions when settin
 | **Description / Scope** | Renders full markdown formatting with nested list indentation. The copy button in the top-right copies the structured scope directly to your clipboard. | Nested `-` or `*` bullets preserve indentation level in plain text and rich clipboard. |
 | **Checklists & Comments** | Shows card checklists in column 1 (including Test Cases) and required comment headings (`Tech Design, Branch`) in column 2, with status checkmarks. | A card missing the `Branch` comment heading is flagged before opening the card. |
 
+## Google Sheets Integration
+
+| Rule | What you need to know | Example |
+| --- | --- | --- |
+| **Webhook setup** | Enter your Google Apps Script Deployment ID or Webhook URL in extension **Settings** (⚙️). | Saved globally across boards. |
+| **Sheet tab confirmation** | The sheet name you enter must match the target tab in your Google Spreadsheet. Always confirm the name before pushing. | `02 September 2026` |
+| **Payload format** | Sends an HTTP POST JSON request with `sheetName` and `developers` metrics (`completed`, `remaining`, `assigned`). | `{ "sheetName": "02 September 2026", "developers": [...] }` |
+| **Expected responses** | Your script should return `SUCCESS: ...` on completion or `ERROR: ...` on failure. | `SUCCESS: Updated '02 September 2026'` |
+
+
