@@ -11,7 +11,8 @@ Built on [Scrum for Trello](https://github.com/Q42/TrelloScrum) by Q42, it exten
 | Workflow | What you can do |
 | --- | --- |
 | **Members Burndown** | Review completed and remaining hours, card completion and individual workloads in one sprint overview. Charts opens interactive developer-points and label-distribution pies with a pop-out view. |
-| **Settings** | Open Members Burndown → Settings to control board features, card listing features (view points and Quick View peek out), charts, and card tools (Check All, comment search, card copying, Review mode and laser pointer). Each feature displays its matching icon for quick recognition. Appearance offers Match Trello Native (default), Times New Roman, or Georgia for extension UI. Choices apply across boards in this browser. All features start enabled; hiding Trello’s native filter is optional. Reset to defaults restores these choices. |
+| **Push to Google Sheets** | Push sprint story points directly to your Google Spreadsheet via Google Apps Script Webhook. Aligned directly before Exclude Not Sure in Members Burndown, confirms target tab before updating, and saves tab names per board. |
+| **Settings** | Open Members Burndown → Settings to control board features, card listing features (view points and Quick View peek out), charts, Google Sheets Deployment ID, and card tools (Check All, comment search, card copying, Review mode and laser pointer). Each feature displays its matching icon for quick recognition. Appearance offers Match Trello Native (default), Times New Roman, or Georgia for extension UI. Choices apply across boards in this browser. All features start enabled; hiding Trello’s native filter is optional. Reset to defaults restores these choices. |
 | **Attention** | Combine scope, points, hotfix and checklist checks with member, label and list filters. Preserve selections and import native Trello filters. |
 | **Cards List & Slack Preview** | Select filtered cards, group them by developer, label or list, choose title/link formats, optionally append developer names when grouping by labels, and copy from the preview panel. |
 | **EOW Update** | Build weekly reports with task categories, drag-and-drop organization, list exclusions, points display and editable Slack previews. |
@@ -59,6 +60,66 @@ Default categories are Stabilization (UI/UX), Hotfix, Features (Client Requests/
 
 Recognizable release dates can trigger a notice to add previous-release tasks manually. There is no automatic previous-board import. Unrecognized release names cannot reliably establish overlap. Empty weeks remain empty.
 
+### Google Sheets Webhook Integration
+
+The extension pushes sprint developer metrics directly to a Google Spreadsheet via a Google Apps Script Webhook.
+
+#### 1. Apps Script Deployment
+1. In your Google Spreadsheet, open **Extensions → Apps Script**.
+2. Deploy as a **Web App**:
+   - **Execute as:** `Me`
+   - **Who has access:** `Anyone`
+3. Copy the **Deployment ID** (or full Webhook URL `https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec`).
+4. Paste the Deployment ID or Webhook URL into **Sprint Helper Settings** (click ⚙️ in the top bar or Members Burndown). The extension will verify the connection before saving and enable **Push to Sheets**.
+
+#### 2. Exact JSON Payload Format
+The extension sends an HTTP POST request with `Content-Type: application/json` and `{ redirect: "follow" }`. Configure your webhook script's `doPost(e)` to parse and handle this payload:
+
+```json
+{
+  "release": "02 September 2026",
+  "sheetName": "02 September 2026",
+  "boardName": "Sprint 02 September 2026",
+  "developers": [
+    {
+      "name": "Alex Johnson",
+      "completed": 14.5,
+      "remaining": 3.0,
+      "assigned": 17.5
+    },
+    {
+      "name": "Sarah Chen",
+      "completed": 8.0,
+      "remaining": 0.0,
+      "assigned": 8.0
+    }
+  ]
+}
+```
+
+- **`release` / `sheetName`**: Target tab name in the spreadsheet.
+- **`boardName`**: Live name of the current Trello board.
+- **`developers`**: Array of developer records with `name`, `completed`, `remaining`, and `assigned` points (honors the *Exclude Not Sure list* toggle if checked).
+
+#### 3. Expected Apps Script Plain-Text Response
+Your Google Apps Script should respond with plain text:
+- **Success:** `SUCCESS: Data received for '<Sheet Name>'`
+- **Missing Tab:** `ERROR: Sheet '<name>' not found`
+- **Other errors:** `ERROR: <reason>`
+
+#### 4. GET Verification Handler in Apps Script
+When saving the URL in **Sprint Helper Settings**, the extension sends a `GET` request to test reachability before saving. Your script must include:
+```javascript
+function doGet(e) {
+  try {
+    return ContentService.createTextOutput("SUCCESS: Webhook URL is verified and active");
+  } catch (err) {
+    return ContentService.createTextOutput("ERROR: " + err.toString());
+  }
+}
+```
+
+
 ### Dashboard link
 
 Set `fullDashboardUrl` inside `renderMembersBurndownModal` in `sprint-helper.js` to Dheeraj’s deployed **Trello Burndown** website URL. **View Full Dashboard** stays inactive until that URL is added and then opens the website in a new tab. Google Sheets export and bulk card updates run on the website; the link itself does not transfer authentication or synchronize data.
@@ -75,7 +136,10 @@ No build step or npm installation is required. With Node.js installed:
 
 ```bash
 node --check sprint-helper.js
-node --check eow-update.js
+node --check charts.js
+node --check google-sheets.js
+node --check background.js
+node --check feature-preferences.js
 node --test attention.test.cjs tests/*.test.cjs
 ```
 

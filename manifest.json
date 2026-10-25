@@ -15,14 +15,22 @@
             "charts.js",
             "eow-update.js",
             "hover-selectors.js",
-            "card-peek.js"
+            "card-peek.js",
+            "google-sheets.js"
          ],
          "matches": [
             "https://trello.com/*"
          ]
       }
    ],
+   "background": {
+      "service_worker": "background.js"
+   },
    "description": "Sprint Helper by Dheeraj. Built on TrelloScrum: points, members burndown, Attention filters, weekly updates, Slack previews and card quick view.",
+   "host_permissions": [
+      "https://script.google.com/*",
+      "https://script.googleusercontent.com/*"
+   ],
    "icons": {
       "164": "sprint-helper-icon.png"
    },
