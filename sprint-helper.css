@@ -2294,8 +2294,8 @@ textarea[data-testid="card-name-input"],
 #s4t-members-modal .s4t-point-label { font-size:12px; font-weight:400; }
 
 /* Font preference applies only to Sprint Helper UI, never native card content. */
-:is(#s4t-modal-overlay, #s4t-attention-panel, #s4t-cards-overlay, #s4t-eow-overlay, #s4t-preferences-overlay, #s4t-workflow-rules, #s4t-workflow-launch, #s4t-icon-tooltip, #s4t-attention-notice, #s4t-board-tools, .s4t-card-peek-popover, .s4t-comment-search-slot, .s4t-card-toast, .s4t-metric-toast, .s4t-checklist-actions, .s4t-card-copy, .badge-points, .list-total),
-:is(#s4t-modal-overlay, #s4t-attention-panel, #s4t-cards-overlay, #s4t-eow-overlay, #s4t-preferences-overlay, #s4t-workflow-rules, #s4t-workflow-launch, #s4t-icon-tooltip, #s4t-attention-notice, #s4t-board-tools, .s4t-card-peek-popover, .s4t-comment-search-slot, .s4t-card-toast, .s4t-metric-toast, .s4t-checklist-actions, .s4t-card-copy, .badge-points, .list-total) :where(button,input,select,textarea,h1,h2,h3,h4,p,span,div,label,a,li,table,th,td,legend,small,strong,b,option):not(pre *,code *) { font-family:var(--s4t-font-family, system-ui, sans-serif) !important; }
+:is(#s4t-modal-overlay, #s4t-attention-panel, #s4t-cards-overlay, #s4t-eow-overlay, #s4t-preferences-overlay, #s4t-workflow-rules, #s4t-workflow-launch, #s4t-icon-tooltip, #s4t-attention-notice, #s4t-board-tools, .s4t-card-peek-popover, .s4t-comment-search-slot, .s4t-card-toast, .s4t-metric-toast, .s4t-checklist-actions, .s4t-card-copy, .badge-points, .list-total, #s4t-export-overlay),
+:is(#s4t-modal-overlay, #s4t-attention-panel, #s4t-cards-overlay, #s4t-eow-overlay, #s4t-preferences-overlay, #s4t-workflow-rules, #s4t-workflow-launch, #s4t-icon-tooltip, #s4t-attention-notice, #s4t-board-tools, .s4t-card-peek-popover, .s4t-comment-search-slot, .s4t-card-toast, .s4t-metric-toast, .s4t-checklist-actions, .s4t-card-copy, .badge-points, .list-total, #s4t-export-overlay) :where(button,input,select,textarea,h1,h2,h3,h4,p,span,div,label,a,li,table,th,td,legend,small,strong,b,option):not(pre *,code *) { font-family:var(--s4t-font-family, system-ui, sans-serif) !important; }
 #s4t-preferences-dialog .s4t-preferences-font { grid-column:1 / -1; }
 #s4t-preferences-dialog .s4t-preferences-font label { align-items:center; justify-content:space-between; }
 #s4t-preferences-dialog .s4t-preferences-font select { font:inherit; padding:6px 10px; border:1px solid var(--ds-border,#dcdfe4); border-radius:7px; color:inherit; background:var(--ds-background-input,#fff); max-width:65%; }
@@ -2655,5 +2655,1998 @@ textarea[data-testid="card-name-input"],
     color: var(--ds-text-subtle, #626f86) !important;
     margin: 0 !important;
     line-height: 1.4 !important;
+}
+
+/* ==========================================================================
+   Interactive Sheet Column Designer & Board Card Export Modal
+   ========================================================================== */
+
+#s4t-export-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(9, 30, 66, 0.65) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    z-index: 2147483640 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+    animation: s4tFadeIn 0.2s ease-out !important;
+}
+
+#s4t-export-dialog {
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    color: var(--ds-text, #172b4d) !important;
+    width: calc(100vw - 20px) !important;
+    max-width: none !important;
+    height: calc(100vh - 20px) !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(9, 30, 66, 0.1) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    font-family: var(--s4t-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif) !important;
+}
+
+#s4t-export-dialog * {
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-export-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 14px 22px !important;
+    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    flex-shrink: 0 !important;
+    min-height: 56px !important;
+}
+
+#s4t-export-dialog .s4t-export-title-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+}
+
+#s4t-export-dialog .s4t-feature-title {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#s4t-export-dialog .s4t-feature-help {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--ds-text-subtle, #626f86) !important;
+    cursor: help !important;
+    padding: 4px !important;
+    width: 28px !important;
+    height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 6px !important;
+    flex-shrink: 0 !important;
+}
+
+#s4t-export-dialog .s4t-feature-help:hover {
+    background: transparent !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-export-header-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#s4t-export-dialog .s4t-export-title-row h2 {
+    margin: 0 !important;
+    font-size: 19px !important;
+    font-weight: 700 !important;
+    color: var(--ds-text, #091e42) !important;
+    line-height: 1.3 !important;
+}
+
+#s4t-export-dialog .s4t-export-title-icon {
+    color: #0f9d58 !important;
+    flex-shrink: 0 !important;
+}
+
+#s4t-export-dialog .s4t-export-board-tag {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--ds-text-selected, #0747a6) !important;
+    background: var(--ds-background-selected, #deebff) !important;
+    padding: 3px 10px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    white-space: nowrap !important;
+    max-width: 250px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+#s4t-export-dialog .s4t-export-match-count {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--ds-text-subtle, #5e6c84) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    padding: 3px 10px !important;
+    border-radius: 12px !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+}
+
+#s4t-export-dialog .s4t-export-close-btn {
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    color: var(--ds-text-subtle, #42526e) !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    width: auto !important;
+    height: 32px !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-export-close-btn:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    color: var(--ds-text, #091e42) !important;
+    border-color: var(--ds-border-focused, #c1c7d0) !important;
+}
+
+/* Tabs Bar */
+#s4t-export-dialog .s4t-export-tabs-bar {
+    display: flex !important;
+    gap: 8px !important;
+    padding: 0 22px !important;
+    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    flex-shrink: 0 !important;
+    height: 44px !important;
+    align-items: flex-end !important;
+}
+
+#s4t-export-dialog .s4t-export-tab {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 9px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border: 0 !important;
+    border-radius: 8px 8px 0 0 !important;
+    background: transparent !important;
+    color: var(--ds-text-subtle, #626f86) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    margin-bottom: -1px !important;
+    border-bottom: 2px solid transparent !important;
+}
+
+#s4t-export-dialog .s4t-export-tab:hover {
+    color: var(--ds-text, #172b4d) !important;
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+}
+
+#s4t-export-dialog .s4t-export-tab.s4t-tab-active {
+    color: var(--ds-text-selected, #0052cc) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border-bottom: 2px solid var(--ds-text-selected, #0052cc) !important;
+    font-weight: 700 !important;
+}
+
+/* Body & Tab Views - Clean White Surface */
+#s4t-export-dialog .s4t-export-body {
+    padding: 18px 22px !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    overflow: hidden !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-tab-view {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+}
+
+#s4t-export-dialog .s4t-tab-view[hidden] {
+    display: none !important;
+}
+
+/* Tab 1: Sheet Layout & Grid */
+#s4t-export-dialog .s4t-sheet-top-bar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+    padding: 8px 16px !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-hint {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-top-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-count-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 3px 10px !important;
+    border-radius: 12px !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    color: var(--ds-text-subtle, #5e6c84) !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+}
+
+#s4t-export-dialog .s4t-sheet-topbar-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-topbar-toggle:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: var(--ds-border-focused, #388bff) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked) {
+    background: var(--ds-background-selected, #deebff) !important;
+    border-color: var(--ds-border-selected, #b3d4ff) !important;
+    color: var(--ds-text-selected, #0052cc) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-topbar-toggle input[type="checkbox"] {
+    margin: 0 !important;
+    width: 15px !important;
+    height: 15px !important;
+    accent-color: var(--ds-background-brand-bold, #0052cc) !important;
+    cursor: pointer !important;
+}
+
+#s4t-export-dialog .s4t-sheet-reset-btn {
+    font-size: 13px !important;
+    height: 32px !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    color: var(--ds-text, #172b4d) !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    transition: all 0.15s ease !important;
+    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.04) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-reset-btn:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    color: var(--ds-text-selected, #0052cc) !important;
+    border-color: var(--ds-border-focused, #388bff) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-banner {
+    flex-shrink: 0 !important;
+    margin-top: 2px !important;
+    padding: 0 !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.04) !important;
+    overflow: hidden !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 7px 14px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    list-style: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-header::-webkit-details-marker {
+    display: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-title-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-toggle-hint {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: var(--ds-text-subtle, #626f86) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header {
+    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-icon {
+    font-size: 14px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px 16px !important;
+    padding: 10px 14px 12px 14px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-item {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    color: var(--ds-text-subtle, #42526e) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-item strong {
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-badge {
+    display: inline-block !important;
+    padding: 0 3px !important;
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 3px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-grid-wrapper {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    position: relative !important;
+    padding: 0 !important;
+    scrollbar-width: thin !important;
+}
+
+/* Tab 1: Whole Sheet Font Family - Times New Roman */
+#s4t-export-dialog #s4t-tab-sheet-view,
+#s4t-export-dialog #s4t-tab-sheet-view * {
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-sheet-grid-table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    font-size: 13px !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+/* Column Header Cells & Cards - Default Green Header Row with Black Bold Text */
+#s4t-export-dialog .s4t-sheet-th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    vertical-align: top !important;
+    min-width: 190px !important;
+    max-width: 230px !important;
+    user-select: none !important;
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th-card {
+    background-color: #b7e1cd !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    border: 1px solid #7cb594 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.15) !important;
+    padding: 8px 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease !important;
+    cursor: grab !important;
+    box-sizing: border-box !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16) !important;
+    border-color: #2e7d32 !important;
+}
+
+#s4t-export-dialog .s4t-col-dragging .s4t-sheet-th-card {
+    opacity: 0.45 !important;
+    border: 2px dashed #2e7d32 !important;
+    transform: scale(0.98) !important;
+}
+
+#s4t-export-dialog .s4t-col-dragover .s4t-sheet-th-card {
+    background: #a3d9bc !important;
+    border-color: #2e7d32 !important;
+    box-shadow: 0 0 0 2px #2e7d32 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-card-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-drag-handle {
+    cursor: grab !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    padding: 2px 4px !important;
+    border-radius: 4px !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-drag-handle:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: #000000 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-drag-handle:active {
+    cursor: grabbing !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-badge {
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-del {
+    width: 22px !important;
+    height: 22px !important;
+    border: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-del:hover:not(:disabled) {
+    background: #ffcdd2 !important;
+    color: #b71c1c !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-del:disabled {
+    opacity: 0.25 !important;
+    cursor: not-allowed !important;
+}
+
+#s4t-export-dialog .s4t-sheet-card-input-row {
+    width: 100% !important;
+}
+
+#s4t-export-dialog .s4t-sheet-header-input {
+    width: 100% !important;
+    padding: 5px 8px !important;
+    font-size: 13px !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    border: 1px solid #7cb594 !important;
+    border-radius: 4px !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+    transition: all 0.15s ease !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-sheet-header-input:hover {
+    border-color: #2e7d32 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-header-input:focus {
+    background: #ffffff !important;
+    border-color: #2e7d32 !important;
+    outline: 2px solid #a3d9bc !important;
+}
+
+#s4t-export-dialog .s4t-sheet-source-row {
+    display: grid !important;
+    grid-template-columns: 56px 1fr !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 2px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-source-header {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-source-label {
+    font-size: 11px !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-field-info-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 15px !important;
+    height: 15px !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: help !important;
+    flex-shrink: 0 !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-field-info-icon:hover,
+#s4t-export-dialog .s4t-field-info-icon:focus-visible {
+    background: transparent !important;
+    color: #000000 !important;
+    outline: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-source-select-wrap {
+    display: flex !important;
+    width: 100% !important;
+}
+
+#s4t-export-dialog .s4t-sheet-source-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 24px !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    border-radius: 4px !important;
+    border: 1px solid #7cb594 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    cursor: pointer !important;
+    padding: 2px 4px !important;
+    text-align: left !important;
+    outline: none !important;
+    transition: all 0.15s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-sheet-source-select:hover {
+    border-color: #2e7d32 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-source-select:focus {
+    background: #ffffff !important;
+    border-color: #2e7d32 !important;
+    outline: 2px solid #a3d9bc !important;
+}
+
+/* Cell Format Row in Column Header Card */
+#s4t-export-dialog .s4t-sheet-type-row {
+    display: grid !important;
+    grid-template-columns: 56px 1fr !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 2px !important;
+    padding-top: 2px !important;
+    border-top: 1px dashed rgba(0, 0, 0, 0.15) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-type-header {
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+#s4t-export-dialog .s4t-sheet-type-label {
+    font-size: 10px !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    color: #000000 !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-sheet-type-select {
+    width: 100% !important;
+    height: 24px !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    padding: 2px 4px !important;
+    border: 1px solid #7cb594 !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    cursor: pointer !important;
+    outline: none !important;
+    transition: all 0.15s ease !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-sheet-type-select:hover {
+    border-color: #2e7d32 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-custom-options-input {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    font-size: 11px !important;
+    padding: 3px 6px !important;
+    margin-top: 2px !important;
+    border: 1px solid #7cb594 !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+    transition: all 0.15s ease !important;
+    font-family: 'Times New Roman', Times, serif !important;
+}
+
+#s4t-export-dialog .s4t-sheet-custom-options-input:focus {
+    border-color: #2e7d32 !important;
+    box-shadow: 0 0 0 2px #a3d9bc !important;
+}
+
+/* Ensure no pseudo-element tooltips clip inside dialog */
+#s4t-export-dialog [data-tooltip]::after,
+#s4t-export-dialog .s4t-field-info-tooltip {
+    display: none !important;
+}
+
+/* Add Column Header Cell & Button */
+#s4t-export-dialog .s4t-sheet-th-add {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    vertical-align: top !important;
+    min-width: 130px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-add-btn {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 112px !important;
+    border: 2px dashed #7cb594 !important;
+    background: rgba(183, 225, 205, 0.25) !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    font-size: 13px !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-add-btn:hover {
+    background: #b7e1cd !important;
+    border-color: #2e7d32 !important;
+    color: #000000 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-add-icon {
+    font-size: 20px !important;
+    font-weight: bold !important;
+    line-height: 1 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-add-label {
+    font-size: 12px !important;
+    font-weight: bold !important;
+}
+
+/* Sheet Grid Body & Cells */
+#s4t-export-dialog .s4t-sheet-cell {
+    padding: 7px 10px !important;
+    background: #ffffff !important;
+    border: 1px solid #dfe1e6 !important;
+    border-radius: 0 !important;
+    color: #000000 !important;
+    max-width: 230px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    box-shadow: none !important;
+    transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell {
+    background: #f8fafc !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-empty {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell {
+    background: #e8f0fe !important;
+    border-color: #a3d9bc !important;
+}
+
+#s4t-export-dialog .s4t-sheet-separator-row td {
+    height: 14px !important;
+    background: #dfe1e6 !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+    opacity: 0.65 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-checkbox-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    user-select: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-checkbox {
+    width: 15px !important;
+    height: 15px !important;
+    accent-color: #0052cc !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-select {
+    width: 100% !important;
+    padding: 3px 6px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    border: 1px solid #dfe1e6 !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
+    color: #172b4d !important;
+    outline: none !important;
+    cursor: pointer !important;
+    transition: border-color 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-select:hover {
+    border-color: #0052cc !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-select:focus {
+    border-color: #0052cc !important;
+    box-shadow: 0 0 0 2px #deebff !important;
+}
+
+/* Virtual Spreadsheet Skeleton Rows */
+#s4t-export-dialog .s4t-sheet-virtual-row {
+    pointer-events: none !important;
+    user-select: none !important;
+    opacity: 0.75 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-virtual-cell {
+    padding: 12px 14px !important;
+    background: #ffffff !important;
+    border: 1px solid #dfe1e6 !important;
+    border-radius: 6px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-skeleton-line {
+    height: 12px !important;
+    background: linear-gradient(90deg, #ebecf0 25%, #f4f5f7 50%, #ebecf0 75%) !important;
+    background-size: 200% 100% !important;
+    border-radius: 4px !important;
+    animation: s4t-skeleton-shimmer 1.8s infinite ease-in-out !important;
+}
+
+@keyframes s4t-skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Blurred Overlay & Crisp Centered Preview CTA Card */
+#s4t-export-dialog .s4t-sheet-preview-blur-overlay {
+    position: absolute !important;
+    top: 112px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 8 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    background: rgba(244, 245, 247, 0.45) !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-sheet-preview-cta-card {
+    background: var(--ds-surface-overlay, rgba(255, 255, 255, 0.98)) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--ds-shadow-overlay, 0 12px 36px rgba(9, 30, 66, 0.18)) !important;
+    padding: 26px 36px !important;
+    text-align: center !important;
+    max-width: 440px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 10px !important;
+    z-index: 9 !important;
+    animation: s4tFadeIn 0.2s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-preview-cta-icon {
+    font-size: 28px !important;
+    line-height: 1 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-preview-cta-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--ds-text, #172b4d) !important;
+    margin: 0 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-preview-cta-text {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--ds-text-subtle, #42526e) !important;
+    line-height: 1.45 !important;
+    margin: 0 0 6px 0 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-empty-td {
+    padding: 48px 20px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    color: var(--ds-text-subtle, #626f86) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px dashed var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+}
+
+#s4t-export-dialog .s4t-btn-generate-preview {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 9px 20px !important;
+    border-radius: 6px !important;
+    background: var(--ds-background-brand-bold, #0052cc) !important;
+    color: #ffffff !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12) !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-btn-generate-preview:hover {
+    background: var(--ds-background-brand-bold-hovered, #0065ff) !important;
+    box-shadow: 0 4px 12px rgba(9, 30, 66, 0.2) !important;
+    transform: translateY(-1px) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-dirty-row td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+#s4t-export-dialog .s4t-dirty-banner {
+    background: #fffae6 !important;
+    border: 1px solid #ffe380 !important;
+    border-radius: 6px !important;
+    color: #172b4d !important;
+    padding: 8px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}
+
+#s4t-export-dialog .s4t-dirty-refresh-btn {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 4px 12px !important;
+    border-radius: 4px !important;
+    background: #ffab00 !important;
+    color: #172b4d !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-dirty-refresh-btn:hover {
+    background: #ff991f !important;
+}
+
+#s4t-export-dialog .s4t-sheet-note-row td {
+    font-size: 12px !important;
+    color: #626f86 !important;
+    padding: 6px 4px !important;
+    background: transparent !important;
+    text-align: right !important;
+    border: none !important;
+}
+
+/* Tab 2: Exclusions & Attention Style Columns - SCOPED TO #s4t-export-dialog */
+#s4t-export-dialog .s4t-export-att-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 16px !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+#s4t-export-dialog .s4t-export-att-heading h3 {
+    margin: 0 0 2px 0 !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-export-att-sub {
+    margin: 0 !important;
+    font-size: 12px !important;
+    color: var(--ds-text-subtle, #626f86) !important;
+}
+
+#s4t-export-dialog .s4t-export-att-sort-box {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--ds-text, #172b4d) !important;
+    flex-wrap: wrap !important;
+}
+
+#s4t-export-dialog .s4t-export-separator-toggle {
+    margin-right: 4px !important;
+}
+
+#s4t-export-dialog .s4t-export-select {
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 6px !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    outline: none !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-export-select:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: var(--ds-border-focused, #388bff) !important;
+}
+
+#s4t-export-dialog .s4t-export-select:focus {
+    border-color: var(--ds-border-focused, #0052cc) !important;
+    outline: 2px solid var(--ds-background-selected, #deebff) !important;
+}
+
+#s4t-export-dialog .s4t-export-att-columns {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+}
+
+#s4t-export-dialog .s4t-export-att-col {
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+    padding: 14px !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.04) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-export-att-column-heading {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 2px !important;
+}
+
+#s4t-export-dialog .s4t-export-att-column-heading h4 {
+    margin: 0 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-export-att-list-groups {
+    display: inline-flex !important;
+    gap: 6px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-items: center !important;
+}
+
+#s4t-export-dialog .s4t-export-att-group-toggle {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2px 4px !important;
+    cursor: pointer !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-export-att-group-toggle:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: var(--ds-border-focused, #388bff) !important;
+}
+
+#s4t-export-dialog .s4t-export-att-group-toggle input[type=checkbox] {
+    margin: 0 !important;
+    width: 14px !important;
+    height: 14px !important;
+    accent-color: var(--ds-background-brand-bold, #0052cc) !important;
+    cursor: pointer !important;
+}
+
+#s4t-export-dialog .s4t-export-att-col-hint {
+    margin: 0 0 6px 0 !important;
+    font-size: 11px !important;
+    color: var(--ds-text-subtle, #626f86) !important;
+    font-style: italic !important;
+}
+
+#s4t-export-dialog .s4t-export-att-lists,
+#s4t-export-dialog .s4t-export-att-members,
+#s4t-export-dialog .s4t-export-att-labels {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    padding-right: 4px !important;
+    scrollbar-width: thin !important;
+}
+
+#s4t-export-dialog .s4t-export-att-option {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 13px !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    padding: 7px 10px !important;
+    border-radius: 6px !important;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+    user-select: none !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+}
+
+#s4t-export-dialog .s4t-export-att-option:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+}
+
+#s4t-export-dialog .s4t-export-att-option:has(input:checked) {
+    background: var(--ds-background-selected, #deebff) !important;
+    color: var(--ds-text-selected, #0052cc) !important;
+    border-color: var(--ds-border-selected, #b3d4ff) !important;
+    font-weight: 600 !important;
+}
+
+#s4t-export-dialog .s4t-export-att-option input[type=checkbox] {
+    width: 16px !important;
+    height: 16px !important;
+    accent-color: var(--ds-background-brand-bold, #0052cc) !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+}
+
+#s4t-export-dialog .s4t-export-att-label-dot {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 3px !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
+}
+
+/* Footer & Action Buttons */
+#s4t-export-dialog .s4t-export-footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 14px 22px !important;
+    border-top: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+    min-height: 60px !important;
+}
+
+#s4t-export-dialog .s4t-export-footer-buttons {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-left: auto !important;
+}
+
+#s4t-export-dialog .s4t-btn {
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 8px 16px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    border: 1px solid transparent !important;
+    transition: all 0.15s ease !important;
+    font-family: var(--s4t-font-family, inherit) !important;
+}
+
+#s4t-export-dialog .s4t-btn-primary {
+    background: var(--ds-background-brand-bold, #0052cc) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12) !important;
+}
+
+#s4t-export-dialog .s4t-btn-primary:hover {
+    background: var(--ds-background-brand-bold-hovered, #0065ff) !important;
+    box-shadow: 0 4px 12px rgba(9, 30, 66, 0.2) !important;
+}
+
+#s4t-export-dialog .s4t-btn-primary:active {
+    background: var(--ds-background-brand-bold-pressed, #0747a6) !important;
+}
+
+#s4t-export-dialog .s4t-btn-primary:focus-visible {
+    outline: 2px solid var(--ds-border-focused, #4c9aff) !important;
+    outline-offset: 2px !important;
+}
+
+#s4t-export-dialog .s4t-btn-secondary {
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    color: var(--ds-text, #172b4d) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.08) !important;
+}
+
+#s4t-export-dialog .s4t-btn-secondary:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: var(--ds-border-focused, #388bff) !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-btn-subtle {
+    background: transparent !important;
+    color: var(--ds-text-subtle, #626f86) !important;
+}
+
+#s4t-export-dialog .s4t-btn-subtle:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+/* Split Download Group */
+#s4t-export-dialog .s4t-split-download-group {
+    display: inline-flex !important;
+    position: relative !important;
+}
+
+#s4t-export-dialog .s4t-split-download-group #s4t-btn-main-download {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+#s4t-export-dialog .s4t-split-arrow {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+}
+
+#s4t-export-dialog .s4t-split-menu {
+    position: absolute !important;
+    bottom: calc(100% + 6px) !important;
+    right: 0 !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--ds-shadow-overlay, 0 8px 24px rgba(9, 30, 66, 0.2)) !important;
+    min-width: 220px !important;
+    z-index: 100 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 4px !important;
+}
+
+#s4t-export-dialog .s4t-split-menu[hidden] {
+    display: none !important;
+}
+
+#s4t-export-dialog .s4t-split-item {
+    background: transparent !important;
+    border: none !important;
+    text-align: left !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    transition: background 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-split-item:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+/* Status / Toast & Metric Copied Feedback */
+#s4t-export-dialog .s4t-btn.s4t-metric-copied {
+    background: #36b37e !important;
+    color: #ffffff !important;
+    border-color: #36b37e !important;
+    box-shadow: 0 0 0 3px rgba(54, 179, 126, 0.3) !important;
+    transform: scale(0.98) !important;
+}
+
+#s4t-export-dialog .s4t-export-footer-status {
+    position: absolute !important;
+    bottom: 68px !important;
+    right: 20px !important;
+    background: #172b4d !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 6px 20px rgba(9, 30, 66, 0.25) !important;
+    z-index: 200 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    opacity: 0 !important;
+    transform: translateY(8px) !important;
+    transition: opacity 0.2s ease, transform 0.2s ease !important;
+    pointer-events: none !important;
+}
+
+#s4t-export-dialog .s4t-export-footer-status.s4t-metric-toast-success {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
+#s4t-export-dialog .s4t-export-loading,
+#s4t-export-dialog .s4t-export-error {
+    padding: 40px 20px !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    color: #626f86 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+}
+
+#s4t-export-dialog .s4t-export-error {
+    color: #de350b !important;
+}
+
+#s4t-export-dialog .s4t-export-spinner {
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid #dfe1e6 !important;
+    border-top-color: #0052cc !important;
+    border-radius: 50% !important;
+    animation: s4t-export-spin 0.8s linear infinite !important;
+}
+
+@keyframes s4t-export-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes s4t-fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#s4t-export-launch {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.s4t-export-modal-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+/* Dark Theme Support for Export Dialog */
+[data-color-mode="dark"] #s4t-export-dialog,
+[data-theme="dark"] #s4t-export-dialog,
+.theme-dark #s4t-export-dialog,
+.dark-theme #s4t-export-dialog {
+    background: #1c1c1f !important;
+    color: #f4f4f5 !important;
+    border-color: #2e2e33 !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-header,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-header,
+.theme-dark #s4t-export-dialog .s4t-export-header,
+.dark-theme #s4t-export-dialog .s4t-export-header {
+    background: #18181b !important;
+    border-bottom: 1px solid #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-title-row h2,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-title-row h2,
+.theme-dark #s4t-export-dialog .s4t-export-title-row h2,
+.dark-theme #s4t-export-dialog .s4t-export-title-row h2 {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-board-tag,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-board-tag,
+.theme-dark #s4t-export-dialog .s4t-export-board-tag,
+.dark-theme #s4t-export-dialog .s4t-export-board-tag {
+    background: #1c2b42 !important;
+    color: #579dff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-match-count,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-match-count,
+.theme-dark #s4t-export-dialog .s4t-export-match-count,
+.dark-theme #s4t-export-dialog .s4t-export-match-count {
+    background: #27272a !important;
+    color: #a1a1aa !important;
+    border: 1px solid #3f3f46 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-close-btn,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-close-btn,
+.theme-dark #s4t-export-dialog .s4t-export-close-btn,
+.dark-theme #s4t-export-dialog .s4t-export-close-btn {
+    background: #27272a !important;
+    border: 1px solid #3f3f46 !important;
+    color: #d4d4d8 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-close-btn:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-close-btn:hover,
+.theme-dark #s4t-export-dialog .s4t-export-close-btn:hover,
+.dark-theme #s4t-export-dialog .s4t-export-close-btn:hover {
+    background: #3f3f46 !important;
+    color: #ffffff !important;
+    border-color: #52525b !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-tabs-bar,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-tabs-bar,
+.theme-dark #s4t-export-dialog .s4t-export-tabs-bar,
+.dark-theme #s4t-export-dialog .s4t-export-tabs-bar {
+    background: #18181b !important;
+    border-bottom: 1px solid #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-tab,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-tab,
+.theme-dark #s4t-export-dialog .s4t-export-tab,
+.dark-theme #s4t-export-dialog .s4t-export-tab {
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-tab:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-tab:hover,
+.theme-dark #s4t-export-dialog .s4t-export-tab:hover,
+.dark-theme #s4t-export-dialog .s4t-export-tab:hover {
+    color: #ffffff !important;
+    background: #27272a !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
+.theme-dark #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
+.dark-theme #s4t-export-dialog .s4t-export-tab.s4t-tab-active {
+    color: #579dff !important;
+    background: #1c1c1f !important;
+    border-bottom: 2px solid #579dff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-body,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-body,
+.theme-dark #s4t-export-dialog .s4t-export-body,
+.dark-theme #s4t-export-dialog .s4t-export-body {
+    background: #1c1c1f !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-top-bar,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-top-bar,
+.theme-dark #s4t-export-dialog .s4t-sheet-top-bar,
+.dark-theme #s4t-export-dialog .s4t-sheet-top-bar {
+    background: #202024 !important;
+    border-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-hint,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-hint,
+.theme-dark #s4t-export-dialog .s4t-sheet-hint,
+.dark-theme #s4t-export-dialog .s4t-sheet-hint {
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-feature-help,
+[data-theme="dark"] #s4t-export-dialog .s4t-feature-help,
+.theme-dark #s4t-export-dialog .s4t-feature-help,
+.dark-theme #s4t-export-dialog .s4t-feature-help,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-icon,
+[data-theme="dark"] #s4t-export-dialog .s4t-field-info-icon,
+.theme-dark #s4t-export-dialog .s4t-field-info-icon,
+.dark-theme #s4t-export-dialog .s4t-field-info-icon {
+    background: transparent !important;
+    border: none !important;
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-count-badge,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-count-badge,
+.theme-dark #s4t-export-dialog .s4t-sheet-col-count-badge,
+.dark-theme #s4t-export-dialog .s4t-sheet-col-count-badge {
+    background: #27272a !important;
+    border-color: #3f3f46 !important;
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner {
+    background: #202024 !important;
+    border-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-header,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-header {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-header:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-header:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-header:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-header:hover {
+    background: #27272a !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header {
+    border-bottom-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-item,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-item {
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-item strong,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-item strong {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-reset-btn,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-reset-btn,
+.theme-dark #s4t-export-dialog .s4t-sheet-reset-btn,
+.dark-theme #s4t-export-dialog .s4t-sheet-reset-btn {
+    background: #27272a !important;
+    border-color: #3f3f46 !important;
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-reset-btn:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-reset-btn:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-reset-btn:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-reset-btn:hover {
+    background: #3f3f46 !important;
+    border-color: #579dff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-grid-wrapper,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-wrapper,
+.theme-dark #s4t-export-dialog .s4t-sheet-grid-wrapper,
+.dark-theme #s4t-export-dialog .s4t-sheet-grid-wrapper {
+    background: #18181b !important;
+    border-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-add-btn,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-add-btn,
+.theme-dark #s4t-export-dialog .s4t-sheet-add-btn,
+.dark-theme #s4t-export-dialog .s4t-sheet-add-btn {
+    background: #202024 !important;
+    border-color: #2e2e33 !important;
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-header-input,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-header-input,
+.theme-dark #s4t-export-dialog .s4t-sheet-header-input,
+.dark-theme #s4t-export-dialog .s4t-sheet-header-input,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-source-select,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-source-select,
+.theme-dark #s4t-export-dialog .s4t-sheet-source-select,
+.dark-theme #s4t-export-dialog .s4t-sheet-source-select,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-select,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-select,
+.theme-dark #s4t-export-dialog .s4t-export-select,
+.dark-theme #s4t-export-dialog .s4t-export-select {
+    background: #18181b !important;
+    color: #f4f4f5 !important;
+    border-color: #3f3f46 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-grid-table td,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-table td,
+.theme-dark #s4t-export-dialog .s4t-sheet-grid-table td,
+.dark-theme #s4t-export-dialog .s4t-sheet-grid-table td {
+    background: #18181b !important;
+    border-color: #2e2e33 !important;
+    color: #e4e4e7 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
+.theme-dark #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
+.dark-theme #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell {
+    background: #141417 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell,
+.theme-dark #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell,
+.dark-theme #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-grid-table tr:hover td,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-table tr:hover td,
+.theme-dark #s4t-export-dialog .s4t-sheet-grid-table tr:hover td,
+.dark-theme #s4t-export-dialog .s4t-sheet-grid-table tr:hover td {
+    background: #202024 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-empty-td,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-empty-td,
+.theme-dark #s4t-export-dialog .s4t-sheet-empty-td,
+.dark-theme #s4t-export-dialog .s4t-sheet-empty-td {
+    background: #1c1c1f !important;
+    border-color: #3f3f46 !important;
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-menu,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-menu,
+.theme-dark #s4t-export-dialog .s4t-split-menu,
+.dark-theme #s4t-export-dialog .s4t-split-menu {
+    background: #202024 !important;
+    border-color: #3f3f46 !important;
+    color: #f4f4f5 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-item,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-item,
+.theme-dark #s4t-export-dialog .s4t-split-item,
+.dark-theme #s4t-export-dialog .s4t-split-item,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-menu-item,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-menu-item,
+.theme-dark #s4t-export-dialog .s4t-split-menu-item,
+.dark-theme #s4t-export-dialog .s4t-split-menu-item {
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-item:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-item:hover,
+.theme-dark #s4t-export-dialog .s4t-split-item:hover,
+.dark-theme #s4t-export-dialog .s4t-split-item:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-menu-item:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-menu-item:hover,
+.theme-dark #s4t-export-dialog .s4t-split-menu-item:hover,
+.dark-theme #s4t-export-dialog .s4t-split-menu-item:hover {
+    background: #2e2e33 !important;
+    color: #579dff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary,
+.theme-dark #s4t-export-dialog .s4t-btn-secondary,
+.dark-theme #s4t-export-dialog .s4t-btn-secondary {
+    background: #27272a !important;
+    color: #f4f4f5 !important;
+    border-color: #3f3f46 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary:hover,
+.theme-dark #s4t-export-dialog .s4t-btn-secondary:hover,
+.dark-theme #s4t-export-dialog .s4t-btn-secondary:hover {
+    background: #3f3f46 !important;
+    border-color: #579dff !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-preview-blur-overlay,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-blur-overlay,
+.theme-dark #s4t-export-dialog .s4t-sheet-preview-blur-overlay,
+.dark-theme #s4t-export-dialog .s4t-sheet-preview-blur-overlay {
+    background: rgba(20, 20, 22, 0.65) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-card,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-card,
+.theme-dark #s4t-export-dialog .s4t-sheet-preview-cta-card,
+.dark-theme #s4t-export-dialog .s4t-sheet-preview-cta-card {
+    background: #202024 !important;
+    border-color: #3f3f46 !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-title,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-title,
+.theme-dark #s4t-export-dialog .s4t-sheet-preview-cta-title,
+.dark-theme #s4t-export-dialog .s4t-sheet-preview-cta-title {
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-text,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-text,
+.theme-dark #s4t-export-dialog .s4t-sheet-preview-cta-text,
+.dark-theme #s4t-export-dialog .s4t-sheet-preview-cta-text {
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-header,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-header,
+.theme-dark #s4t-export-dialog .s4t-export-att-header,
+.dark-theme #s4t-export-dialog .s4t-export-att-header {
+    background: #202024 !important;
+    border-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-heading h3,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-heading h3,
+.theme-dark #s4t-export-dialog .s4t-export-att-heading h3,
+.dark-theme #s4t-export-dialog .s4t-export-att-heading h3 {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-col,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-col,
+.theme-dark #s4t-export-dialog .s4t-export-att-col,
+.dark-theme #s4t-export-dialog .s4t-export-att-col {
+    background: #202024 !important;
+    border-color: #2e2e33 !important;
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-column-heading,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-column-heading,
+.theme-dark #s4t-export-dialog .s4t-export-att-column-heading,
+.dark-theme #s4t-export-dialog .s4t-export-att-column-heading {
+    border-bottom-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-column-heading h4,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-column-heading h4,
+.theme-dark #s4t-export-dialog .s4t-export-att-column-heading h4,
+.dark-theme #s4t-export-dialog .s4t-export-att-column-heading h4 {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-col-hint,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-col-hint,
+.theme-dark #s4t-export-dialog .s4t-export-att-col-hint,
+.dark-theme #s4t-export-dialog .s4t-export-att-col-hint {
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-option,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-option,
+.theme-dark #s4t-export-dialog .s4t-export-att-option,
+.dark-theme #s4t-export-dialog .s4t-export-att-option {
+    background: #27272a !important;
+    border-color: #3f3f46 !important;
+    color: #d4d4d8 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-option:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-option:hover,
+.theme-dark #s4t-export-dialog .s4t-export-att-option:hover,
+.dark-theme #s4t-export-dialog .s4t-export-att-option:hover {
+    background: #3f3f46 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-option:has(input:checked),
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-option:has(input:checked),
+.theme-dark #s4t-export-dialog .s4t-export-att-option:has(input:checked),
+.dark-theme #s4t-export-dialog .s4t-export-att-option:has(input:checked) {
+    background: #1c2b42 !important;
+    border-color: #254d7f !important;
+    color: #579dff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-group-toggle,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-group-toggle,
+.theme-dark #s4t-export-dialog .s4t-export-att-group-toggle,
+.dark-theme #s4t-export-dialog .s4t-export-att-group-toggle {
+    background: #27272a !important;
+    border-color: #3f3f46 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-group-toggle:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-group-toggle:hover,
+.theme-dark #s4t-export-dialog .s4t-export-att-group-toggle:hover,
+.dark-theme #s4t-export-dialog .s4t-export-att-group-toggle:hover {
+    background: #3f3f46 !important;
+    border-color: #579dff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-virtual-cell,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-virtual-cell,
+.theme-dark #s4t-export-dialog .s4t-sheet-virtual-cell,
+.dark-theme #s4t-export-dialog .s4t-sheet-virtual-cell {
+    background: #202024 !important;
+    border-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-skeleton-line,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-skeleton-line,
+.theme-dark #s4t-export-dialog .s4t-sheet-skeleton-line,
+.dark-theme #s4t-export-dialog .s4t-sheet-skeleton-line {
+    background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%) !important;
+    background-size: 200% 100% !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle,
+.theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle,
+.dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle {
+    background: #202024 !important;
+    color: #f4f4f5 !important;
+    border-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle:hover {
+    background: #27272a !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
+.theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
+.dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked) {
+    background: #1c2b42 !important;
+    border-color: #254d7f !important;
+    color: #579dff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner {
+    background: #202024 !important;
+    border-color: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-header,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-header {
+    color: #f4f4f5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-item,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-item {
+    color: #a1a1aa !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-item strong,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-item strong {
+    color: #e4e4e7 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-badge,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-badge,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-badge,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-badge {
+    background: #27272a !important;
+    border-color: #3f3f46 !important;
+    color: #d4d4d8 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-type-select,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-type-select,
+.theme-dark #s4t-export-dialog .s4t-sheet-type-select,
+.dark-theme #s4t-export-dialog .s4t-sheet-type-select,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input,
+.theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input,
+.dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell-select,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell-select {
+    background: #18181b !important;
+    color: #f4f4f5 !important;
+    border-color: #3f3f46 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-separator-row td,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-separator-row td,
+.theme-dark #s4t-export-dialog .s4t-sheet-separator-row td,
+.dark-theme #s4t-export-dialog .s4t-sheet-separator-row td {
+    background: #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-footer,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-footer,
+.theme-dark #s4t-export-dialog .s4t-export-footer,
+.dark-theme #s4t-export-dialog .s4t-export-footer {
+    background: #18181b !important;
+    border-top: 1px solid #2e2e33 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-footer-status,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-footer-status,
+.theme-dark #s4t-export-dialog .s4t-export-footer-status,
+.dark-theme #s4t-export-dialog .s4t-export-footer-status {
+    background: #27272a !important;
+    color: #f4f4f5 !important;
+    border: 1px solid #3f3f46 !important;
 }
 

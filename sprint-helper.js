@@ -286,6 +286,14 @@ function updateBurndownLink() {
             .append('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 16l2 2 5-5"/></svg>')
             .on('click.s4t', function () { s4tOpenEow(); }).appendTo(toolbar);
     }
+    if (!toolbar.find('#s4t-export-launch').length) {
+        $('<button type="button" id="s4t-export-launch" class="s4t-navbar-icon-btn" data-tooltip="Export Cards (Excel / CSV / Sheets)" aria-label="Export Cards">')
+            .append('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>')
+            .on('click.s4t', function () {
+                if (typeof s4tOpenCardExport === 'function') s4tOpenCardExport();
+                else showExcelExport();
+            }).appendTo(toolbar);
+    }
     // All actions mount together at one stable native toolbar anchor.
     if (anchor.previousElementSibling !== toolbar[0]) $(anchor).before(toolbar);
 }
@@ -340,7 +348,7 @@ function fetchBoardData(shortLink, forceRefresh, callback) {
         callback(null, data);
     }
     // Try Trello REST API first for maximum efficiency
-    var apiUrl = '/1/boards/' + shortLink + '?fields=name,shortLink&cards=open&card_fields=name,idList,idMembers,idLabels,labels,dueComplete,closed&labels=all&label_fields=name,color&lists=open&list_fields=name,closed&members=all&member_fields=fullName,username,avatarUrl,initials';
+    var apiUrl = '/1/boards/' + shortLink + '?fields=name,shortLink&cards=open&card_fields=name,idList,idMembers,idLabels,labels,dueComplete,closed,desc,due,shortUrl,badges&labels=all&label_fields=name,color&lists=open&list_fields=name,closed&members=all&member_fields=fullName,username,avatarUrl,initials';
 
     $.ajax({
         url: apiUrl,
@@ -1379,6 +1387,10 @@ function renderMembersBurndownModal(data) {
             '<span>Push to Sheets</span>',
             '</button>'
         ].join('') : ''),
+        '<button type="button" id="s4t-burndown-export-btn" class="s4t-sheets-btn s4t-export-modal-btn" data-tooltip="Export cards to Excel, CSV or Google Sheets">',
+        '<svg class="s4t-sheets-btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
+        '<span>Export Cards</span>',
+        '</button>',
         '<label data-tooltip="Exclude Not Sure list cards from member points, progress and card counts. Team summaries stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list</label>',
         '</div>',
         '<div class="s4t-members-list" id="s4t-members-container">',
@@ -1394,6 +1406,17 @@ function renderMembersBurndownModal(data) {
     $('#s4t-members-modal').data('members', data.members);
     $('#s4t-exclude-not-sure').on('change', function () {
         s4tRenderMemberRows($('#s4t-members-modal').data('members'), this.checked);
+    });
+
+    $('#s4t-burndown-export-btn').off('click.s4tBurndownExport').on('click.s4tBurndownExport', function () {
+        $('#s4t-modal-overlay').remove();
+        if (typeof s4tOpenCardExport === 'function') {
+            s4tOpenCardExport({
+                boardData: cachedBoardData,
+                boardName: (data && data.boardName) || $('.board-name span.text, [data-testid="board-name-display"]').text().trim(),
+                boardShortLink: typeof getBoardShortLink === 'function' ? getBoardShortLink() : ''
+            });
+        }
     });
 
     function bindPushSheetsAction() {
@@ -2046,7 +2069,11 @@ function checkExport() {
 };
 
 function showExcelExport() {
-    $excel_btn.text('Generating...');
+    if (typeof s4tOpenCardExport === 'function') {
+        s4tOpenCardExport();
+        return false;
+    }
+    if ($excel_btn && $excel_btn.text) $excel_btn.text('Generating...');
 
     $.getJSON($('.pop-over-list').find('.js-export-json').attr('href'), function (data) {
         var s = '<table id="export" border=1>';
@@ -4428,7 +4455,7 @@ var s4tOpenCardsList = (function () {
 /* Shared tooltips stay outside scroll containers and dismiss on pointer down. */
 (function () {
     if (typeof document === 'undefined') return;
-    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-comment-layout-toggle[data-tooltip], .s4t-checklist-action, .s4t-card-copy[data-tooltip], .s4t-card-peek-copy-btn[data-tooltip], #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
+    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-comment-layout-toggle[data-tooltip], .s4t-checklist-action, .s4t-card-copy[data-tooltip], .s4t-card-peek-copy-btn[data-tooltip], #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip], #s4t-export-dialog [data-tooltip]';
     var tip, owner, timer, leaveTimer, pinned = false;
     function hide() {
         clearTimeout(timer); clearTimeout(leaveTimer); pinned = false;

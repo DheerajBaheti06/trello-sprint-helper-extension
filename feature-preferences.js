@@ -17,14 +17,16 @@ var s4tPreferences = (function () {
         cardShare: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/></svg>',
         commentSearch: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>',
         reviewMode: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6M7 7h4M7 11h3M7 15h3"/><circle cx="16" cy="7" r="4"/><path d="m19 10 3 3"/></svg>',
-        laserPointer: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 14 9-9 5 5-9 9-5-5Zm-1 1-2 6 6-2M13 6l5 5"/><path d="M13 21h8" stroke="#ef3340" stroke-width="2.5"/></svg>'
+        laserPointer: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 14 9-9 5 5-9 9-5-5Zm-1 1-2 6 6-2M13 6l5 5"/><path d="M13 21h8" stroke="#ef3340" stroke-width="2.5"/></svg>',
+        exportCards: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>'
     };
     var groups = [
         ['Board features', [
             // ['members', 'Members Burndown', 'Team and member points, progress and card counts.', '#membersBurndownLink, #s4t-modal-overlay'],
             ['attention', 'Attention filters', 'Find cards needing updates.', '#s4t-attention-controls, #s4t-attention-panel'],
             ['cardsList', 'Cards List', 'Select cards and create Slack messages.', '#s4t-cards-launch, #s4t-cards-overlay'],
-            ['eow', 'EOW Update', 'Create weekly task reports.', '#s4t-eow-launch, #s4t-eow-overlay']
+            ['eow', 'EOW Update', 'Create weekly task reports.', '#s4t-eow-launch, #s4t-eow-overlay'],
+            ['exportCards', 'Export Cards', 'Interactive sheet designer and card exporter.', '#s4t-export-launch, #s4t-export-overlay']
         ]],
         ['Charts', [
             ['charts', 'Sprint charts', 'Developer points and label distribution, including pop-out charts.', '#s4t-charts-action, .s4t-chart-overlay']

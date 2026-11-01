@@ -13,10 +13,13 @@ Card Quick View (Peek Out), rich description clipboard workflows, and productivi
 - **Rich Description Copy in Card Modal**:
   - Enhanced modal description copy button to preserve semantic markdown formatting and nested bullet list hierarchies (`text/html` and structured `text/plain`).
   - Automatically filters out internal Trello edit button text artifacts.
-- **Settings & Preferences**:
-  - Added authentic UI icons next to each feature name in Settings for fast visual identification.
-  - Introduced a dedicated **Card listing** category in Settings for board card listing features (`View points (Quick editing)` and `Quick View (Peek Out)`).
-  - Reorganized **Card tools** in Settings to focus purely on inner card modal productivity tools (Topbar, Left container, and Right container).
+- **Interactive Board Card Export**:
+  - Replaced broken legacy export with interactive Column Designer modal accessible from the board toolbar (`#s4t-export-launch`) and Members Burndown.
+  - Dynamically add, rename, remove, and shift (← / →) columns across 14 card fields with descriptions and tooltips (`list`, `title`, `title_raw`, `points`, `completed_points`, `remaining_points`, `members`, `labels`, `due`, `status`, `desc`, `url`, `checklists`, `blank`).
+  - Independent Exclusions & Ordering section below the column builder to exclude lists (with Not Sure toggle), developers, and labels, and sort rows by list, developer, title, story points, or due date.
+  - Live on-demand 4–5 card demo preview with settings-changed refresh indicator.
+  - Exports to Excel (.xls), CSV (.csv) with UTF-8 BOM, and tab-separated clipboard copy for direct Google Sheets paste, with formula injection protection (`=`, `+`, `-`, `@`).
+  - Settings preference toggle under Board features.
 
 ## 1.107
 
