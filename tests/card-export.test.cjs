@@ -3,9 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const cardExport = require('../card-export.js');
 
-test('card-export.js defines all 14 specified field mappings with exact descriptions', () => {
+test('card-export.js defines all 15 specified field mappings with exact descriptions', () => {
     const fields = cardExport.s4tExportCardFields;
-    assert.equal(fields.length, 14, 'Must have exactly 14 field definitions');
+    assert.equal(fields.length, 15, 'Must have exactly 15 field definitions');
 
     const expected = {
         list: 'Trello List name (e.g. "Screening", "In Progress").',
@@ -15,7 +15,8 @@ test('card-export.js defines all 14 specified field mappings with exact descript
         completed_points: 'Completed points (from [ ] or { }).',
         remaining_points: 'Remaining points.',
         members: 'Developer / member names (or usernames).',
-        labels: 'Label names (comma-separated).',
+        product_owner: 'Product Owner extracted from card labels ending with a dot "." (e.g. "Kashvi." -> "Kashvi").',
+        labels: 'Label names (excluding developer and product member labels).',
         due: 'Due date formatted (e.g. "2026-09-15").',
         status: 'Completion status ("Done" if in done list or dueComplete, otherwise "In Progress").',
         desc: 'Card description.',
@@ -396,9 +397,10 @@ test('card-export UI: includes full width and height dialog, green header row wi
     assert.ok(ce.includes('s4t-sheet-guide-banner'), 'card-export.js must include guide banner');
     assert.ok(ce.includes('Spreadsheet Designer Tips & Quick Guide'), 'card-export.js must include guide banner heading');
     assert.ok(ce.includes('s4t-sheet-type-select'), 'card-export.js must include format select in column card');
-    assert.ok(ce.includes('Dropdown (Board Devs)'), 'card-export.js must support Board Devs dropdown format');
-    assert.ok(ce.includes('Checkbox (QA / Review)'), 'card-export.js must support Checkbox format');
-    assert.ok(ce.includes('Custom Dropdown...'), 'card-export.js must support Custom Dropdown format');
+    assert.ok(ce.includes("'String'"), 'card-export.js must support String format');
+    assert.ok(ce.includes("'Devs'"), 'card-export.js must support Devs format');
+    assert.ok(ce.includes("'Custom'"), 'card-export.js must support Custom format');
+    assert.ok(!ce.includes('Checkbox (QA / Review)'), 'card-export.js must remove Checkbox format');
     assert.ok(!ce.includes('s4t-sheet-color-swatches'), 'card-export.js must remove header tint color swatches');
     assert.ok(ce.includes('20-Card Preview'), 'card-export.js must feature 20-card preview CTA');
     assert.ok(ce.includes('slice(0, 20)'), 'card-export.js must slice first 20 cards for preview');
@@ -465,12 +467,470 @@ test('card-export UI: header reset button, tab-2 separator position, transparent
     assert.ok(css.includes('#s4t-export-dialog .s4t-feature-help {\n    background: transparent !important;'), 'Header feature-help icon must have transparent background');
     assert.ok(css.includes('#s4t-export-dialog .s4t-field-info-icon {\n    display: inline-flex !important;'), 'Field info icon must be styled');
 
-    // 4. Enhanced tab-1 preview area and column showing (uncluttered, compact card grid, zebra striping, collapsible banner)
+    // 4. Enhanced tab-1 preview area and column showing (uncluttered, compact card grid, zebra striping, collapsible banner, footer counter)
     assert.ok(ce.includes('<details class="s4t-sheet-guide-banner">'), 'Guide banner must be collapsible <details> to maximize preview area');
-    assert.ok(ce.includes('s4t-sheet-col-count-badge'), 'Top bar must display columns count badge');
-    assert.ok(css.includes('grid-template-columns: 56px 1fr !important'), 'Source & format rows must use compact 2-column grid layout');
+    assert.ok(ce.includes('s4t-sheet-col-count-badge'), 'Columns count badge must be defined');
+    assert.ok(ce.includes('s4t-export-footer-left'), 'Footer left container must exist for column count');
+    assert.ok(css.includes('grid-template-columns: 66px 1fr !important'), 'Source & format rows must use compact 2-column grid layout');
     assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell'), 'Preview table must feature zebra striping on alternating rows');
-    assert.ok(css.includes('background: #e8f0fe !important'), 'Preview table must feature light blue hover highlight');
+    assert.ok(css.includes('background: #f0fdfa !important'), 'Preview table must feature teal hover highlight');
+    assert.ok(ce.includes('s4t-dirty-refresh-btn'), 'Dirty state must render refresh button to regenerate preview');
+    assert.ok(ce.includes('Column or exclusion settings changed.'), 'Dirty state must inform user of pending changes');
 });
 
+test('card-export UI: centered dirty banner, custom required error, hover drop, SVG info icon, dropdown hover, Tab 2 inclusion defaults, auto-scroll, and soft grey dark theme', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
 
+    // 1. Centered dirty banner and refresh button in viewport
+    assert.ok(css.includes('position: sticky !important;\n    left: 24px !important;'), 'Dirty banner must be sticky with left anchor for viewport centering');
+    assert.ok(css.includes('margin: 10px auto !important;'), 'Dirty banner must have auto margins');
+    assert.ok(css.includes('.s4t-dirty-refresh-btn {\n    font-size: 13px !important;'), 'Dirty refresh button must have distinct styling');
+
+    // 2. Custom dtype required error
+    assert.ok(ce.includes('s4t-input-required-error'), 'card-export.js must add required error class when custom options are empty');
+    assert.ok(ce.includes('validateCustomOptions'), 'card-export.js must validate custom options input');
+    assert.ok(css.includes('.s4t-sheet-custom-options-input.s4t-input-required-error'), 'sprint-helper.css must style required error with red border and soft red background');
+
+    // 3. Hover drop background effect on column header input, selects, and custom text inputs
+    assert.ok(css.includes('.s4t-sheet-header-input:hover'), 'sprint-helper.css must style column header input hover');
+    assert.ok(css.includes('.s4t-sheet-source-select:hover'), 'sprint-helper.css must style source select hover');
+    assert.ok(css.includes('.s4t-sheet-type-select:hover'), 'sprint-helper.css must style type select hover');
+    assert.ok(css.includes('.s4t-sheet-custom-options-input:hover'), 'sprint-helper.css must style custom options input hover');
+
+    // 4. Vector SVG info icon for columns matching other popups' subtle gray styling
+    assert.ok(ce.includes('s4t-field-info-svg'), 'card-export.js must render vector SVG info icon for crisp visibility');
+    assert.ok(css.includes('.s4t-field-info-svg'), 'sprint-helper.css must style vector SVG info icon');
+    assert.ok(css.includes('color: var(--ds-text-subtle, #626f86) !important;'), 's4t-field-info-icon must use subtle text color matching other popups');
+    assert.ok(css.includes('color: var(--ds-text-subtle, #9fadbc) !important;'), 'dark mode info icon must use subtle text color #9fadbc matching other popups');
+
+    // 5. Dropdown open on mouseenter, close on mousedown
+    assert.ok(ce.includes('attachDropdownHover'), 'card-export.js must attach hover trigger to dropdown selects');
+    assert.ok(ce.includes('showPicker'), 'card-export.js must invoke showPicker on mouseenter');
+
+    // 6. Tab 2 inclusion mental model (all checked by default, checking includes, unchecking excludes)
+    assert.ok(ce.includes('All members are included by default'), 'card-export.js must describe inclusion model for members');
+    assert.ok(ce.includes('All labels and unlabeled cards are included by default'), 'card-export.js must describe inclusion model for labels');
+    assert.ok(ce.includes('!state.excludedMemberIds.has(m.id)'), 'Members must be checked by default when not in excludedMemberIds');
+    assert.ok(ce.includes('!state.excludedLabelIds.has(key)'), 'Labels must be checked by default when not in excludedLabelIds');
+
+    // 7. Auto-scroll to rightmost on adding column
+    assert.ok(ce.includes('scrollLeft: wrapper[0].scrollWidth'), 'card-export.js must scroll wrapper to scrollWidth upon adding a column');
+
+    // 8. Soft grey dark theme matching Members Burndown and Attention Filters
+    assert.ok(css.includes('#s4t-export-dialog {\n    background: #22272b !important;'), 'Export dialog in dark theme must use soft grey #22272b');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-header,\n[data-theme="dark"] #s4t-export-dialog .s4t-export-header'), 'Dark header must use soft grey #282e33');
+    assert.ok(css.includes('rgba(34, 39, 43, 0.75) !important'), 'Dark preview blur overlay must use soft grey rgba(34, 39, 43, 0.75)');
+
+    // 9. Preview note text is aligned left with sticky position instead of pushed to far right
+    assert.ok(ce.includes('s4t-sheet-note-content'), 'card-export.js must wrap preview note in .s4t-sheet-note-content');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-note-row td {\n    font-size: 12px !important;\n    color: #626f86 !important;\n    padding: 8px 12px !important;\n    background: transparent !important;\n    text-align: left !important;\n    border: none !important;\n}'), 'sprint-helper.css must align preview note to the left instead of rightmost');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-note-content {\n    display: inline-flex !important;\n    align-items: center !important;\n    gap: 6px !important;\n    position: sticky !important;\n    left: 12px !important;'), 'sprint-helper.css must style note content as sticky left');
+});
+
+test('card-export: guide banner popover prevents upward UI shift, validation disables copy/download, and dropdowns open on single click/hover', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Guide banner popover prevents layout shift
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-guide-banner {\n    position: relative !important;\n    flex-shrink: 0 !important;\n    margin-top: 2px !important;\n    padding: 0 !important;\n    background: var(--ds-background-neutral, #f4f5f7) !important;\n    border: 1px solid var(--ds-border, #dfe1e6) !important;\n    border-radius: 8px !important;\n    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.04) !important;\n    overflow: visible !important;\n}'), 'Guide banner must be relative with visible overflow so popover can escape flow');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid {\n    position: absolute !important;\n    bottom: calc(100% + 6px) !important;\n    left: 0 !important;\n    right: 0 !important;\n    z-index: 100 !important;'), 'Open guide grid must float as an absolute popover above the banner to prevent upward layout shift');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-guide-grid {\n    display: none;\n}'), 'Collapsed guide grid must be hidden');
+    assert.ok(ce.includes("$(document).off('click.s4tGuideClose').on('click.s4tGuideClose'"), 'Guide banner must have outside-click dismissal handler');
+
+    // 2. Action buttons validation state and error blocking for copy / download
+    assert.ok(ce.includes('function hasValidationErrors()'), 'card-export.js must define hasValidationErrors helper');
+    assert.ok(ce.includes('function updateActionButtonsState()'), 'card-export.js must define updateActionButtonsState helper');
+    assert.ok(ce.includes("copyBtn.addClass('s4t-btn-disabled')"), 'Copy button must receive s4t-btn-disabled on error');
+    assert.ok(ce.includes("downloadBtn.addClass('s4t-btn-disabled')"), 'Download button must receive s4t-btn-disabled on error');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-btn.s4t-btn-disabled'), 'sprint-helper.css must style s4t-btn-disabled with reduced opacity and not-allowed cursor');
+    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in custom options before copying table.')"), 'Copy button must block and show warning toast when required fields are unfilled');
+    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in custom options before downloading file.')"), 'Download button must block and show warning toast when required fields are unfilled');
+    assert.ok(ce.includes("dialog.find('.s4t-input-required-error:first').focus()"), 'Invalid input must be focused when attempting to download/copy with errors');
+
+    // 3. Dropdowns open on single click and hover without double click
+    assert.ok(ce.includes("attachDropdownHover(sourceSelect)"), 'Source select must have attachDropdownHover');
+    assert.ok(ce.includes("attachDropdownHover(typeSelect)"), 'Type select must have attachDropdownHover');
+    assert.ok(ce.includes("attachDropdownHover(sortSelect)"), 'Sort select must have attachDropdownHover');
+    assert.ok(!ce.includes("if (document.activeElement === this) this.blur()"), 'attachDropdownHover must not blur on mousedown, which caused double-click bug');
+    assert.ok(ce.includes("formatToggle.on('click', function (e) {\n                e.stopPropagation();\n                if (hasValidationErrors()) {\n                    dialog.find('.s4t-input-required-error:first').focus();\n                    showToast('⚠️ Required: Please fill in custom options before choosing export format.');\n                    return;\n                }\n                formatMenu.prop('hidden', false);"), 'Format toggle button must open on single click');
+
+    // 4. Custom dropdown component for instant hover and single-click opening
+    assert.ok(ce.includes("s4t-custom-dropdown"), 'card-export.js must create s4t-custom-dropdown component');
+    assert.ok(ce.includes("s4t-custom-dropdown-trigger"), 'card-export.js must create dropdown trigger button');
+    assert.ok(ce.includes("s4t-custom-dropdown-menu"), 'card-export.js must create dropdown menu');
+    assert.ok(ce.includes("s4t-custom-dropdown-item"), 'card-export.js must create dropdown items');
+    assert.ok(ce.includes("$select.val(val).trigger('change')"), 'Item click must update select val and fire change event');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-select-replaced[hidden]'), 'sprint-helper.css must hide replaced native select');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-custom-dropdown'), 'sprint-helper.css must style s4t-custom-dropdown');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-custom-dropdown-trigger'), 'sprint-helper.css must style s4t-custom-dropdown-trigger');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-custom-dropdown-menu'), 'sprint-helper.css must style s4t-custom-dropdown-menu');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-split-menu::after'), 'sprint-helper.css must bridge 6px gap with pseudo-element to prevent flicker');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger'), 'sprint-helper.css must style dark theme for custom dropdown trigger');
+});
+
+test('card-export: column info icon is black, and missing custom dtype options disables copy/download with not-allowed cursor', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Column info icon is solid black (#000000) in both light and dark mode
+    assert.ok(ce.includes('stroke="#000000"'), 'card-export.js must render SVG with black stroke');
+    assert.ok(ce.includes('stroke-width="2"'), 'card-export.js must render SVG with stroke-width 2');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-field-info-icon {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    width: 18px !important;\n    height: 18px !important;\n    color: #000000 !important;'), 'sprint-helper.css must style field info icon with color #000000');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-field-info-icon svg,\n#s4t-export-dialog .s4t-field-info-svg {\n    display: block !important;\n    width: 14px !important;\n    height: 14px !important;\n    stroke: #000000 !important;\n    stroke-width: 2 !important;'), 'sprint-helper.css must style field info svg with stroke #000000');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-icon') && css.includes('color: #000000 !important;'), 'Dark mode field info icon must maintain black color #000000');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-svg') && css.includes('stroke: #000000 !important;'), 'Dark mode field info svg must maintain black stroke #000000');
+
+    // 2. Custom Dtype missing detection
+    assert.ok(ce.includes('function isCustomDtypeMissing(col)'), 'card-export.js must define isCustomDtypeMissing helper');
+    assert.ok(ce.includes("if (!col || col.cellType !== 'custom_select') return false;"), 'isCustomDtypeMissing must only apply to custom_select columns');
+    assert.ok(ce.includes("raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean)"), 'isCustomDtypeMissing must filter empty trimmed entries');
+
+    // Verify isCustomDtypeMissing logic directly
+    function isCustomDtypeMissing(col) {
+        if (!col || col.cellType !== 'custom_select') return false;
+        var raw = (col.customOptions || '').trim();
+        if (!raw) return true;
+        var validItems = raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        return validItems.length === 0;
+    }
+    assert.strictEqual(isCustomDtypeMissing({ cellType: 'text', customOptions: '' }), false, 'Non custom_select is not missing');
+    assert.strictEqual(isCustomDtypeMissing({ cellType: 'custom_select', customOptions: '' }), true, 'Empty customOptions is missing');
+    assert.strictEqual(isCustomDtypeMissing({ cellType: 'custom_select', customOptions: '   ' }), true, 'Whitespace customOptions is missing');
+    assert.strictEqual(isCustomDtypeMissing({ cellType: 'custom_select', customOptions: ' , ,   , ' }), true, 'Comma-only customOptions is missing');
+    assert.strictEqual(isCustomDtypeMissing({ cellType: 'custom_select', customOptions: 'Option A, Option B' }), false, 'Valid customOptions is not missing');
+
+    // 3. Action buttons and split download group disabled state
+    assert.ok(ce.includes("splitGroup.addClass('s4t-group-disabled')"), 'Split download group must receive s4t-group-disabled when validation errors exist');
+    assert.ok(ce.includes("splitGroup.removeClass('s4t-group-disabled')"), 'Split download group must remove s4t-group-disabled when valid');
+    assert.ok(ce.includes("formatToggle.addClass('s4t-btn-disabled')"), 'Format toggle must receive s4t-btn-disabled on error');
+
+    // 4. Split group hover blocking
+    assert.ok(ce.includes("splitGroup.on('mouseenter', function () {\n                if (hasValidationErrors()) {\n                    formatMenu.prop('hidden', true);\n                    return;\n                }"), 'Split group mouseenter must block opening menu when errors exist');
+
+    // 5. Disabled cursor: not-allowed !important on buttons and split group in light & dark modes
+    assert.ok(css.includes('#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled,\n#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled *'), 'sprint-helper.css must target split group and children when disabled');
+    assert.ok(css.includes('cursor: not-allowed !important;'), 'sprint-helper.css must apply not-allowed cursor to disabled controls');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled .s4t-btn-primary:hover'), 'Primary button hover inside disabled split group must be neutralized');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled'), 'Dark mode must style disabled split download group');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary.s4t-btn-disabled:hover'), 'Dark mode must neutralize secondary button hover when disabled');
+});
+
+test('card-export Tab 2: info icons in headers, member-scoped Exclude lists, vibrant label colors, and Attention-style soft teal highlight', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Three lines converted into info icons inside column headers
+    assert.ok(ce.includes('function makeAttInfoIcon(label, tooltip)'), 'card-export.js must define makeAttInfoIcon helper');
+    assert.ok(ce.includes('s4t-att-info-icon'), 'makeAttInfoIcon must render .s4t-att-info-icon button');
+    assert.ok(ce.includes('s4t-export-att-heading-title'), 'Column headings must wrap title and info icon in .s4t-export-att-heading-title');
+    assert.ok(ce.includes('Match any selected member. All members are included by default.'), 'Members header info icon tooltip must contain member description');
+    assert.ok(ce.includes('Cards in checked lists are excluded from export.'), 'Exclude lists header info icon tooltip must contain list description');
+    assert.ok(ce.includes('Match any selected label. All labels and unlabeled cards are included by default.'), 'Labels header info icon tooltip must contain label description');
+
+    // Verify static hint paragraphs were replaced
+    assert.ok(!ce.includes('<p class="s4t-export-att-col-hint">Cards in checked lists are excluded from export.</p>'), 'Static hint paragraph for lists must be removed');
+    assert.ok(!ce.includes('<p class="s4t-export-att-col-hint">Match any selected member. All members are included by default.</p>'), 'Static hint paragraph for members must be removed');
+    assert.ok(!ce.includes('<p class="s4t-export-att-col-hint">Match any selected label. All labels and unlabeled cards are included by default.</p>'), 'Static hint paragraph for labels must be removed');
+
+    // 2. Column order matches Attention (Members -> Exclude lists -> Labels)
+    const membersColIdx = ce.indexOf('var membersCol = $(\'<div class="s4t-export-att-col">\');');
+    const listsColIdx = ce.indexOf('var listsCol = $(\'<div class="s4t-export-att-col">\');');
+    const labelsColIdx = ce.indexOf('var labelsCol = $(\'<div class="s4t-export-att-col">\');');
+    const appendMembersIdx = ce.indexOf('columnsGrid.append(membersCol);');
+    const appendListsIdx = ce.indexOf('columnsGrid.append(listsCol);');
+    const appendLabelsIdx = ce.indexOf('columnsGrid.append(labelsCol);');
+    assert.ok(membersColIdx !== -1 && listsColIdx !== -1 && labelsColIdx !== -1, 'All three columns must exist');
+    assert.ok(membersColIdx < listsColIdx && listsColIdx < labelsColIdx, 'Column definition order must be Members -> Exclude lists -> Labels');
+    assert.ok(appendMembersIdx !== -1 && appendListsIdx !== -1 && appendLabelsIdx !== -1, 'All three columns must be appended to columnsGrid');
+    assert.ok(appendMembersIdx < appendListsIdx && appendListsIdx < appendLabelsIdx, 'Columns must be appended in order: membersCol, listsCol, labelsCol');
+
+    // 3. Dynamic Member-scoped Exclude lists and reactive updates
+    assert.ok(ce.includes('function getMemberLists(boardData, excludedMemberIds)'), 'card-export.js must define getMemberLists scoped helper');
+    assert.ok(ce.includes('renderExcludeLists();'), 'Member checkbox toggle must trigger renderExcludeLists');
+    assert.ok(ce.includes('NOTE: - No members selected. Select a member to see available lists.'), 'Note must be shown when all members excluded');
+    assert.ok(ce.includes('No lists found for the selected members.'), 'Note must be shown when no lists match member filter');
+
+    // 4. Exclude lists group toggles (All Todo, All Not Sure, All lists)
+    assert.ok(ce.includes('All Todo lists'), 'Exclude lists column must feature All Todo lists group toggle');
+    assert.ok(ce.includes('All Not Sure lists'), 'Exclude lists column must feature All Not Sure lists group toggle');
+    assert.ok(ce.includes('All lists'), 'Exclude lists column must feature All lists group toggle');
+
+    // 5. Vibrant label colors palette mapping
+    assert.ok(ce.includes('LABEL_COLORS = {'), 'card-export.js must define authentic LABEL_COLORS palette');
+    assert.ok(ce.includes("'#4bce97'"), 'LABEL_COLORS must map green to authentic Trello hex #4bce97');
+    assert.ok(ce.includes("'#f5cd47'"), 'LABEL_COLORS must map yellow to authentic Trello hex #f5cd47');
+    assert.ok(ce.includes("'#fea362'"), 'LABEL_COLORS must map orange to authentic Trello hex #fea362');
+    assert.ok(ce.includes("'#f87168'"), 'LABEL_COLORS must map red to authentic Trello hex #f87168');
+    assert.ok(ce.includes("'#9f8fef'"), 'LABEL_COLORS must map purple to authentic Trello hex #9f8fef');
+    assert.ok(ce.includes("'#579dff'"), 'LABEL_COLORS must map blue to authentic Trello hex #579dff');
+    assert.ok(ce.includes("'#6cc3e0'"), 'LABEL_COLORS must map sky to authentic Trello hex #6cc3e0');
+    assert.ok(ce.includes("'#94c748'"), 'LABEL_COLORS must map lime to authentic Trello hex #94c748');
+    assert.ok(ce.includes("'#e774bb'"), 'LABEL_COLORS must map pink to authentic Trello hex #e774bb');
+    assert.ok(ce.includes("'#8590a2'"), 'LABEL_COLORS must map black to authentic Trello hex #8590a2');
+    assert.ok(ce.includes('s4t-label-dot-none'), 'Unlabeled cards must use s4t-label-dot-none class');
+
+    // 6. Highlighting UI similar to Attention popup
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-att-heading-title {\n    display: inline-flex !important;\n    align-items: center !important;\n    gap: 6px !important;\n}'), 'sprint-helper.css must style heading title container');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-att-info-icon {\n    display: inline-flex !important;'), 'sprint-helper.css must style Tab 2 info icon');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-att-option:hover {\n    background: var(--ds-background-neutral-subtle-hovered, #f4f4f5) !important;\n}'), 'sprint-helper.css must style option hover with soft neutral background');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-att-option:has(input:checked) {\n    background: var(--ds-background-neutral, #f0fdfa) !important;\n    color: var(--ds-text, #0f766e) !important;\n    border-color: #14b8a6 !important;\n    font-weight: 500 !important;\n}'), 'sprint-helper.css must style checked option with Attention soft teal highlight');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-att-option input[type=checkbox] {\n    width: 16px !important;\n    height: 16px !important;\n    accent-color: #0f766e !important;\n    flex-shrink: 0 !important;\n    cursor: pointer !important;\n}'), 'sprint-helper.css must style checkbox with teal accent color #0f766e');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-att-label-dot {\n    width: 12px !important;\n    height: 12px !important;'), 'sprint-helper.css must style label dot at 12px with border and shadow');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-option:has(input:checked)') && css.includes('background: rgba(20, 184, 166, 0.16) !important;'), 'Dark mode option highlight must use Attention soft teal tint');
+});
+
+test('card-export: generated preview dropdowns open cleanly without clipping or table row occlusion', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Cells with dev_select and custom_select receive s4t-sheet-cell-has-dropdown
+    assert.ok(ce.includes("td.addClass('s4t-sheet-cell-has-dropdown');"), 'card-export.js must add s4t-sheet-cell-has-dropdown class to dropdown cells');
+
+    // 2. sprint-helper.css enforces overflow: visible on dropdown cells
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,\n#s4t-export-dialog .s4t-sheet-cell:has(.s4t-custom-dropdown) {\n    overflow: visible !important;'), 'sprint-helper.css must allow visible overflow on cells containing dropdowns');
+
+    // 3. Active dropdown cell and row receive elevated z-index (500) to float over subsequent rows
+    assert.ok(ce.includes("$wrap.closest('.s4t-sheet-cell').addClass('s4t-cell-dropdown-active');"), 'openDropdown must mark closest cell as active');
+    assert.ok(ce.includes("$wrap.closest('.s4t-sheet-row').addClass('s4t-row-dropdown-active');"), 'openDropdown must mark closest row as active');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-cell.s4t-cell-dropdown-active,\n#s4t-export-dialog .s4t-sheet-cell:has(.s4t-dropdown-open) {\n    overflow: visible !important;\n    position: relative !important;\n    z-index: 500 !important;\n}'), 'Active cell must have position: relative and z-index 500');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-row.s4t-row-dropdown-active,\n#s4t-export-dialog .s4t-sheet-row:has(.s4t-dropdown-open) {\n    position: relative !important;\n    z-index: 500 !important;\n}'), 'Active row must have position: relative and z-index 500');
+
+    // 4. Boundary detection checks .s4t-sheet-grid-wrapper to prevent clipping in scroll container
+    assert.ok(ce.includes("var gridWrap = dialog.find('.s4t-sheet-grid-wrapper');"), 'Boundary detection must find grid wrapper');
+    assert.ok(ce.includes("wrapRect.bottom + 180 > bottomBoundary"), 'Boundary detection must check bottomBoundary');
+    assert.ok(ce.includes("s4t-dropdown-align-right"), 'Boundary detection must support s4t-dropdown-align-right');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-align-right .s4t-custom-dropdown-menu'), 'sprint-helper.css must style s4t-dropdown-align-right');
+
+    // 5. Cleanup on closeDropdown and document outside click
+    assert.ok(ce.includes("$wrap.closest('.s4t-sheet-cell').removeClass('s4t-cell-dropdown-active');"), 'closeDropdown must remove cell active class');
+    assert.ok(ce.includes("$wrap.closest('.s4t-sheet-row').removeClass('s4t-row-dropdown-active');"), 'closeDropdown must remove row active class');
+    assert.ok(ce.includes("dialog.find('.s4t-sheet-cell').removeClass('s4t-cell-dropdown-active');"), 'Outside click must remove cell active class');
+    assert.ok(ce.includes("dialog.find('.s4t-sheet-row').removeClass('s4t-row-dropdown-active');"), 'Outside click must remove row active class');
+
+    // 6. Dark theme support for cell dropdowns
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown') && css.includes('overflow: visible !important;'), 'Dark theme must allow visible overflow on dropdown cells');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-cell-dropdown-active') && css.includes('z-index: 500 !important;'), 'Dark theme must elevate z-index on active dropdown cells');
+});
+
+test('card-export: Tab 2 info icons match heading colors in light and dark mode', () => {
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Light mode info icon color matches heading h4 text color
+    assert.ok(
+        css.includes('#s4t-export-dialog .s4t-att-info-icon {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    width: 16px !important;\n    height: 16px !important;\n    padding: 0 !important;\n    color: var(--ds-text, #172b4d) !important;'),
+        'Light mode info icon must match heading h4 color var(--ds-text, #172b4d)'
+    );
+
+    // 2. Dark mode info icon color matches dark heading text color
+    assert.ok(
+        css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-att-info-icon,') &&
+        css.includes('color: #ffffff !important;\n}'),
+        'Dark mode info icon must match dark heading text color #ffffff'
+    );
+});
+
+test('card-export: custom dropdown options parsing and preview table dropdown handling', () => {
+    const cardExport = require('../card-export.js');
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Presets feature is completely removed
+    assert.strictEqual(cardExport.STANDARD_OPTION_PRESETS, undefined, 'STANDARD_OPTION_PRESETS must not be exported');
+    assert.strictEqual(cardExport.s4tGetStandardOptionsForColumn, undefined, 's4tGetStandardOptionsForColumn must not be exported');
+    assert.ok(!ce.includes('s4t-sheet-preset-chips'), 'card-export.js must not include preset chips');
+    assert.ok(!ce.includes('s4t-preset-chip'), 'card-export.js must not include preset chip buttons');
+    assert.ok(!css.includes('#s4t-export-dialog .s4t-sheet-preset-chips'), 'sprint-helper.css must not style preset chips');
+
+    // 2. s4tParseCustomOptions handles whitespace, duplicates, and empty strings
+    const parsed = cardExport.s4tParseCustomOptions('In Progress, Blocked, in progress, Ready for QA, , Approved ');
+    assert.deepStrictEqual(parsed, ['In Progress', 'Blocked', 'Ready for QA', 'Approved']);
+    const emptyParsed = cardExport.s4tParseCustomOptions(' , , ');
+    assert.deepStrictEqual(emptyParsed, []);
+
+    // 3. Tab 1 custom_select input allows manual options without forced presets
+    assert.ok(ce.includes("var customInput = $('<input type=\"text\" class=\"s4t-sheet-custom-options-input\""), 'Custom input must be rendered');
+    assert.ok(!ce.includes("col.customOptions = s4tGetStandardOptionsForColumn(col);"), 'Switching to custom_select must not auto-populate presets');
+
+    // 4. Preview table dropdowns preserve card values and handle select states
+    assert.ok(ce.includes("var optList = s4tParseCustomOptions(col.customOptions);"), 'Preview custom_select must parse col.customOptions');
+    assert.ok(ce.includes("optList.unshift(val);"), 'Preview custom_select must preserve card value in options if not present');
+    assert.ok(ce.includes("custSel.append($('<option value=\"\">').text('-- Select --').prop('selected', true));"), 'Preview custom_select must show -- Select -- for blank source without value');
+    assert.ok(ce.includes("devSel.append(customDevOpt);"), 'Preview dev_select must preserve assigned name if not in board members list');
+});
+
+test('card-export: reference sheet alignment with 13 default columns, PO dot extraction, and cell edits sync', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Verify DEFAULT_COLUMNS definition matches 13 reference columns
+    const expectedCols = [
+        { id: 'c_list', header: 'List Name', source: 'list', cellType: 'text' },
+        { id: 'c_title', header: 'Title', source: 'title', cellType: 'text' },
+        { id: 'c_labels', header: 'Labels', source: 'labels', cellType: 'text' },
+        { id: 'c_status', header: 'Status', source: 'blank', cellType: 'custom_select', customOptions: 'Going Live, Not Going Live' },
+        { id: 'c_dev_owner', header: 'Dev Owner', source: 'members', cellType: 'dev_select' },
+        { id: 'c_dev_conf', header: 'Dev Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_mgr_conf', header: 'Mgr Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select' },
+        { id: 'c_po_conf', header: 'Product Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select' },
+        { id: 'c_cs_conf', header: 'CS Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_risk', header: 'Risk (Comments)', source: 'blank', cellType: 'text' },
+        { id: 'c_resolution', header: 'Resolution (Comments)', source: 'blank', cellType: 'text' }
+    ];
+
+    expectedCols.forEach(col => {
+        assert.ok(ce.includes(`id: '${col.id}'`), `DEFAULT_COLUMNS must include ${col.id}`);
+        assert.ok(ce.includes(`header: '${col.header}'`), `DEFAULT_COLUMNS must include header ${col.header}`);
+        assert.ok(ce.includes(`source: '${col.source}'`), `DEFAULT_COLUMNS must map source ${col.source}`);
+        assert.ok(ce.includes(`cellType: '${col.cellType}'`), `DEFAULT_COLUMNS must set cellType ${col.cellType}`);
+        if (col.customOptions) {
+            assert.ok(ce.includes(`customOptions: '${col.customOptions}'`), `DEFAULT_COLUMNS must set customOptions for ${col.id}`);
+        }
+    });
+
+    // 2. Test product_owner extraction from dot-terminated labels
+    const lookup = {
+        listsById: new Map([['l1', { id: 'l1', name: 'In Progress (Arman)' }]]),
+        membersById: new Map([
+            ['m1', { id: 'm1', fullName: 'Arman Khan', username: 'arman' }],
+            ['m2', { id: 'm2', fullName: 'Sarah Chen', username: 'sarah' }]
+        ]),
+        labelsById: new Map()
+    };
+
+    const cardWithPO = {
+        id: 'c101',
+        name: 'Build checkout flow',
+        idList: 'l1',
+        idMembers: ['m1'],
+        labels: [
+            { id: 'lb1', name: 'Critical' },
+            { id: 'lb2', name: 'Kashvi.' },
+            { id: 'lb3', name: 'Arman Khan' },
+            { id: 'lb4', name: 'Frontend' }
+        ]
+    };
+
+    assert.equal(
+        cardExport.s4tExtractFieldValue(cardWithPO, 'product_owner', lookup),
+        'Kashvi',
+        'product_owner must extract name from dot-ended label and strip trailing dot'
+    );
+
+    // Labels field must exclude both dev member names and PO dot labels
+    assert.equal(
+        cardExport.s4tExtractFieldValue(cardWithPO, 'labels', lookup),
+        'Critical, Frontend',
+        'Labels field must filter out developer member names and dot-ended labels'
+    );
+
+    // Members field strictly returns assigned members (no list name fallback)
+    assert.equal(
+        cardExport.s4tExtractFieldValue(cardWithPO, 'members', lookup),
+        'Arman Khan',
+        'Members field must return assigned members'
+    );
+
+    const unassignedCard = {
+        id: 'c102',
+        name: 'Unassigned task',
+        idList: 'l1',
+        idMembers: [],
+        labels: [{ id: 'lb1', name: 'Backend' }]
+    };
+
+    assert.equal(
+        cardExport.s4tExtractFieldValue(unassignedCard, 'members', lookup),
+        '',
+        'Unassigned card must return empty string for members (no list name fallback)'
+    );
+
+    assert.equal(
+        cardExport.s4tExtractFieldValue(unassignedCard, 'product_owner', lookup),
+        '',
+        'Card without dot label must return empty string for product_owner'
+    );
+
+    // 3. Test editedCells synchronization into TSV, CSV, and Excel
+    const testCols = [
+        { id: 'col_title', header: 'Title', source: 'title' },
+        { id: 'col_status', header: 'Status', source: 'blank' },
+        { id: 'col_risk', header: 'Risk', source: 'blank' }
+    ];
+    const editedOptions = {
+        editedCells: {
+            'c101_col_status': 'Going Live',
+            'c101_col_risk': 'Third-party API dependency'
+        }
+    };
+
+    // TSV Export with edited cells
+    const tsv = cardExport.s4tBuildExportTsv(testCols, [cardWithPO], lookup, editedOptions);
+    assert.ok(tsv.includes('Build checkout flow\tGoing Live\tThird-party API dependency'), 'TSV must export edited cell values');
+
+    // CSV Export with edited cells
+    const csv = cardExport.s4tBuildExportCsv(testCols, [cardWithPO], lookup, editedOptions);
+    assert.ok(csv.includes('"Build checkout flow","Going Live","Third-party API dependency"'), 'CSV must export edited cell values');
+
+    // Excel Export with edited cells
+    const excel = cardExport.s4tBuildExportExcel(testCols, [cardWithPO], lookup, 'Sprint Sheet', editedOptions);
+    assert.ok(excel.includes('Going Live'), 'Excel must include edited status');
+    assert.ok(excel.includes('Third-party API dependency'), 'Excel must include edited risk comment');
+
+    // 4. Verify CSS styling for .s4t-sheet-cell-input
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-cell-input'), 'sprint-helper.css must style .s4t-sheet-cell-input');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-cell-input:hover'), 'sprint-helper.css must style .s4t-sheet-cell-input:hover');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-cell-input:focus'), 'sprint-helper.css must style .s4t-sheet-cell-input:focus');
+    assert.ok(css.includes('.theme-dark #s4t-export-dialog .s4t-sheet-cell-input,'), 'sprint-helper.css must style dark mode .s4t-sheet-cell-input');
+});
+
+test('card-export UI: aligns with Attention popup in styling, typography, buttons, tabs, metric badges, focus rings, and dark theme', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Dialog Shell & Backdrop
+    assert.ok(css.includes('background: rgba(9, 30, 66, 0.54) !important'), 'Export backdrop must match modal overlay standard');
+    assert.ok(css.includes('backdrop-filter: blur(4px) !important'), 'Export backdrop must have blur(4px)');
+    assert.ok(css.includes('border-radius: 18px !important'), 'Export dialog must have 18px border radius like Attention panel');
+    assert.ok(css.includes('border: 1px solid var(--ds-border, #e4e4e7) !important'), 'Export dialog must use ds-border #e4e4e7');
+    assert.ok(css.includes('box-shadow: 0 12px 48px #18181b30 !important'), 'Export dialog must use Attention shadow');
+    assert.ok(css.includes('font: 14px/1.5 var(--s4t-font-family, system-ui, sans-serif) !important'), 'Export dialog must use Attention font family and size');
+
+    // 2. Header & Action Controls
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-header'), 'Must style header');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-title-row h2'), 'Must style title row h2');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-title-icon {\n    color: #0f766e !important;'), 'Title icon must use Attention deep teal #0f766e');
+    assert.ok(ce.includes('s4t-export-match-count s4t-metric-badge'), 'Count badge must carry s4t-metric-badge class');
+    assert.ok(ce.includes('data-tooltip="Double-click to copy matching card count"'), 'Count badge must have Attention double-click tooltip');
+    assert.ok(ce.includes('data-copy-value="0"'), 'Count badge must have initial data-copy-value');
+    assert.ok(ce.includes(".attr('data-copy-value', count)"), 'Count badge must update data-copy-value on filter update');
+    assert.ok(ce.includes('s4tBindMetricCopy(dialog)'), 'card-export.js must wire s4tBindMetricCopy to dialog');
+
+    // 3. Metric Badge Global Copy Integration
+    assert.ok(css.includes('#s4t-export-dialog .s4t-metric-badge'), 'sprint-helper.css must style export metric badge');
+    assert.ok(css.includes('#s4t-export-dialog [data-copy-value]'), 'sprint-helper.css must wire pointer on export [data-copy-value]');
+    assert.ok(css.includes('#s4t-export-dialog [data-copy-value].s4t-metric-copied'), 'sprint-helper.css must celebrate export metric copy');
+
+    // 4. Tabs Bar & Active Indicator
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-tabs-bar'), 'Must style tabs bar');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-tab'), 'Must style tabs');
+    assert.ok(css.includes('box-shadow: inset 0 -2px #14b8a6 !important'), 'Active tab must use Attention teal bottom indicator #14b8a6');
+
+    // 5. Buttons, Focus Ring, and Reduced Motion
+    assert.ok(css.includes('#s4t-export-dialog :focus-visible'), 'Dialog must provide Attention focus outline');
+    assert.ok(css.includes('outline: 2px solid #14b8a6 !important'), 'Focus visible must use #14b8a6');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-btn-primary'), 'Must style primary button');
+    assert.ok(css.includes('background: #0f766e !important'), 'Primary button must use #0f766e');
+    assert.ok(css.includes('background: #115e59 !important'), 'Primary hover must use #115e59');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-btn-secondary'), 'Must style secondary button');
+    assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'), 'Must include reduced motion rule');
+
+    // 6. Toast Notification & Dark Mode
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-footer-status'), 'Must style toast status');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-footer-status.s4t-metric-toast-success'), 'Must style success toast');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog'), 'Must provide dark mode dialog styles');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-primary'), 'Must style dark mode primary button');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary'), 'Must style dark mode secondary button');
+});

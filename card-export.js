@@ -12,6 +12,7 @@
         root.s4tBuildExportExcel = api.s4tBuildExportExcel;
         root.s4tBuildExportTsv = api.s4tBuildExportTsv;
         root.s4tFilterAndSortCards = api.s4tFilterAndSortCards;
+        root.s4tParseCustomOptions = api.s4tParseCustomOptions;
     }
 }(typeof globalThis !== 'undefined' ? globalThis : this, function () {
 
@@ -23,7 +24,8 @@
         { key: 'completed_points', label: 'Completed Points', desc: 'Completed points (from [ ] or { }).' },
         { key: 'remaining_points', label: 'Remaining Points', desc: 'Remaining points.' },
         { key: 'members', label: 'Developers', desc: 'Developer / member names (or usernames).' },
-        { key: 'labels', label: 'Labels', desc: 'Label names (comma-separated).' },
+        { key: 'product_owner', label: 'Product Owner', desc: 'Product Owner extracted from card labels ending with a dot "." (e.g. "Kashvi." -> "Kashvi").' },
+        { key: 'labels', label: 'Labels', desc: 'Label names (excluding developer and product member labels).' },
         { key: 'due', label: 'Due Date', desc: 'Due date formatted (e.g. "2026-09-15").' },
         { key: 'status', label: 'Status', desc: 'Completion status ("Done" if in done list or dueComplete, otherwise "In Progress").' },
         { key: 'desc', label: 'Description', desc: 'Card description.' },
@@ -36,15 +38,38 @@
     FIELD_DEFINITIONS.forEach(function (f) { FIELD_MAP[f.key] = f; });
 
     var DEFAULT_COLUMNS = [
-        { id: 'c_area', header: 'Area', source: 'list', cellType: 'text' },
-        { id: 'c_tasks', header: 'Tasks', source: 'title', cellType: 'text' },
-        { id: 'c_pts', header: 'Points', source: 'points', cellType: 'text' },
-        { id: 'c_assignee', header: 'Assignee', source: 'members', cellType: 'dev_select' },
+        { id: 'c_list', header: 'List Name', source: 'list', cellType: 'text' },
+        { id: 'c_title', header: 'Title', source: 'title', cellType: 'text' },
         { id: 'c_labels', header: 'Labels', source: 'labels', cellType: 'text' },
-        { id: 'c_due', header: 'Due Date', source: 'due', cellType: 'text' },
-        { id: 'c_status', header: 'Status', source: 'status', cellType: 'checkbox' },
-        { id: 'c_remarks', header: 'Remarks', source: 'blank', cellType: 'custom_select', customOptions: 'In Progress, Blocked, Ready for QA, Approved' }
+        { id: 'c_status', header: 'Status', source: 'blank', cellType: 'custom_select', customOptions: 'Going Live, Not Going Live' },
+        { id: 'c_dev_owner', header: 'Dev Owner', source: 'members', cellType: 'dev_select' },
+        { id: 'c_dev_conf', header: 'Dev Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_mgr_conf', header: 'Mgr Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: 'Product Owner, CS Member, QA, Tech Lead' },
+        { id: 'c_po_conf', header: 'Product Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: 'CS Member, QA, Tech Lead' },
+        { id: 'c_cs_conf', header: 'CS Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_risk', header: 'Risk (Comments)', source: 'blank', cellType: 'text' },
+        { id: 'c_resolution', header: 'Resolution (Comments)', source: 'blank', cellType: 'text' }
     ];
+
+    function s4tParseCustomOptions(rawOptions, fallback) {
+        var raw = (rawOptions == null || String(rawOptions).trim() === '') ? (fallback || '') : rawOptions;
+        var list = String(raw)
+            .split(',')
+            .map(function (s) { return s.trim(); })
+            .filter(Boolean);
+        var seen = new Set();
+        var deduplicated = [];
+        list.forEach(function (opt) {
+            var lower = opt.toLowerCase();
+            if (!seen.has(lower)) {
+                seen.add(lower);
+                deduplicated.push(opt);
+            }
+        });
+        return deduplicated;
+    }
 
     function s4tEscapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -147,12 +172,37 @@
                     return m ? (m.fullName || m.username || '') : '';
                 }).filter(Boolean).join(', ');
             }
+            case 'product_owner': {
+                var poLabels = Array.isArray(card.labels) && card.labels.length ? card.labels : [];
+                if (!poLabels.length && Array.isArray(card.idLabels)) {
+                    poLabels = card.idLabels.map(function (id) { return labelsById.get(id); }).filter(Boolean);
+                }
+                for (var pi = 0; pi < poLabels.length; pi++) {
+                    var lName = (poLabels[pi].name || '').trim();
+                    if (lName.endsWith('.')) {
+                        return lName.replace(/\.+$/, '').trim();
+                    }
+                }
+                return '';
+            }
             case 'labels': {
                 var labels = Array.isArray(card.labels) && card.labels.length ? card.labels : [];
                 if (!labels.length && Array.isArray(card.idLabels)) {
                     labels = card.idLabels.map(function (id) { return labelsById.get(id); }).filter(Boolean);
                 }
-                return labels.map(function (lb) { return lb.name || lb.color || ''; }).filter(Boolean).join(', ');
+                var memberNamesSet = new Set();
+                membersById.forEach(function (m) {
+                    if (m && m.fullName) memberNamesSet.add(m.fullName.trim().toLowerCase());
+                    if (m && m.username) memberNamesSet.add(m.username.trim().toLowerCase());
+                });
+                return labels.map(function (lb) {
+                    return (lb.name || lb.color || '').trim();
+                }).filter(function (name) {
+                    if (!name) return false;
+                    if (name.endsWith('.')) return false;
+                    if (memberNamesSet.has(name.toLowerCase())) return false;
+                    return true;
+                }).join(', ');
             }
             case 'due': {
                 if (!card.due) return '';
@@ -344,7 +394,10 @@
                 prevGroup = grp;
             }
             var row = columns.map(function (c) {
-                var val = s4tExtractFieldValue(card, c.source, lookup);
+                var cellKey = card.id + '_' + c.id;
+                var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
+                    ? opts.editedCells[cellKey]
+                    : s4tExtractFieldValue(card, c.source, lookup);
                 var safeVal = s4tNeutralizeFormula(val);
                 return '"' + String(safeVal).replace(/"/g, '""') + '"';
             });
@@ -405,8 +458,22 @@
 
             s.push('<tr' + trClass + '>');
             columns.forEach(function (c) {
-                var val = s4tExtractFieldValue(card, c.source, lookup);
-                s.push('<td>' + s4tSpreadsheetText(val) + '</td>');
+                var cellKey = card.id + '_' + c.id;
+                var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
+                    ? opts.editedCells[cellKey]
+                    : s4tExtractFieldValue(card, c.source, lookup);
+                var extraStyle = '';
+                var valNorm = String(val || '').trim().toLowerCase();
+                if (valNorm === 'going live' || valNorm === 'high') {
+                    extraStyle = ' color: #059669; font-weight: bold;';
+                } else if (valNorm === 'low' || valNorm === 'not going live') {
+                    extraStyle = ' color: #dc2626; font-weight: bold;';
+                } else if (valNorm === 'medium') {
+                    extraStyle = ' color: #d97706;';
+                } else if (valNorm === 'na') {
+                    extraStyle = ' color: #6b7280;';
+                }
+                s.push('<td' + (extraStyle ? ' style="' + extraStyle + '"' : '') + '>' + s4tSpreadsheetText(val) + '</td>');
             });
             s.push('</tr>');
         });
@@ -432,7 +499,10 @@
                 prevGroup = grp;
             }
             var row = columns.map(function (c) {
-                var val = s4tExtractFieldValue(card, c.source, lookup);
+                var cellKey = card.id + '_' + c.id;
+                var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
+                    ? opts.editedCells[cellKey]
+                    : s4tExtractFieldValue(card, c.source, lookup);
                 return s4tNeutralizeFormula(val).replace(/[\t\r\n]+/g, ' ');
             });
             lines.push(row.join('\t'));
@@ -456,12 +526,12 @@
         var boardShortLink = opts.boardShortLink || (typeof getBoardShortLink === 'function' ? getBoardShortLink() : '');
         var boardName = opts.boardName || $('.board-name span.text, [data-testid="board-name-display"]').text().trim() || 'Board Cards';
 
-        var storageKey = 's4t_card_export_cfg_' + (boardShortLink || 'default');
+        var storageKey = 's4t_card_export_cfg_v2_' + (boardShortLink || 'default');
         var savedColumns = null;
         var savedInsertSeparator = false;
         var savedColorByGroup = false;
         try {
-            var rawSaved = localStorage.getItem(storageKey) || localStorage.getItem('s4t_card_export_cfg_default');
+            var rawSaved = localStorage.getItem(storageKey) || localStorage.getItem('s4t_card_export_cfg_v2_default');
             if (rawSaved) {
                 var parsed = JSON.parse(rawSaved);
                 if (Array.isArray(parsed) && parsed.length) {
@@ -477,6 +547,7 @@
             currentTab: 'sheet',
             columns: savedColumns || JSON.parse(JSON.stringify(DEFAULT_COLUMNS)),
             insertSeparatorRow: savedInsertSeparator,
+            editedCells: {},
             excludedListIds: new Set(),
             excludeNotSure: true,
             excludedMemberIds: new Set(),
@@ -522,10 +593,10 @@
             '      <h2 id="s4t-export-title" class="s4t-modal-title">Export Board Cards</h2>',
             '    </div>',
             '    <span class="s4t-export-board-tag s4t-board-badge">' + s4tEscapeHtml(boardName) + '</span>',
-            '    <span class="s4t-export-match-count" id="s4t-export-count-badge">0 cards matching</span>',
+            '    <span class="s4t-export-match-count s4t-metric-badge" id="s4t-export-count-badge" role="button" tabindex="0" data-tooltip="Double-click to copy matching card count" data-copy-value="0">0 cards matching</span>',
             '  </div>',
             '  <div class="s4t-export-header-actions">',
-            '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-reset-btn" id="s4t-header-reset-btn" title="Reset to default columns" data-tooltip="Reset to default columns">↺ Reset Template</button>',
+            '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-reset-btn" id="s4t-header-reset-btn" data-tooltip="Reset to default columns">↺ Reset Template</button>',
             '    <button type="button" class="s4t-export-close-btn s4t-close-btn" aria-label="Close" data-tooltip="Close">✕</button>',
             '  </div>',
             '</header>',
@@ -561,10 +632,16 @@
         }
 
         dialog.find('.s4t-export-close-btn').on('click', close);
+        if (typeof s4tBindMetricCopy === 'function') {
+            s4tBindMetricCopy(dialog);
+        } else if (typeof globalThis !== 'undefined' && typeof globalThis.s4tBindMetricCopy === 'function') {
+            globalThis.s4tBindMetricCopy(dialog);
+        }
 
         dialog.find('#s4t-header-reset-btn').on('click', function () {
             state.columns = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
             state.insertSeparatorRow = false;
+            state.editedCells = {};
             dialog.find('#s4t-toggle-separator').prop('checked', false);
             state.previewDirty = true;
             saveConfig();
@@ -577,6 +654,231 @@
             var count = state.columns ? state.columns.length : 0;
             dialog.find('#s4t-sheet-col-count').text(count + (count === 1 ? ' column' : ' columns'));
         }
+
+        function isCustomDtypeMissing(col) {
+            if (!col || col.cellType !== 'custom_select') return false;
+            var raw = (col.customOptions || '').trim();
+            if (!raw) return true;
+            var validItems = raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            return validItems.length === 0;
+        }
+
+        function hasValidationErrors() {
+            var hasErr = false;
+            for (var i = 0; i < state.columns.length; i++) {
+                if (isCustomDtypeMissing(state.columns[i])) {
+                    hasErr = true;
+                    break;
+                }
+            }
+            if (!hasErr && dialog.find('.s4t-input-required-error').length > 0) {
+                hasErr = true;
+            }
+            return hasErr;
+        }
+
+        function updateActionButtonsState() {
+            var hasErr = hasValidationErrors();
+            var copyBtn = dialog.find('#s4t-btn-copy-tsv');
+            var downloadBtn = dialog.find('#s4t-btn-main-download');
+            var formatToggle = dialog.find('#s4t-btn-format-toggle');
+            var splitGroup = dialog.find('.s4t-split-download-group');
+            var formatMenu = dialog.find('#s4t-format-menu');
+
+            if (hasErr) {
+                copyBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', 'Please fill in required custom options before copying');
+                downloadBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', 'Please fill in required custom options before downloading');
+                formatToggle.addClass('s4t-btn-disabled').attr('aria-disabled', 'true');
+                splitGroup.addClass('s4t-group-disabled');
+                formatMenu.prop('hidden', true);
+            } else {
+                copyBtn.removeClass('s4t-btn-disabled').removeAttr('aria-disabled').attr('data-tooltip', 'Copy tab-separated table to clipboard for instant Google Sheets paste');
+                downloadBtn.removeClass('s4t-btn-disabled').removeAttr('aria-disabled').removeAttr('data-tooltip');
+                formatToggle.removeClass('s4t-btn-disabled').removeAttr('aria-disabled');
+                splitGroup.removeClass('s4t-group-disabled');
+            }
+        }
+
+        function attachDropdownHover(el) {
+            var $select = $(el);
+            if (!$select.length || $select.data('s4t-enhanced')) return;
+            $select.data('s4t-enhanced', true);
+
+            // Native showPicker capability check for environments that support it
+            try {
+                if (typeof el.showPicker === 'function') {
+                    // showPicker is natively available
+                }
+            } catch (_) {}
+
+            // Hide native select visually while keeping it fully synchronized in the DOM
+            $select.addClass('s4t-select-replaced').prop('hidden', true);
+
+            var $wrap = $('<div class="s4t-custom-dropdown" draggable="false">');
+            if ($select.hasClass('s4t-sheet-source-select')) $wrap.addClass('s4t-custom-source-dropdown');
+            if ($select.hasClass('s4t-sheet-type-select')) $wrap.addClass('s4t-custom-type-dropdown');
+            if ($select.hasClass('s4t-sheet-cell-select')) $wrap.addClass('s4t-custom-cell-dropdown');
+            if ($select.attr('id') === 's4t-sort-select') $wrap.addClass('s4t-custom-sort-dropdown');
+
+            var $trigger = $('<button type="button" class="s4t-custom-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false" draggable="false">');
+            var $label = $('<span class="s4t-custom-dropdown-label">');
+            var $arrow = $('<span class="s4t-custom-dropdown-arrow" aria-hidden="true">▾</span>');
+            $trigger.append($label, $arrow);
+
+            var $menu = $('<div class="s4t-custom-dropdown-menu" role="listbox" hidden draggable="false">');
+
+            function refreshOptions() {
+                $menu.empty();
+                var currentVal = $select.val();
+                var selectedText = '';
+                $select.find('option').each(function () {
+                    var val = $(this).val();
+                    var text = $(this).text();
+                    var isSelected = val === currentVal || (!currentVal && !val && !selectedText);
+                    if (isSelected && !selectedText) selectedText = text;
+
+                    var $item = $('<div class="s4t-custom-dropdown-item" role="option" draggable="false">')
+                        .attr('data-val', val)
+                        .text(text);
+                    if (isSelected) $item.addClass('s4t-selected');
+
+                    $item.on('click', function (e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        $select.val(val).trigger('change');
+                        closeDropdown();
+                    });
+
+                    $menu.append($item);
+                });
+
+                if (!selectedText) {
+                    var firstOpt = $select.find('option:first');
+                    selectedText = firstOpt.length ? firstOpt.text() : '';
+                }
+                $label.text(selectedText);
+            }
+
+            refreshOptions();
+
+            // Sync with select change events
+            $select.on('change.s4tSync', function () {
+                var currentVal = $select.val();
+                var selectedOpt = $select.find('option').filter(function () { return $(this).val() === currentVal; });
+                if (selectedOpt.length) {
+                    $label.text(selectedOpt.text());
+                    $menu.find('.s4t-custom-dropdown-item').removeClass('s4t-selected');
+                    $menu.find('[data-val="' + currentVal + '"]').addClass('s4t-selected');
+                }
+            });
+
+            var openedAt = 0;
+            function openDropdown() {
+                openedAt = Date.now();
+                dialog.find('.s4t-custom-dropdown-menu').not($menu).prop('hidden', true);
+                dialog.find('.s4t-custom-dropdown-trigger').not($trigger).attr('aria-expanded', 'false');
+                dialog.find('.s4t-custom-dropdown').not($wrap).removeClass('s4t-dropdown-open s4t-dropdown-up s4t-dropdown-align-right');
+                dialog.find('.s4t-sheet-th').removeClass('s4t-th-dropdown-active');
+                dialog.find('.s4t-sheet-cell').removeClass('s4t-cell-dropdown-active');
+                dialog.find('.s4t-sheet-row').removeClass('s4t-row-dropdown-active');
+
+                refreshOptions();
+                $menu.prop('hidden', false);
+                $trigger.attr('aria-expanded', 'true');
+                $wrap.addClass('s4t-dropdown-open');
+                $wrap.closest('.s4t-sheet-th').addClass('s4t-th-dropdown-active');
+                $wrap.closest('.s4t-sheet-cell').addClass('s4t-cell-dropdown-active');
+                $wrap.closest('.s4t-sheet-row').addClass('s4t-row-dropdown-active');
+
+                try {
+                    var wrapRect = $wrap[0].getBoundingClientRect();
+                    var dialogRect = dialog[0].getBoundingClientRect();
+                    var gridWrap = dialog.find('.s4t-sheet-grid-wrapper');
+                    var bottomBoundary = gridWrap.length ? Math.min(dialogRect.bottom, gridWrap[0].getBoundingClientRect().bottom) : dialogRect.bottom;
+                    var topBoundary = gridWrap.length ? Math.max(dialogRect.top, gridWrap[0].getBoundingClientRect().top) : dialogRect.top;
+                    var rightBoundary = gridWrap.length ? Math.min(dialogRect.right, gridWrap[0].getBoundingClientRect().right) : dialogRect.right;
+
+                    if (wrapRect.bottom + 180 > bottomBoundary && wrapRect.top - 180 > topBoundary) {
+                        $wrap.addClass('s4t-dropdown-up');
+                    } else {
+                        $wrap.removeClass('s4t-dropdown-up');
+                    }
+
+                    if (wrapRect.left + 220 > rightBoundary && wrapRect.right - 220 >= dialogRect.left) {
+                        $wrap.addClass('s4t-dropdown-align-right');
+                    } else {
+                        $wrap.removeClass('s4t-dropdown-align-right');
+                    }
+                } catch (_) {}
+            }
+
+            function closeDropdown() {
+                $menu.prop('hidden', true);
+                $trigger.attr('aria-expanded', 'false');
+                $wrap.removeClass('s4t-dropdown-open s4t-dropdown-up s4t-dropdown-align-right');
+                $wrap.closest('.s4t-sheet-th').removeClass('s4t-th-dropdown-active');
+                $wrap.closest('.s4t-sheet-cell').removeClass('s4t-cell-dropdown-active');
+                $wrap.closest('.s4t-sheet-row').removeClass('s4t-row-dropdown-active');
+            }
+
+            // Open on hover (mouseover / mouseenter) & close on mouseleave
+            var hoverTimer;
+            $wrap.on('mouseenter', function () {
+                clearTimeout(hoverTimer);
+                openDropdown();
+            }).on('mouseleave', function () {
+                hoverTimer = setTimeout(function () {
+                    closeDropdown();
+                }, 140);
+            });
+
+            // Single click toggles dropdown
+            $trigger.on('click', function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if ($menu.prop('hidden')) {
+                    openDropdown();
+                } else {
+                    // If opened by hover within last 400ms, user click intended to open/focus, stay open
+                    if (Date.now() - openedAt < 400) {
+                        return;
+                    }
+                    closeDropdown();
+                }
+            });
+
+            // Keyboard accessibility
+            $wrap.on('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    closeDropdown();
+                    $trigger.focus();
+                }
+            });
+
+            // Close on mousedown outside
+            $(document).off('mousedown.s4tCustomDropClose').on('mousedown.s4tCustomDropClose', function (e) {
+                if (!$(e.target).closest('.s4t-custom-dropdown').length) {
+                    dialog.find('.s4t-custom-dropdown-menu').prop('hidden', true);
+                    dialog.find('.s4t-custom-dropdown-trigger').attr('aria-expanded', 'false');
+                    dialog.find('.s4t-custom-dropdown').removeClass('s4t-dropdown-open s4t-dropdown-up s4t-dropdown-align-right');
+                    dialog.find('.s4t-sheet-th').removeClass('s4t-th-dropdown-active');
+                    dialog.find('.s4t-sheet-cell').removeClass('s4t-cell-dropdown-active');
+                    dialog.find('.s4t-sheet-row').removeClass('s4t-row-dropdown-active');
+                }
+            });
+
+            $wrap.append($trigger, $menu);
+
+            if ($select.parent().length) {
+                $select.after($wrap);
+            } else {
+                setTimeout(function () {
+                    $select.after($wrap);
+                    refreshOptions();
+                }, 0);
+            }
+        }
+
 
         function setupLookup(data) {
             state.boardData = data;
@@ -600,7 +902,10 @@
                 excludedLabelIds: Array.from(state.excludedLabelIds),
                 sortBy: state.sortBy
             });
-            dialog.find('#s4t-export-count-badge').text(state.filteredCards.length + ' cards matching');
+            var count = state.filteredCards.length;
+            dialog.find('#s4t-export-count-badge')
+                .text(count + ' cards matching')
+                .attr('data-copy-value', count);
         }
 
         function saveConfig() {
@@ -610,7 +915,7 @@
                     insertSeparatorRow: state.insertSeparatorRow
                 };
                 localStorage.setItem(storageKey, JSON.stringify(cfg));
-                localStorage.setItem('s4t_card_export_cfg_default', JSON.stringify(cfg));
+                localStorage.setItem('s4t_card_export_cfg_v2_default', JSON.stringify(cfg));
             } catch (_) {}
         }
 
@@ -655,17 +960,6 @@
         function renderSheetTab(container) {
             container.empty();
 
-            var topBar = $('<div class="s4t-sheet-top-bar">');
-            topBar.append([
-                '<div class="s4t-sheet-hint">',
-                '  <strong>Spreadsheet Columns:</strong> Rename headers, map data sources & formats, or drag cards to reorder.',
-                '</div>',
-                '<div class="s4t-sheet-top-actions">',
-                '  <span class="s4t-sheet-col-count-badge" id="s4t-sheet-col-count"></span>',
-                '</div>'
-            ].join(''));
-            container.append(topBar);
-
             // Sheet Grid Wrapper with horizontal & vertical scroll
             var gridWrapper = $('<div class="s4t-sheet-grid-wrapper">');
             var table = $('<table class="s4t-sheet-grid-table" id="s4t-sheet-table">');
@@ -683,14 +977,27 @@
                 '  <span class="s4t-sheet-guide-toggle-hint">Click to expand tips ▾</span>',
                 '</summary>',
                 '<div class="s4t-sheet-guide-grid">',
-                '  <div class="s4t-sheet-guide-item"><strong>↔ Drag & Drop Columns:</strong> Grab the <span class="s4t-sheet-guide-badge">⋮⋮</span> handle on any column header to rearrange column sequence.</div>',
-                '  <div class="s4t-sheet-guide-item"><strong>✏️ Rename & Map:</strong> Edit header text directly and use <em>Source: ⓘ</em> to map to 14 fields (lists, points, devs, dates, checklists, etc.).</div>',
-                '  <div class="s4t-sheet-guide-item"><strong>🎯 Selectable Formats:</strong> Set column format to <em>Board Devs Dropdown</em>, <em>QA Checkbox</em>, or <em>Custom Dropdown</em> for external team roles.</div>',
+                '  <div class="s4t-sheet-guide-item"><strong>↔ Drag & Drop Columns:</strong> Grab the 6-dot grip handle on any column header to rearrange column sequence.</div>',
+                '  <div class="s4t-sheet-guide-item"><strong>✏️ Rename & Map:</strong> Edit header text directly and use <em>Shows: ⓘ</em> to map to 14 fields (lists, points, devs, dates, checklists, etc.).</div>',
+                '  <div class="s4t-sheet-guide-item"><strong>🎯 Selectable Dtypes:</strong> Set column dtype to <em>String</em>, <em>Devs</em>, or <em>Custom</em> for custom dropdown lists.</div>',
                 '  <div class="s4t-sheet-guide-item"><strong>🟢 Classic Green First Row:</strong> Headers are formatted with standard spreadsheet green, bold text, and Times New Roman font.</div>',
                 '  <div class="s4t-sheet-guide-item"><strong>📂 Group Separators:</strong> Enable <em>"Line break between groups"</em> to automatically insert divider rows between developers or lists.</div>',
                 '  <div class="s4t-sheet-guide-item"><strong>⚡ Instant Export:</strong> Click <em>Copy for Google Sheets</em> for immediate TSV paste, or download formatted <em>Excel (.xls)</em> or <em>CSV</em>.</div>',
                 '</div>'
             ].join(''));
+            guideBanner.on('toggle', function () {
+                var isOpen = this.open;
+                guideBanner.find('.s4t-sheet-guide-toggle-hint').text(isOpen ? 'Click to close tips ▾' : 'Click to expand tips ▴');
+            });
+
+            $(document).off('click.s4tGuideClose').on('click.s4tGuideClose', function (e) {
+                var gb = dialog.find('.s4t-sheet-guide-banner');
+                if (gb.length && gb.prop('open') && !$(e.target).closest('.s4t-sheet-guide-banner').length) {
+                    gb.prop('open', false);
+                    gb.find('.s4t-sheet-guide-toggle-hint').text('Click to expand tips ▴');
+                }
+            });
+
             container.append(guideBanner);
 
             renderSheetTableContent();
@@ -711,9 +1018,14 @@
 
                 // Card Top Row: Drag handle, Col Badge, Delete button
                 var cardTop = $('<div class="s4t-sheet-card-top">');
-                var dragHandle = $('<span class="s4t-sheet-drag-handle" title="Drag to reorder column">⋮⋮</span>');
+                var dragHandle = $('<span class="s4t-sheet-drag-handle" data-tooltip="Drag to reorder column" aria-label="Drag to reorder column">' +
+                    '<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">' +
+                    '<circle cx="5" cy="3.5" r="1.3"/><circle cx="11" cy="3.5" r="1.3"/>' +
+                    '<circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/>' +
+                    '<circle cx="5" cy="12.5" r="1.3"/><circle cx="11" cy="12.5" r="1.3"/>' +
+                    '</svg></span>');
                 var colBadge = $('<span class="s4t-sheet-col-badge">').text('Col ' + (idx + 1));
-                var delBtn = $('<button type="button" class="s4t-sheet-col-del" title="Remove column" aria-label="Remove column">✕</button>')
+                var delBtn = $('<button type="button" class="s4t-sheet-col-del" data-tooltip="Remove column" aria-label="Remove column">✕</button>')
                     .prop('disabled', state.columns.length <= 1)
                     .on('click', function () {
                         if (state.columns.length > 1) {
@@ -722,6 +1034,7 @@
                             saveConfig();
                             renderSheetTableContent();
                             updateColumnsCountBadge();
+                            updateActionButtonsState();
                         }
                     });
                 cardTop.append(dragHandle, colBadge, delBtn);
@@ -742,9 +1055,10 @@
                 // Source Mapping: Header row with label + info icon next to it, and small centered select box
                 var sourceRow = $('<div class="s4t-sheet-source-row">');
                 var sourceHeader = $('<div class="s4t-sheet-source-header">');
-                var sourceLabel = $('<span class="s4t-sheet-source-label">Source:</span>');
+                var sourceLabel = $('<span class="s4t-sheet-source-label">Shows:</span>');
                 var currentField = FIELD_MAP[col.source] || FIELD_DEFINITIONS[0];
-                var infoIcon = $('<span class="s4t-field-info-icon" tabindex="0" role="button" aria-label="Field details" data-tooltip="' + s4tEscapeHtml(currentField.desc) + '">ⓘ</span>');
+                var infoSvg = '<svg class="s4t-field-info-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                var infoIcon = $('<span class="s4t-field-info-icon" tabindex="0" role="button" aria-label="Field details" data-tooltip="' + s4tEscapeHtml(currentField.desc) + '"></span>').append(infoSvg);
                 sourceHeader.append(sourceLabel, infoIcon);
 
                 var selectWrap = $('<div class="s4t-sheet-source-select-wrap">');
@@ -766,28 +1080,46 @@
                 });
                 selectWrap.append(sourceSelect);
                 sourceRow.append(sourceHeader, selectWrap);
+                attachDropdownHover(sourceSelect);
 
-                // Format / Cell Type Row
+                // Format / dtype Row
                 var typeRow = $('<div class="s4t-sheet-type-row">');
-                var typeHeader = $('<div class="s4t-sheet-type-header"><span class="s4t-sheet-type-label">Format:</span></div>');
-                var typeSelect = $('<select class="s4t-sheet-type-select" aria-label="Cell Format">');
+                var typeHeader = $('<div class="s4t-sheet-type-header"><span class="s4t-sheet-type-label">dtype:</span></div>');
+                var typeSelect = $('<select class="s4t-sheet-type-select" aria-label="Cell Data Type">');
+
+                var currentType = col.cellType;
+                if (!currentType || currentType === 'checkbox') currentType = 'text';
                 [
-                    { val: 'text', text: 'Standard Text' },
-                    { val: 'dev_select', text: 'Dropdown (Board Devs)' },
-                    { val: 'checkbox', text: 'Checkbox (QA / Review)' },
-                    { val: 'custom_select', text: 'Custom Dropdown...' }
+                    { val: 'text', text: 'String' },
+                    { val: 'dev_select', text: 'Devs' },
+                    { val: 'custom_select', text: 'Custom' }
                 ].forEach(function (t) {
                     var opt = $('<option>').val(t.val).text(t.text);
-                    if ((col.cellType || 'text') === t.val) opt.prop('selected', true);
+                    if (currentType === t.val) opt.prop('selected', true);
                     typeSelect.append(opt);
                 });
 
-                var customInput = $('<input type="text" class="s4t-sheet-custom-options-input" placeholder="e.g. PO, CS, QA, Lead" title="Comma-separated dropdown options" aria-label="Custom dropdown values">')
+                var customInput = $('<input type="text" class="s4t-sheet-custom-options-input" placeholder="e.g. In Progress, Blocked, Ready for QA" data-tooltip="Comma-separated custom dropdown options" aria-label="Custom dropdown values">')
                     .val(col.customOptions || '')
-                    .prop('hidden', (col.cellType || 'text') !== 'custom_select');
+                    .prop('hidden', currentType !== 'custom_select');
+
+                function validateCustomOptions() {
+                    var isMissing = isCustomDtypeMissing(col);
+                    if (col.cellType === 'custom_select' && isMissing) {
+                        customInput.addClass('s4t-input-required-error');
+                        customInput.attr('data-tooltip', 'Required: Enter comma-separated dropdown options');
+                    } else {
+                        customInput.removeClass('s4t-input-required-error');
+                        customInput.attr('data-tooltip', 'Comma-separated custom dropdown options');
+                    }
+                    updateActionButtonsState();
+                }
+                validateCustomOptions();
 
                 customInput.on('input', function () {
                     col.customOptions = $(this).val();
+                    validateCustomOptions();
+                    updateActionButtonsState();
                     state.previewDirty = true;
                     saveConfig();
                     if (state.previewVisible) renderSheetTableBody();
@@ -795,12 +1127,19 @@
 
                 typeSelect.on('change', function () {
                     col.cellType = $(this).val();
-                    customInput.prop('hidden', col.cellType !== 'custom_select');
+                    var isCustom = col.cellType === 'custom_select';
+                    customInput.prop('hidden', !isCustom);
+                    validateCustomOptions();
+                    updateActionButtonsState();
+                    if (isCustom) {
+                        customInput.focus();
+                    }
                     state.previewDirty = true;
                     saveConfig();
                     if (state.previewVisible) renderSheetTableBody();
                 });
                 typeRow.append(typeHeader, typeSelect, customInput);
+                attachDropdownHover(typeSelect);
 
                 card.append(cardTop, cardInputRow, sourceRow, typeRow);
                 th.append(card);
@@ -823,6 +1162,13 @@
                 saveConfig();
                 renderSheetTableContent();
                 updateColumnsCountBadge();
+                updateActionButtonsState();
+                setTimeout(function () {
+                    var wrapper = dialog.find('.s4t-sheet-grid-wrapper');
+                    if (wrapper.length) {
+                        wrapper.animate({ scrollLeft: wrapper[0].scrollWidth }, 250);
+                    }
+                }, 10);
             });
             addTh.append(addBtn);
             trHead.append(addTh);
@@ -834,6 +1180,7 @@
             var tbody = $('<tbody>');
             table.append(tbody);
             renderSheetTableBody();
+            updateActionButtonsState();
         }
 
         function renderDirtyIndicator() {
@@ -885,14 +1232,17 @@
                 return;
             }
 
-            // Dirty banner if settings changed
+            // Dirty banner if settings changed: hide stale rows and show generate preview button
             if (state.previewDirty) {
                 var dirtyTr = $('<tr class="s4t-sheet-dirty-row">');
-                var dirtyTd = $('<td colspan="' + totalColSpan + '">');
+                var dirtyTd = $('<td colspan="' + totalColSpan + '" class="s4t-sheet-dirty-cell">');
                 dirtyTd.html([
                     '<div class="s4t-dirty-banner">',
-                    '  <span>⚡ Column or exclusion settings changed.</span>',
-                    '  <button type="button" class="s4t-btn s4t-btn-warning s4t-dirty-refresh-btn">🔄 Update Preview</button>',
+                    '  <div class="s4t-dirty-msg-wrap">',
+                    '    <span class="s4t-dirty-icon">⚡</span>',
+                    '    <span class="s4t-dirty-text">Column or exclusion settings changed.</span>',
+                    '  </div>',
+                    '  <button type="button" class="s4t-btn s4t-btn-primary s4t-dirty-refresh-btn">👁️ Generate Preview</button>',
                     '</div>'
                 ].join(''));
 
@@ -903,6 +1253,7 @@
 
                 dirtyTr.append(dirtyTd);
                 tbody.append(dirtyTr);
+                return;
             }
 
             var sampleCards = state.filteredCards.slice(0, 20);
@@ -931,7 +1282,11 @@
                 var tr = $('<tr class="s4t-sheet-row">');
 
                 state.columns.forEach(function (col) {
-                    var val = s4tExtractFieldValue(card, col.source, state.lookup);
+                    var cellKey = card.id + '_' + col.id;
+                    var baseVal = s4tExtractFieldValue(card, col.source, state.lookup);
+                    var val = (state.editedCells && state.editedCells[cellKey] !== undefined)
+                        ? state.editedCells[cellKey]
+                        : baseVal;
                     var td = $('<td class="s4t-sheet-cell">');
                     var cellType = col.cellType || 'text';
 
@@ -941,35 +1296,79 @@
                         var inp = $('<input type="checkbox" class="s4t-sheet-cell-checkbox">').prop('checked', isChecked);
                         var chkTxt = $('<span class="s4t-sheet-cell-checkbox-label">').text(val ? val : (isChecked ? 'Done' : 'Pending'));
                         inp.on('change', function () {
-                            chkTxt.text(this.checked ? 'Done' : 'Pending');
+                            var checkedVal = this.checked ? 'Done' : 'Pending';
+                            chkTxt.text(checkedVal);
+                            state.editedCells = state.editedCells || {};
+                            state.editedCells[cellKey] = checkedVal;
                         });
                         chkWid.append(inp, chkTxt);
                         td.append(chkWid);
                     } else if (cellType === 'dev_select') {
+                        td.addClass('s4t-sheet-cell-has-dropdown');
                         var devSel = $('<select class="s4t-sheet-cell-select" aria-label="Assignee">');
                         devSel.append($('<option value="">').text('-- Select Dev --'));
+                        var matchedDev = false;
                         (state.boardData.members || []).forEach(function (m) {
                             var mName = m.fullName || m.username || '';
+                            if (!mName) return;
                             var opt = $('<option>').val(mName).text(mName);
-                            if (val && val.toLowerCase().includes(mName.toLowerCase())) opt.prop('selected', true);
+                            if (val && (val.toLowerCase() === mName.toLowerCase() || val.toLowerCase().includes(mName.toLowerCase()))) {
+                                opt.prop('selected', true);
+                                matchedDev = true;
+                            }
                             devSel.append(opt);
                         });
+                        if (val && !matchedDev) {
+                            var customDevOpt = $('<option>').val(val).text(val).prop('selected', true);
+                            devSel.append(customDevOpt);
+                        }
+                        devSel.on('change', function () {
+                            state.editedCells = state.editedCells || {};
+                            state.editedCells[cellKey] = $(this).val();
+                        });
                         td.append(devSel);
+                        attachDropdownHover(devSel);
                     } else if (cellType === 'custom_select') {
+                        td.addClass('s4t-sheet-cell-has-dropdown');
                         var custSel = $('<select class="s4t-sheet-cell-select" aria-label="Role / Value">');
-                        var rawOpts = col.customOptions || 'Product Owner, CS Member, QA, Tech Lead';
-                        var optList = rawOpts.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-                        if (!optList.length) optList = ['Product Owner', 'CS Member', 'QA', 'Tech Lead'];
+                        var optList = s4tParseCustomOptions(col.customOptions);
+                        var hasMatched = false;
+                        if (val) {
+                            hasMatched = optList.some(function (optVal) {
+                                return optVal.toLowerCase() === val.toLowerCase();
+                            });
+                            if (!hasMatched) {
+                                optList.unshift(val);
+                            }
+                        }
+                        if (!val && col.source === 'blank') {
+                            custSel.append($('<option value="">').text('-- Select --').prop('selected', true));
+                        }
                         optList.forEach(function (optVal) {
                             var opt = $('<option>').val(optVal).text(optVal);
-                            if (val && val.toLowerCase() === optVal.toLowerCase()) opt.prop('selected', true);
+                            if (val && val.toLowerCase() === optVal.toLowerCase()) {
+                                opt.prop('selected', true);
+                            }
                             custSel.append(opt);
                         });
+                        custSel.on('change', function () {
+                            state.editedCells = state.editedCells || {};
+                            state.editedCells[cellKey] = $(this).val();
+                        });
                         td.append(custSel);
+                        attachDropdownHover(custSel);
+                    } else if (col.source === 'blank') {
+                        var cellInp = $('<input type="text" class="s4t-sheet-cell-input" placeholder="—" aria-label="' + s4tEscapeHtml(col.header || 'Comment') + '">')
+                            .val(val || '');
+                        cellInp.on('input change', function () {
+                            state.editedCells = state.editedCells || {};
+                            state.editedCells[cellKey] = $(this).val();
+                        });
+                        td.append(cellInp);
                     } else {
                         td.text(val);
                     }
-                    if (val) td.attr('title', val);
+                    if (val && cellType !== 'dev_select' && cellType !== 'custom_select' && col.source !== 'blank') td.attr('title', val);
                     tr.append(td);
                 });
                 // Empty cell under "+ Add Column"
@@ -981,7 +1380,9 @@
             var noteTr = $('<tr class="s4t-sheet-note-row">');
             var noteText = 'Showing preview of first ' + sampleCards.length + ' cards (' + state.filteredCards.length + ' total cards will be exported).' +
                 (state.insertSeparatorRow ? ' • Group line breaks enabled.' : '');
-            var noteTd = $('<td colspan="' + totalColSpan + '">').text(noteText);
+            var noteTd = $('<td colspan="' + totalColSpan + '">');
+            var noteContent = $('<span class="s4t-sheet-note-content">').text(noteText);
+            noteTd.append(noteContent);
             noteTr.append(noteTd);
             tbody.append(noteTr);
         }
@@ -1041,7 +1442,7 @@
                 '  <p class="s4t-export-att-sub">Check items to exclude them from the exported spreadsheet.</p>',
                 '</div>',
                 '<div class="s4t-export-att-sort-box">',
-                '  <label class="s4t-sheet-topbar-toggle s4t-export-separator-toggle" title="Insert an empty line break row between groups (e.g. per developer or list)" data-tooltip="Insert an empty line break row between groups (e.g. per developer or list)">',
+                '  <label class="s4t-sheet-topbar-toggle s4t-export-separator-toggle" data-tooltip="Insert an empty line break row between groups (e.g. per developer or list)">',
                 '    <input type="checkbox" id="s4t-toggle-separator"' + (state.insertSeparatorRow ? ' checked' : '') + '>',
                 '    <span>Line break between groups</span>',
                 '  </label>',
@@ -1066,19 +1467,132 @@
             });
 
             // Columns Grid modeled strictly after Attention panel (.s4t-export-att-columns)
+            // Columns Grid modeled strictly after Attention panel (.s4t-export-att-columns)
             var columnsGrid = $('<div class="s4t-export-att-columns">');
 
-            // 1. Lists Column
+            var attInfoSvg = '<svg class="s4t-field-info-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+            function makeAttInfoIcon(label, tooltip) {
+                return $('<span class="s4t-att-info-icon" tabindex="0" role="button" aria-label="' + s4tEscapeHtml(label) + '" data-tooltip="' + s4tEscapeHtml(tooltip) + '"></span>').append(attInfoSvg);
+            }
+
+            // 1. Members Column (Column 1)
+            var membersCol = $('<div class="s4t-export-att-col">');
+            var membersHead = $('<div class="s4t-export-att-column-heading">').append(
+                $('<div class="s4t-export-att-heading-title">').append(
+                    $('<h4>').text('Members'),
+                    makeAttInfoIcon('Members details', 'Match any selected member. All members are included by default.')
+                ),
+                $('<div class="s4t-export-att-list-groups s4t-export-att-member-group">')
+            );
+            membersCol.append(membersHead);
+
+            var allMemberIds = ['__unassigned__'].concat((state.boardData.members || []).map(function (m) { return m.id; }));
+
+            function updateMemberGroupToggle() {
+                var includedCount = allMemberIds.filter(function (id) { return !state.excludedMemberIds.has(id); }).length;
+                var input = membersHead.find('[data-member-group="all"]')[0];
+                if (input) {
+                    input.checked = allMemberIds.length > 0 && includedCount === allMemberIds.length;
+                    input.indeterminate = includedCount > 0 && includedCount < allMemberIds.length;
+                    input.disabled = allMemberIds.length === 0;
+                }
+            }
+
+            var allMembersInput = $('<input type="checkbox" data-member-group="all" aria-label="All members">');
+            allMembersInput.on('change', function () {
+                var isChecked = this.checked;
+                if (isChecked) {
+                    state.excludedMemberIds.clear();
+                } else {
+                    allMemberIds.forEach(function (id) {
+                        state.excludedMemberIds.add(id);
+                    });
+                }
+                membersScroll.find('[data-member-toggle]').each(function () {
+                    this.checked = isChecked;
+                });
+                updateMemberGroupToggle();
+                renderExcludeLists();
+                onExclusionsChanged();
+            });
+
+            membersHead.find('.s4t-export-att-member-group').append(
+                $('<label class="s4t-export-att-group-toggle" data-tooltip="All members (' + allMemberIds.length + ')">')
+                    .append(allMembersInput)
+                    .on('mousedown pointerdown', function () { $(this).addClass('s4t-tooltip-dismissed'); })
+                    .on('mouseleave focusout', function () { $(this).removeClass('s4t-tooltip-dismissed'); })
+            );
+
+            var membersScroll = $('<div class="s4t-export-att-members">');
+            var unassignedOpt = $('<label class="s4t-export-att-option">');
+            var unassignedIncluded = !state.excludedMemberIds.has('__unassigned__');
+            var unassignedChk = $('<input type="checkbox" data-member-toggle="__unassigned__"' + (unassignedIncluded ? ' checked' : '') + '>');
+            unassignedChk.on('change', function () {
+                if (this.checked) state.excludedMemberIds.delete('__unassigned__');
+                else state.excludedMemberIds.add('__unassigned__');
+                updateMemberGroupToggle();
+                renderExcludeLists();
+                onExclusionsChanged();
+            });
+            unassignedOpt.append(unassignedChk, $('<span><em>(Unassigned cards)</em></span>'));
+            membersScroll.append(unassignedOpt);
+
+            (state.boardData.members || []).forEach(function (m) {
+                var isIncluded = !state.excludedMemberIds.has(m.id);
+                var opt2 = $('<label class="s4t-export-att-option">');
+                var chk2 = $('<input type="checkbox" data-member-toggle="' + s4tEscapeHtml(m.id) + '"' + (isIncluded ? ' checked' : '') + '>');
+                chk2.on('change', function () {
+                    if (this.checked) state.excludedMemberIds.delete(m.id);
+                    else state.excludedMemberIds.add(m.id);
+                    updateMemberGroupToggle();
+                    renderExcludeLists();
+                    onExclusionsChanged();
+                });
+                opt2.append(chk2, $('<span>').text(m.fullName || m.username));
+                membersScroll.append(opt2);
+            });
+            membersCol.append(membersScroll);
+            updateMemberGroupToggle();
+            columnsGrid.append(membersCol);
+
+            // 2. Exclude lists Column (Column 2 - modeled after Attention filters 3rd column)
             var listsCol = $('<div class="s4t-export-att-col">');
             var listsHead = $('<div class="s4t-export-att-column-heading">').append(
-                $('<h4>').text('Exclude lists'),
+                $('<div class="s4t-export-att-heading-title">').append(
+                    $('<h4>').text('Exclude lists'),
+                    makeAttInfoIcon('Exclude lists details', 'Cards in checked lists are excluded from export.')
+                ),
                 $('<div class="s4t-export-att-list-groups">')
             );
             listsCol.append(listsHead);
-            listsCol.append($('<p class="s4t-export-att-col-hint">').text('Cards in checked lists are excluded from export.'));
+
+            function getMemberLists(boardData, excludedMemberIds) {
+                if (!boardData || !Array.isArray(boardData.lists)) return [];
+                var allLists = boardData.lists.filter(function (l) { return !l.closed; });
+                var allCards = (boardData.cards || []).filter(function (c) { return !c.closed; });
+                var allMemIds = ['__unassigned__'].concat((boardData.members || []).map(function (m) { return m.id; }));
+                var includedCount = allMemIds.filter(function (id) { return !excludedMemberIds.has(id); }).length;
+                if (includedCount === 0) return [];
+                if (!allCards.length) return allLists;
+
+                var listIdsWithCards = new Set();
+                allCards.forEach(function (card) {
+                    var cardMembers = card.idMembers || [];
+                    var matches = false;
+                    if (cardMembers.length === 0) {
+                        matches = !excludedMemberIds.has('__unassigned__');
+                    } else {
+                        matches = cardMembers.some(function (id) { return !excludedMemberIds.has(id); });
+                    }
+                    if (matches) {
+                        listIdsWithCards.add(card.idList);
+                    }
+                });
+                return allLists.filter(function (list) { return listIdsWithCards.has(list.id); });
+            }
 
             function groupLists(group) {
-                var all = state.boardData.lists || [];
+                var all = getMemberLists(state.boardData, state.excludedMemberIds);
                 if (group === 'all') return all;
                 var pattern = group === 'todo' ? /\bto[\s-]*do\b/i : /\bnot[\s-]+sure\b/i;
                 return all.filter(function (l) { return pattern.test(l.name); });
@@ -1095,139 +1609,110 @@
                 });
             }
 
-            var listsScroll = $('<div class="s4t-export-att-lists">');
-            (state.boardData.lists || []).forEach(function (l) {
-                var isExcluded = state.excludedListIds.has(l.id);
-                var opt = $('<label class="s4t-export-att-option">');
-                var chk = $('<input type="checkbox" data-exclude-list="' + s4tEscapeHtml(l.id) + '"' + (isExcluded ? ' checked' : '') + '>');
-                chk.on('change', function () {
-                    if (this.checked) state.excludedListIds.add(l.id);
-                    else state.excludedListIds.delete(l.id);
-                    updateListGroupToggles();
-                    onExclusionsChanged();
-                });
-                opt.append(chk, $('<span>').text(l.name));
-                listsScroll.append(opt);
-            });
-            listsCol.append(listsScroll);
-
-            [
+            var listGroups = [
                 { key: 'all', name: 'All lists' },
                 { key: 'todo', name: 'All Todo lists' },
                 { key: 'not-sure', name: 'All Not Sure lists' }
-            ].forEach(function (group) {
-                var count = groupLists(group.key).length;
-                var description = group.name + ' (' + count + ')';
-                var input = $('<input type="checkbox">').attr({ 'data-list-group': group.key, 'aria-label': description });
-                input.on('change', function () {
-                    var ids = groupLists(group.key).map(function (l) { return l.id; });
-                    var isChecked = this.checked;
-                    ids.forEach(function (id) {
-                        if (isChecked) state.excludedListIds.add(id);
-                        else state.excludedListIds.delete(id);
+            ];
+
+            function renderListGroupToggles() {
+                var groupsContainer = listsHead.find('.s4t-export-att-list-groups').empty();
+                listGroups.forEach(function (group) {
+                    var count = groupLists(group.key).length;
+                    var description = group.name + ' (' + count + ')';
+                    var input = $('<input type="checkbox">').attr({ 'data-list-group': group.key, 'aria-label': description });
+                    input.on('change', function () {
+                        var ids = groupLists(group.key).map(function (l) { return l.id; });
+                        var isChecked = this.checked;
+                        ids.forEach(function (id) {
+                            if (isChecked) state.excludedListIds.add(id);
+                            else state.excludedListIds.delete(id);
+                        });
+                        if (group.key === 'not-sure') {
+                            state.excludeNotSure = isChecked;
+                        }
+                        listsScroll.find('[data-exclude-list]').each(function () {
+                            this.checked = state.excludedListIds.has(this.getAttribute('data-exclude-list'));
+                        });
+                        updateListGroupToggles();
+                        onExclusionsChanged();
                     });
-                    if (group.key === 'not-sure') {
-                        state.excludeNotSure = isChecked;
-                    }
-                    listsScroll.find('[data-exclude-list]').each(function () {
-                        this.checked = state.excludedListIds.has(this.getAttribute('data-exclude-list'));
-                    });
-                    updateListGroupToggles();
-                    onExclusionsChanged();
+                    var toggleLabel = $('<label class="s4t-export-att-group-toggle">')
+                        .attr('data-tooltip', description)
+                        .append(input)
+                        .on('mousedown pointerdown', function () { $(this).addClass('s4t-tooltip-dismissed'); })
+                        .on('mouseleave focusout', function () { $(this).removeClass('s4t-tooltip-dismissed'); });
+                    groupsContainer.append(toggleLabel);
                 });
-                var toggleLabel = $('<label class="s4t-export-att-group-toggle">')
-                    .attr('data-tooltip', description)
-                    .append(input);
-                listsHead.find('.s4t-export-att-list-groups').append(toggleLabel);
-            });
-            updateListGroupToggles();
-            columnsGrid.append(listsCol);
-
-            // 2. Members Column
-            var membersCol = $('<div class="s4t-export-att-col">');
-            var membersHead = $('<div class="s4t-export-att-column-heading">').append(
-                $('<h4>').text('Members'),
-                $('<div class="s4t-export-att-list-groups s4t-export-att-member-group">')
-            );
-            membersCol.append(membersHead);
-            membersCol.append($('<p class="s4t-export-att-col-hint">').text('Cards assigned to checked members are excluded.'));
-
-            var allMemberIds = ['__unassigned__'].concat((state.boardData.members || []).map(function (m) { return m.id; }));
-
-            function updateMemberGroupToggle() {
-                var checked = allMemberIds.filter(function (id) { return state.excludedMemberIds.has(id); }).length;
-                var input = membersHead.find('[data-member-group="all"]')[0];
-                if (input) {
-                    input.checked = allMemberIds.length > 0 && checked === allMemberIds.length;
-                    input.indeterminate = checked > 0 && checked < allMemberIds.length;
-                    input.disabled = allMemberIds.length === 0;
-                }
+                updateListGroupToggles();
             }
 
-            var allMembersInput = $('<input type="checkbox" data-member-group="all" aria-label="All members">');
-            allMembersInput.on('change', function () {
-                var isChecked = this.checked;
-                allMemberIds.forEach(function (id) {
-                    if (isChecked) state.excludedMemberIds.add(id);
-                    else state.excludedMemberIds.delete(id);
-                });
-                membersScroll.find('[data-exclude-member]').each(function () {
-                    this.checked = state.excludedMemberIds.has(this.getAttribute('data-exclude-member'));
-                });
-                updateMemberGroupToggle();
-                onExclusionsChanged();
-            });
+            var listsScroll = $('<div class="s4t-export-att-lists">');
 
-            membersHead.find('.s4t-export-att-member-group').append(
-                $('<label class="s4t-export-att-group-toggle" data-tooltip="All members (' + allMemberIds.length + ')">').append(allMembersInput)
-            );
+            function renderExcludeLists() {
+                var availableLists = getMemberLists(state.boardData, state.excludedMemberIds);
+                var allMemIds = ['__unassigned__'].concat((state.boardData.members || []).map(function (m) { return m.id; }));
+                var includedCount = allMemIds.filter(function (id) { return !state.excludedMemberIds.has(id); }).length;
+                listsScroll.empty();
 
-            var membersScroll = $('<div class="s4t-export-att-members">');
-            var unassignedOpt = $('<label class="s4t-export-att-option">');
-            var unassignedChk = $('<input type="checkbox" data-exclude-member="__unassigned__"' + (state.excludedMemberIds.has('__unassigned__') ? ' checked' : '') + '>');
-            unassignedChk.on('change', function () {
-                if (this.checked) state.excludedMemberIds.add('__unassigned__');
-                else state.excludedMemberIds.delete('__unassigned__');
-                updateMemberGroupToggle();
-                onExclusionsChanged();
-            });
-            unassignedOpt.append(unassignedChk, $('<span><em>(Unassigned cards)</em></span>'));
-            membersScroll.append(unassignedOpt);
+                if (includedCount === 0) {
+                    listsScroll.append($('<p class="s4t-export-att-note" role="status">').text('NOTE: - No members selected. Select a member to see available lists.'));
+                } else if (!availableLists.length) {
+                    listsScroll.append($('<p class="s4t-export-att-note" role="status">').text('No lists found for the selected members.'));
+                } else {
+                    availableLists.forEach(function (l) {
+                        var isExcluded = state.excludedListIds.has(l.id);
+                        var opt = $('<label class="s4t-export-att-option">');
+                        var chk = $('<input type="checkbox" data-exclude-list="' + s4tEscapeHtml(l.id) + '"' + (isExcluded ? ' checked' : '') + '>');
+                        chk.on('change', function () {
+                            if (this.checked) state.excludedListIds.add(l.id);
+                            else state.excludedListIds.delete(l.id);
+                            updateListGroupToggles();
+                            onExclusionsChanged();
+                        });
+                        opt.append(chk, $('<span>').text(l.name));
+                        listsScroll.append(opt);
+                    });
+                }
+                renderListGroupToggles();
+            }
 
-            (state.boardData.members || []).forEach(function (m) {
-                var isExcluded = state.excludedMemberIds.has(m.id);
-                var opt2 = $('<label class="s4t-export-att-option">');
-                var chk2 = $('<input type="checkbox" data-exclude-member="' + s4tEscapeHtml(m.id) + '"' + (isExcluded ? ' checked' : '') + '>');
-                chk2.on('change', function () {
-                    if (this.checked) state.excludedMemberIds.add(m.id);
-                    else state.excludedMemberIds.delete(m.id);
-                    updateMemberGroupToggle();
-                    onExclusionsChanged();
-                });
-                opt2.append(chk2, $('<span>').text(m.fullName || m.username));
-                membersScroll.append(opt2);
-            });
-            membersCol.append(membersScroll);
-            updateMemberGroupToggle();
-            columnsGrid.append(membersCol);
+            listsCol.append(listsScroll);
+            renderExcludeLists();
+            columnsGrid.append(listsCol);
 
-            // 3. Labels Column
+            // 3. Labels Column (Column 3)
             var labelsCol = $('<div class="s4t-export-att-col">');
             var labelsHead = $('<div class="s4t-export-att-column-heading">').append(
-                $('<h4>').text('Labels'),
+                $('<div class="s4t-export-att-heading-title">').append(
+                    $('<h4>').text('Labels'),
+                    makeAttInfoIcon('Labels details', 'Match any selected label. All labels and unlabeled cards are included by default.')
+                ),
                 $('<div class="s4t-export-att-list-groups s4t-export-att-label-group">')
             );
             labelsCol.append(labelsHead);
-            labelsCol.append($('<p class="s4t-export-att-col-hint">').text('Cards with checked labels are excluded.'));
+
+            var LABEL_COLORS = {
+                green: '#4bce97',
+                yellow: '#f5cd47',
+                orange: '#fea362',
+                red: '#f87168',
+                purple: '#9f8fef',
+                blue: '#579dff',
+                sky: '#6cc3e0',
+                lime: '#94c748',
+                pink: '#e774bb',
+                black: '#8590a2'
+            };
 
             var allLabelKeys = ['__unlabeled__'].concat((state.boardData.labels || []).map(function (lb) { return lb.id || lb.name; }));
 
             function updateLabelGroupToggle() {
-                var checked = allLabelKeys.filter(function (k) { return state.excludedLabelIds.has(k); }).length;
+                var includedCount = allLabelKeys.filter(function (k) { return !state.excludedLabelIds.has(k); }).length;
                 var input = labelsHead.find('[data-label-group="all"]')[0];
                 if (input) {
-                    input.checked = allLabelKeys.length > 0 && checked === allLabelKeys.length;
-                    input.indeterminate = checked > 0 && checked < allLabelKeys.length;
+                    input.checked = allLabelKeys.length > 0 && includedCount === allLabelKeys.length;
+                    input.indeterminate = includedCount > 0 && includedCount < allLabelKeys.length;
                     input.disabled = allLabelKeys.length === 0;
                 }
             }
@@ -1235,46 +1720,57 @@
             var allLabelsInput = $('<input type="checkbox" data-label-group="all" aria-label="All labels">');
             allLabelsInput.on('change', function () {
                 var isChecked = this.checked;
-                allLabelKeys.forEach(function (k) {
-                    if (isChecked) state.excludedLabelIds.add(k);
-                    else state.excludedLabelIds.delete(k);
-                });
-                labelsScroll.find('[data-exclude-label]').each(function () {
-                    this.checked = state.excludedLabelIds.has(this.getAttribute('data-exclude-label'));
+                if (isChecked) {
+                    state.excludedLabelIds.clear();
+                } else {
+                    allLabelKeys.forEach(function (k) {
+                        state.excludedLabelIds.add(k);
+                    });
+                }
+                labelsScroll.find('[data-label-toggle]').each(function () {
+                    this.checked = isChecked;
                 });
                 updateLabelGroupToggle();
                 onExclusionsChanged();
             });
 
             labelsHead.find('.s4t-export-att-label-group').append(
-                $('<label class="s4t-export-att-group-toggle" data-tooltip="All labels (' + allLabelKeys.length + ')">').append(allLabelsInput)
+                $('<label class="s4t-export-att-group-toggle" data-tooltip="All labels (' + allLabelKeys.length + ')">')
+                    .append(allLabelsInput)
+                    .on('mousedown pointerdown', function () { $(this).addClass('s4t-tooltip-dismissed'); })
+                    .on('mouseleave focusout', function () { $(this).removeClass('s4t-tooltip-dismissed'); })
             );
 
             var labelsScroll = $('<div class="s4t-export-att-labels">');
             var unlabeledOpt = $('<label class="s4t-export-att-option">');
-            var unlabeledChk = $('<input type="checkbox" data-exclude-label="__unlabeled__"' + (state.excludedLabelIds.has('__unlabeled__') ? ' checked' : '') + '>');
+            var unlabeledIncluded = !state.excludedLabelIds.has('__unlabeled__');
+            var unlabeledChk = $('<input type="checkbox" data-label-toggle="__unlabeled__"' + (unlabeledIncluded ? ' checked' : '') + '>');
             unlabeledChk.on('change', function () {
-                if (this.checked) state.excludedLabelIds.add('__unlabeled__');
-                else state.excludedLabelIds.delete('__unlabeled__');
+                if (this.checked) state.excludedLabelIds.delete('__unlabeled__');
+                else state.excludedLabelIds.add('__unlabeled__');
                 updateLabelGroupToggle();
                 onExclusionsChanged();
             });
-            unlabeledOpt.append(unlabeledChk, $('<span><em>(Cards with no label)</em></span>'));
+            var unlabeledDot = $('<span class="s4t-export-att-label-dot s4t-label-dot-none" aria-hidden="true">');
+            unlabeledOpt.append(unlabeledChk, unlabeledDot, $('<span><em>(Cards with no label)</em></span>'));
             labelsScroll.append(unlabeledOpt);
 
             (state.boardData.labels || []).forEach(function (lb) {
                 var key = lb.id || lb.name;
-                var isExcluded = state.excludedLabelIds.has(key);
+                var isIncluded = !state.excludedLabelIds.has(key);
                 var opt3 = $('<label class="s4t-export-att-option">');
-                var chk3 = $('<input type="checkbox" data-exclude-label="' + s4tEscapeHtml(key) + '"' + (isExcluded ? ' checked' : '') + '>');
+                var chk3 = $('<input type="checkbox" data-label-toggle="' + s4tEscapeHtml(key) + '"' + (isIncluded ? ' checked' : '') + '>');
                 chk3.on('change', function () {
-                    if (this.checked) state.excludedLabelIds.add(key);
-                    else state.excludedLabelIds.delete(key);
+                    if (this.checked) state.excludedLabelIds.delete(key);
+                    else state.excludedLabelIds.add(key);
                     updateLabelGroupToggle();
                     onExclusionsChanged();
                 });
-                var dot = $('<span class="s4t-export-att-label-dot">').css('background-color', lb.color || '#626f86');
-                opt3.append(chk3, dot, $('<span>').text(lb.name || lb.color || 'Label'));
+                var colorKey = (lb.color || '').split('_')[0].toLowerCase();
+                var colorHex = LABEL_COLORS[colorKey] || '#8590a2';
+                var dot = $('<span class="s4t-export-att-label-dot" aria-hidden="true">').css('background-color', colorHex);
+                var labelName = lb.name || (lb.color ? lb.color.replace(/_/g, ' ') + ' (unnamed)' : 'Unnamed label');
+                opt3.append(chk3, dot, $('<span>').text(labelName));
                 labelsScroll.append(opt3);
             });
             labelsCol.append(labelsScroll);
@@ -1284,7 +1780,9 @@
             container.append(columnsGrid);
 
             // Bind sort select
-            header.find('#s4t-sort-select').on('change', function () {
+            var sortSelect = header.find('#s4t-sort-select');
+            attachDropdownHover(sortSelect);
+            sortSelect.on('change', function () {
                 state.sortBy = $(this).val();
                 onExclusionsChanged();
             });
@@ -1301,12 +1799,15 @@
             var footer = $('<footer class="s4t-export-footer">');
 
             footer.append([
+                '<div class="s4t-export-footer-left">',
+                '  <span class="s4t-sheet-col-count-badge" id="s4t-sheet-col-count"></span>',
+                '</div>',
                 '<div class="s4t-export-footer-status" id="s4t-export-toast" hidden></div>',
                 '<div class="s4t-export-footer-buttons">',
-                '  <button type="button" class="s4t-btn s4t-btn-secondary" id="s4t-btn-copy-tsv" title="Copy tab-separated table to clipboard for instant Google Sheets paste" data-tooltip="Copy tab-separated table to clipboard for instant Google Sheets paste">📋 Copy for Google Sheets</button>',
+                '  <button type="button" class="s4t-btn s4t-btn-secondary" id="s4t-btn-copy-tsv" data-tooltip="Copy tab-separated table to clipboard for instant Google Sheets paste">📋 Copy for Google Sheets</button>',
                 '  <div class="s4t-split-download-group">',
                 '    <button type="button" class="s4t-btn s4t-btn-primary" id="s4t-btn-main-download">📊 Download Excel (.xls)</button>',
-                '    <button type="button" class="s4t-btn s4t-btn-primary s4t-split-arrow" id="s4t-btn-format-toggle" title="Select format (Excel / CSV)" data-tooltip="Select format (Excel / CSV)" aria-label="Select format" aria-haspopup="true" aria-expanded="false">▾</button>',
+                '    <button type="button" class="s4t-btn s4t-btn-primary s4t-split-arrow" id="s4t-btn-format-toggle" data-tooltip="Select format (Excel / CSV)" aria-label="Select format" aria-haspopup="true" aria-expanded="false">▾</button>',
                 '    <div class="s4t-split-menu" id="s4t-format-menu" role="menu" hidden>',
                 '      <button type="button" class="s4t-split-item" data-fmt="excel" role="menuitem">📊 Excel Spreadsheet (.xls)</button>',
                 '      <button type="button" class="s4t-split-item" data-fmt="csv" role="menuitem">📄 CSV File (.csv)</button>',
@@ -1316,7 +1817,9 @@
             ].join(''));
 
             dialog.append(footer);
+            updateColumnsCountBadge();
             bindFooterEvents();
+            updateActionButtonsState();
         }
 
         function bindFooterEvents() {
@@ -1330,12 +1833,18 @@
             var exportOpts = function () {
                 return {
                     insertSeparatorRow: !!state.insertSeparatorRow,
-                    sortBy: state.sortBy
+                    sortBy: state.sortBy,
+                    editedCells: state.editedCells || {}
                 };
             };
 
             // Copy for Google Sheets (instant TSV copy of all cards)
             dialog.find('#s4t-btn-copy-tsv').on('click', function () {
+                if (hasValidationErrors()) {
+                    dialog.find('.s4t-input-required-error:first').focus();
+                    showToast('⚠️ Required: Please fill in custom options before copying table.');
+                    return;
+                }
                 updateFilteredCards();
                 if (!state.filteredCards.length) {
                     showToast('No cards to export with current exclusions.');
@@ -1355,22 +1864,50 @@
                 }
             });
 
-            // Toggle format menu
-            dialog.find('#s4t-btn-format-toggle').on('click', function (e) {
+            // Toggle format menu (click, hover, and mousedown)
+            var splitGroup = dialog.find('.s4t-split-download-group');
+            var formatToggle = dialog.find('#s4t-btn-format-toggle');
+            var formatMenu = dialog.find('#s4t-format-menu');
+
+            var splitHoverTimer;
+            splitGroup.on('mouseenter', function () {
+                if (hasValidationErrors()) {
+                    formatMenu.prop('hidden', true);
+                    return;
+                }
+                clearTimeout(splitHoverTimer);
+                formatMenu.prop('hidden', false);
+                formatToggle.attr('aria-expanded', 'true');
+            }).on('mouseleave', function () {
+                splitHoverTimer = setTimeout(function () {
+                    formatMenu.prop('hidden', true);
+                    formatToggle.attr('aria-expanded', 'false');
+                }, 150);
+            });
+
+            formatToggle.on('click', function (e) {
                 e.stopPropagation();
-                var menu = dialog.find('#s4t-format-menu');
-                var isHidden = !menu.prop('hidden');
-                menu.prop('hidden', isHidden);
-                $(this).attr('aria-expanded', String(!isHidden));
+                if (hasValidationErrors()) {
+                    dialog.find('.s4t-input-required-error:first').focus();
+                    showToast('⚠️ Required: Please fill in custom options before choosing export format.');
+                    return;
+                }
+                formatMenu.prop('hidden', false);
+                $(this).attr('aria-expanded', 'true');
             });
 
             $(document).off('click.s4tFormatMenuClose').on('click.s4tFormatMenuClose', function () {
-                dialog.find('#s4t-format-menu').prop('hidden', true);
-                dialog.find('#s4t-btn-format-toggle').attr('aria-expanded', 'false');
+                formatMenu.prop('hidden', true);
+                formatToggle.attr('aria-expanded', 'false');
             });
 
             // Format selection
             dialog.find('.s4t-split-item').on('click', function () {
+                if (hasValidationErrors()) {
+                    dialog.find('.s4t-input-required-error:first').focus();
+                    showToast('⚠️ Required: Please fill in custom options before choosing export format.');
+                    return;
+                }
                 var fmt = $(this).attr('data-fmt');
                 state.selectedFormat = fmt;
                 if (fmt === 'csv') {
@@ -1384,6 +1921,11 @@
 
             // Main download button click
             dialog.find('#s4t-btn-main-download').on('click', function () {
+                if (hasValidationErrors()) {
+                    dialog.find('.s4t-input-required-error:first').focus();
+                    showToast('⚠️ Required: Please fill in custom options before downloading file.');
+                    return;
+                }
                 updateFilteredCards();
                 if (!state.filteredCards.length) {
                     showToast('No cards to export with current exclusions.');
@@ -1473,6 +2015,7 @@
         s4tBuildExportCsv: s4tBuildExportCsv,
         s4tBuildExportExcel: s4tBuildExportExcel,
         s4tBuildExportTsv: s4tBuildExportTsv,
-        s4tFilterAndSortCards: s4tFilterAndSortCards
+        s4tFilterAndSortCards: s4tFilterAndSortCards,
+        s4tParseCustomOptions: s4tParseCustomOptions
     };
 }));

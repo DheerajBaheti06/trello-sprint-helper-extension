@@ -1576,16 +1576,18 @@ textarea[data-testid="card-name-input"],
 
 #s4t-attention-panel .s4t-attention-heading { flex-wrap:wrap; min-width:0; }
 #s4t-attention-panel .s4t-attention-metrics { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-#s4t-attention-panel .s4t-metric-badge { display:inline-flex; min-width:0; padding:4px 9px; border-radius:8px; font-size:12px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; background:var(--ds-background-neutral,#f1f2f4); color:var(--ds-text,#172b4d); }
+#s4t-attention-panel .s4t-metric-badge,
+#s4t-export-dialog .s4t-metric-badge { display:inline-flex; min-width:0; padding:4px 9px; border-radius:8px; font-size:12px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; background:var(--ds-background-neutral,#f1f2f4); color:var(--ds-text,#172b4d); }
 #s4t-attention-panel .s4t-attention-assigned { background:var(--ds-background-information,#e9f2ff); color:var(--ds-text-information,#0055cc); }
 #s4t-attention-panel .s4t-attention-completed { background:var(--ds-background-success,#dcfff1); color:var(--ds-text-success,#216e4e); }
-#s4t-attention-panel [data-copy-value], #s4t-members-modal [data-copy-value] { cursor:pointer; user-select:none; }
-#s4t-attention-panel [data-copy-value]:focus-visible, #s4t-members-modal [data-copy-value]:focus-visible { outline:2px solid var(--ds-border-focused,#388bff); outline-offset:2px; }
+#s4t-attention-panel [data-copy-value], #s4t-members-modal [data-copy-value], #s4t-export-dialog [data-copy-value] { cursor:pointer; user-select:none; }
+#s4t-attention-panel [data-copy-value]:focus-visible, #s4t-members-modal [data-copy-value]:focus-visible, #s4t-export-dialog [data-copy-value]:focus-visible { outline:2px solid var(--ds-border-focused,#388bff); outline-offset:2px; }
 .s4t-metric-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:2147483647; padding:8px 14px; border-radius:8px; background:var(--ds-surface-overlay,#fff); color:var(--ds-text,#172b4d); box-shadow:0 4px 16px #0003; font-size:13px; pointer-events:none; }
 
 /* Copy celebration stays on the selected metric without moving nearby content. */
 #s4t-attention-panel [data-copy-value].s4t-metric-copied,
-#s4t-members-modal [data-copy-value].s4t-metric-copied {
+#s4t-members-modal [data-copy-value].s4t-metric-copied,
+#s4t-export-dialog [data-copy-value].s4t-metric-copied {
     position:relative; border-radius:8px;
     background:var(--ds-background-success,#dcfff1) !important;
     color:var(--ds-text-success,#216e4e) !important;
@@ -2669,7 +2671,7 @@ textarea[data-testid="card-name-input"],
     bottom: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background: rgba(9, 30, 66, 0.65) !important;
+    background: rgba(9, 30, 66, 0.54) !important;
     backdrop-filter: blur(4px) !important;
     -webkit-backdrop-filter: blur(4px) !important;
     z-index: 2147483640 !important;
@@ -2678,46 +2680,51 @@ textarea[data-testid="card-name-input"],
     justify-content: center !important;
     padding: 10px !important;
     box-sizing: border-box !important;
-    animation: s4tFadeIn 0.2s ease-out !important;
+    animation: s4tFadeIn 0.15s ease-out !important;
 }
 
 #s4t-export-dialog {
     background: var(--ds-surface-overlay, #ffffff) !important;
-    color: var(--ds-text, #172b4d) !important;
+    color: var(--ds-text, #27272a) !important;
     width: calc(100vw - 20px) !important;
     max-width: none !important;
     height: calc(100vh - 20px) !important;
     max-height: none !important;
     min-height: 0 !important;
-    border-radius: 14px !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(9, 30, 66, 0.1) !important;
+    border-radius: 18px !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    box-shadow: 0 12px 48px #18181b30 !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
-    font-family: var(--s4t-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif) !important;
+    font: 14px/1.5 var(--s4t-font-family, system-ui, sans-serif) !important;
 }
 
 #s4t-export-dialog * {
     box-sizing: border-box !important;
 }
 
+#s4t-export-dialog :focus-visible {
+    outline: 2px solid #14b8a6 !important;
+    outline-offset: 2px !important;
+}
+
 #s4t-export-dialog .s4t-export-header {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 14px 22px !important;
-    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
-    background: var(--ds-background-neutral, #f4f5f7) !important;
+    padding: 14px 20px 12px !important;
+    border-bottom: 1px solid var(--ds-border, #e4e4e7) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
     flex-shrink: 0 !important;
-    min-height: 56px !important;
+    min-height: 52px !important;
 }
 
 #s4t-export-dialog .s4t-export-title-row {
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
+    gap: 10px !important;
     flex-wrap: wrap !important;
 }
 
@@ -2731,7 +2738,7 @@ textarea[data-testid="card-name-input"],
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: var(--ds-text-subtle, #626f86) !important;
+    color: var(--ds-text-subtle, #71717a) !important;
     cursor: help !important;
     padding: 4px !important;
     width: 28px !important;
@@ -2745,7 +2752,7 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-feature-help:hover {
     background: transparent !important;
-    color: var(--ds-text, #172b4d) !important;
+    color: var(--ds-text, #27272a) !important;
 }
 
 #s4t-export-dialog .s4t-export-header-actions {
@@ -2756,25 +2763,25 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-export-title-row h2 {
     margin: 0 !important;
-    font-size: 19px !important;
+    font-size: 16px !important;
     font-weight: 700 !important;
-    color: var(--ds-text, #091e42) !important;
+    color: var(--ds-text, #27272a) !important;
     line-height: 1.3 !important;
 }
 
 #s4t-export-dialog .s4t-export-title-icon {
-    color: #0f9d58 !important;
+    color: #0f766e !important;
     flex-shrink: 0 !important;
 }
 
 #s4t-export-dialog .s4t-export-board-tag {
     font-size: 12px !important;
-    font-weight: 600 !important;
-    color: var(--ds-text-selected, #0747a6) !important;
-    background: var(--ds-background-selected, #deebff) !important;
-    padding: 3px 10px !important;
-    border-radius: 12px !important;
-    border: none !important;
+    font-weight: 500 !important;
+    color: var(--ds-text-subtle, #71717a) !important;
+    background: var(--ds-background-neutral, #f4f4f5) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    padding: 3px 8px !important;
+    border-radius: 6px !important;
     white-space: nowrap !important;
     max-width: 250px !important;
     overflow: hidden !important;
@@ -2783,84 +2790,87 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-export-match-count {
     font-size: 12px !important;
-    font-weight: 500 !important;
-    color: var(--ds-text-subtle, #5e6c84) !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    padding: 3px 10px !important;
-    border-radius: 12px !important;
+    font-weight: 600 !important;
+    color: var(--ds-text, #172b4d) !important;
+    background: var(--ds-background-neutral, #f1f2f4) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    padding: 4px 9px !important;
+    border-radius: 8px !important;
     font-variant-numeric: tabular-nums !important;
     white-space: nowrap !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-export-close-btn {
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    color: var(--ds-text-subtle, #42526e) !important;
-    border-radius: 6px !important;
-    padding: 6px 12px !important;
-    font-size: 16px !important;
+    background: var(--ds-background-neutral, #f4f4f5) !important;
+    border: 0 !important;
+    color: var(--ds-text-subtle, #71717a) !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+    font-size: 15px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     line-height: 1 !important;
-    width: auto !important;
+    width: 32px !important;
     height: 32px !important;
-    transition: all 0.15s ease !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-export-close-btn:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    color: var(--ds-text, #091e42) !important;
-    border-color: var(--ds-border-focused, #c1c7d0) !important;
+    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
+    color: var(--ds-text, #27272a) !important;
 }
 
 /* Tabs Bar */
 #s4t-export-dialog .s4t-export-tabs-bar {
     display: flex !important;
-    gap: 8px !important;
-    padding: 0 22px !important;
-    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
-    background: var(--ds-background-neutral, #f4f5f7) !important;
+    gap: 6px !important;
+    padding: 0 20px 6px !important;
+    border-bottom: 1px solid var(--ds-border, #e4e4e7) !important;
+    background: transparent !important;
     flex-shrink: 0 !important;
-    height: 44px !important;
-    align-items: flex-end !important;
+    height: auto !important;
+    align-items: center !important;
 }
 
 #s4t-export-dialog .s4t-export-tab {
     display: inline-flex !important;
     align-items: center !important;
-    gap: 8px !important;
-    padding: 9px 16px !important;
+    gap: 6px !important;
+    padding: 7px 14px !important;
     font-size: 13px !important;
-    font-weight: 600 !important;
+    font-weight: 500 !important;
     border: 0 !important;
-    border-radius: 8px 8px 0 0 !important;
+    border-radius: 8px !important;
     background: transparent !important;
-    color: var(--ds-text-subtle, #626f86) !important;
+    color: var(--ds-text-subtle, #71717a) !important;
     cursor: pointer !important;
-    transition: all 0.15s ease !important;
-    margin-bottom: -1px !important;
-    border-bottom: 2px solid transparent !important;
+    transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease !important;
+    margin-bottom: 0 !important;
+    border-bottom: 0 !important;
 }
 
 #s4t-export-dialog .s4t-export-tab:hover {
-    color: var(--ds-text, #172b4d) !important;
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    color: var(--ds-text, #27272a) !important;
+    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
 }
 
 #s4t-export-dialog .s4t-export-tab.s4t-tab-active {
-    color: var(--ds-text-selected, #0052cc) !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    border-bottom: 2px solid var(--ds-text-selected, #0052cc) !important;
-    font-weight: 700 !important;
+    background: var(--ds-background-neutral, #e4e4e7) !important;
+    color: var(--ds-text, #27272a) !important;
+    font-weight: 600 !important;
+    box-shadow: inset 0 -2px #14b8a6 !important;
+    border-bottom: 0 !important;
 }
 
 /* Body & Tab Views - Clean White Surface */
 #s4t-export-dialog .s4t-export-body {
-    padding: 18px 22px !important;
+    padding: 16px 20px !important;
     background: var(--ds-surface-overlay, #ffffff) !important;
     overflow: hidden !important;
     flex: 1 1 0 !important;
@@ -2893,15 +2903,15 @@ textarea[data-testid="card-name-input"],
     gap: 12px !important;
     flex-shrink: 0 !important;
     padding: 8px 16px !important;
-    background: var(--ds-background-neutral, #f4f5f7) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
     border-radius: 8px !important;
 }
 
 #s4t-export-dialog .s4t-sheet-hint {
     font-size: 13px !important;
     font-weight: 500 !important;
-    color: var(--ds-text, #172b4d) !important;
+    color: var(--ds-text, #27272a) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-top-actions {
@@ -2915,11 +2925,11 @@ textarea[data-testid="card-name-input"],
     align-items: center !important;
     font-size: 12px !important;
     font-weight: 600 !important;
-    padding: 3px 10px !important;
-    border-radius: 12px !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    color: var(--ds-text-subtle, #5e6c84) !important;
+    padding: 4px 9px !important;
+    border-radius: 8px !important;
+    background: var(--ds-background-neutral, #f1f2f4) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    color: var(--ds-text-subtle, #71717a) !important;
     font-variant-numeric: tabular-nums !important;
     white-space: nowrap !important;
 }
@@ -2929,33 +2939,33 @@ textarea[data-testid="card-name-input"],
     align-items: center !important;
     gap: 7px !important;
     font-size: 13px !important;
-    font-weight: 600 !important;
-    color: var(--ds-text, #172b4d) !important;
+    font-weight: 500 !important;
+    color: var(--ds-text, #27272a) !important;
     cursor: pointer !important;
     user-select: none !important;
     padding: 6px 12px !important;
-    border-radius: 6px !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
     background: var(--ds-surface-overlay, #ffffff) !important;
     transition: all 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-sheet-topbar-toggle:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    border-color: var(--ds-border-focused, #388bff) !important;
+    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
+    border-color: #14b8a6 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked) {
-    background: var(--ds-background-selected, #deebff) !important;
-    border-color: var(--ds-border-selected, #b3d4ff) !important;
-    color: var(--ds-text-selected, #0052cc) !important;
+    background: var(--ds-background-neutral, #f0fdfa) !important;
+    border-color: #14b8a6 !important;
+    color: #0f766e !important;
 }
 
 #s4t-export-dialog .s4t-sheet-topbar-toggle input[type="checkbox"] {
     margin: 0 !important;
     width: 15px !important;
     height: 15px !important;
-    accent-color: var(--ds-background-brand-bold, #0052cc) !important;
+    accent-color: #0f766e !important;
     cursor: pointer !important;
 }
 
@@ -2963,26 +2973,25 @@ textarea[data-testid="card-name-input"],
     font-size: 13px !important;
     height: 32px !important;
     padding: 6px 12px !important;
-    border-radius: 6px !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    color: var(--ds-text, #172b4d) !important;
-    font-weight: 600 !important;
+    border-radius: 8px !important;
+    border: 0 !important;
+    background: var(--ds-background-neutral, #f4f4f5) !important;
+    color: var(--ds-text, #27272a) !important;
+    font-weight: 500 !important;
     cursor: pointer !important;
     display: inline-flex !important;
     align-items: center !important;
     gap: 6px !important;
-    transition: all 0.15s ease !important;
-    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.04) !important;
+    transition: background 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-sheet-reset-btn:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    color: var(--ds-text-selected, #0052cc) !important;
-    border-color: var(--ds-border-focused, #388bff) !important;
+    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
+    color: var(--ds-text, #27272a) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-guide-banner {
+    position: relative !important;
     flex-shrink: 0 !important;
     margin-top: 2px !important;
     padding: 0 !important;
@@ -2990,7 +2999,7 @@ textarea[data-testid="card-name-input"],
     border: 1px solid var(--ds-border, #dfe1e6) !important;
     border-radius: 8px !important;
     box-shadow: 0 1px 2px rgba(9, 30, 66, 0.04) !important;
-    overflow: hidden !important;
+    overflow: visible !important;
 }
 
 #s4t-export-dialog .s4t-sheet-guide-header {
@@ -3023,18 +3032,32 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header {
-    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-bottom: none !important;
 }
 
 #s4t-export-dialog .s4t-sheet-guide-icon {
     font-size: 14px !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-grid {
+#s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid {
+    position: absolute !important;
+    bottom: calc(100% + 6px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 100 !important;
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 8px 16px !important;
-    padding: 10px 14px 12px 14px !important;
+    padding: 12px 16px !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 -8px 28px rgba(9, 30, 66, 0.18) !important;
+    animation: s4tFadeIn 0.15s ease-out !important;
+}
+
+#s4t-export-dialog .s4t-sheet-guide-grid {
+    display: none;
 }
 
 #s4t-export-dialog .s4t-sheet-guide-item {
@@ -3217,21 +3240,26 @@ textarea[data-testid="card-name-input"],
     outline: none !important;
     transition: all 0.15s ease !important;
     font-family: 'Times New Roman', Times, serif !important;
+    text-align: center !important;
 }
 
 #s4t-export-dialog .s4t-sheet-header-input:hover {
-    border-color: #2e7d32 !important;
+    background: #f0fdfa !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 2px 6px rgba(15, 118, 110, 0.2) !important;
+    cursor: text !important;
 }
 
 #s4t-export-dialog .s4t-sheet-header-input:focus {
     background: #ffffff !important;
-    border-color: #2e7d32 !important;
-    outline: 2px solid #a3d9bc !important;
+    border-color: #0f766e !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px #14b8a6 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-source-row {
     display: grid !important;
-    grid-template-columns: 56px 1fr !important;
+    grid-template-columns: 66px 1fr !important;
     align-items: center !important;
     gap: 6px !important;
     width: 100% !important;
@@ -3242,6 +3270,8 @@ textarea[data-testid="card-name-input"],
     display: inline-flex !important;
     align-items: center !important;
     gap: 3px !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
 }
 
 #s4t-export-dialog .s4t-sheet-source-label {
@@ -3257,22 +3287,31 @@ textarea[data-testid="card-name-input"],
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 15px !important;
-    height: 15px !important;
-    font-size: 11px !important;
-    font-weight: bold !important;
+    width: 18px !important;
+    height: 18px !important;
     color: #000000 !important;
     background: transparent !important;
     border: none !important;
     cursor: help !important;
     flex-shrink: 0 !important;
+    overflow: visible !important;
     transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-field-info-icon svg,
+#s4t-export-dialog .s4t-field-info-svg {
+    display: block !important;
+    width: 14px !important;
+    height: 14px !important;
+    stroke: #000000 !important;
+    stroke-width: 2 !important;
 }
 
 #s4t-export-dialog .s4t-field-info-icon:hover,
 #s4t-export-dialog .s4t-field-info-icon:focus-visible {
     background: transparent !important;
     color: #000000 !important;
+    transform: scale(1.18) !important;
     outline: none !important;
 }
 
@@ -3302,19 +3341,21 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-source-select:hover {
-    border-color: #2e7d32 !important;
+    background: #f0fdfa !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-source-select:focus {
     background: #ffffff !important;
-    border-color: #2e7d32 !important;
-    outline: 2px solid #a3d9bc !important;
+    border-color: #0f766e !important;
+    outline: 2px solid #14b8a6 !important;
 }
 
 /* Cell Format Row in Column Header Card */
 #s4t-export-dialog .s4t-sheet-type-row {
     display: grid !important;
-    grid-template-columns: 56px 1fr !important;
+    grid-template-columns: 66px 1fr !important;
     align-items: center !important;
     gap: 6px !important;
     width: 100% !important;
@@ -3354,7 +3395,215 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-type-select:hover {
-    border-color: #2e7d32 !important;
+    background: #f0fdfa !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-type-select:focus {
+    background: #ffffff !important;
+    border-color: #0f766e !important;
+    outline: 2px solid #14b8a6 !important;
+}
+
+/* Replaced Native Selects & Custom Interactive Dropdowns */
+#s4t-export-dialog .s4t-select-replaced[hidden] {
+    display: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th.s4t-th-dropdown-active {
+    z-index: 600 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell.s4t-cell-dropdown-active,
+#s4t-export-dialog .s4t-sheet-cell:has(.s4t-dropdown-open) {
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 500 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-row.s4t-row-dropdown-active,
+#s4t-export-dialog .s4t-sheet-row:has(.s4t-dropdown-open) {
+    position: relative !important;
+    z-index: 500 !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown {
+    position: relative !important;
+    display: inline-flex !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    user-select: none !important;
+    vertical-align: middle !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open {
+    z-index: 1000 !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-trigger {
+    width: 100% !important;
+    height: 24px !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    border-radius: 4px !important;
+    border: 1px solid #7cb594 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    cursor: pointer !important;
+    padding: 2px 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    outline: none !important;
+    transition: all 0.15s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    text-align: left !important;
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+#s4t-export-dialog .s4t-custom-dropdown-trigger:hover {
+    background: #f0fdfa !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+#s4t-export-dialog .s4t-custom-dropdown-trigger:focus-visible {
+    background: #ffffff !important;
+    border-color: #0f766e !important;
+    outline: 2px solid #14b8a6 !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-label {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    text-align: left !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-arrow {
+    flex: 0 0 auto !important;
+    font-size: 9px !important;
+    margin-left: 4px !important;
+    color: #4b5563 !important;
+    line-height: 1 !important;
+    transition: transform 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-arrow {
+    transform: rotate(180deg) !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    min-width: 100% !important;
+    width: max-content !important;
+    max-width: 280px !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    background: #ffffff !important;
+    border: 1px solid #7cb594 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 8px 24px rgba(9, 30, 66, 0.2) !important;
+    z-index: 1000 !important;
+    padding: 4px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    scrollbar-width: thin !important;
+    animation: s4tFadeIn 0.12s ease !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-up .s4t-custom-dropdown-menu {
+    top: auto !important;
+    bottom: 100% !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-align-right .s4t-custom-dropdown-menu {
+    left: auto !important;
+    right: 0 !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-menu[hidden] {
+    display: none !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-item {
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: #172b4d !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    transition: background 0.12s ease, color 0.12s ease !important;
+    white-space: nowrap !important;
+    text-align: left !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-item:hover {
+    background: #f0fdfa !important;
+    color: #0f766e !important;
+    font-weight: 600 !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected {
+    background: #e6fffa !important;
+    color: #0f766e !important;
+    font-weight: bold !important;
+}
+
+/* Specific styling for cell dropdown in table body */
+#s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger {
+    height: 24px !important;
+    border: 1px solid #dfe1e6 !important;
+    font-weight: 500 !important;
+    font-size: 12px !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    background: #ffffff !important;
+    color: #172b4d !important;
+}
+
+#s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+#s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger {
+    border-color: #0f766e !important;
+    background: #f0fdfa !important;
+}
+
+#s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-menu {
+    border-color: #14b8a6 !important;
+    min-width: 140px !important;
+}
+
+/* Specific styling for Sort Select dropdown */
+#s4t-export-dialog .s4t-custom-sort-dropdown {
+    width: auto !important;
+    min-width: 220px !important;
+}
+
+#s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger {
+    height: 32px !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border-radius: 6px !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    color: var(--ds-text, #172b4d) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+#s4t-export-dialog .s4t-custom-sort-dropdown:hover .s4t-custom-dropdown-trigger {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: var(--ds-border-focused, #388bff) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-custom-options-input {
@@ -3374,9 +3623,32 @@ textarea[data-testid="card-name-input"],
     font-family: 'Times New Roman', Times, serif !important;
 }
 
+#s4t-export-dialog .s4t-sheet-custom-options-input:hover {
+    background: #f0fdfa !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
+}
+
 #s4t-export-dialog .s4t-sheet-custom-options-input:focus {
-    border-color: #2e7d32 !important;
-    box-shadow: 0 0 0 2px #a3d9bc !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 0 0 2px #14b8a6 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error {
+    border: 1.5px solid #e11d48 !important;
+    background: #fff1f2 !important;
+    box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.25) !important;
+    outline: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error:hover {
+    background: #ffe4e6 !important;
+    border-color: #be123c !important;
+}
+
+#s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error:focus {
+    border-color: #be123c !important;
+    box-shadow: 0 0 0 3px rgba(190, 18, 60, 0.35) !important;
 }
 
 /* Ensure no pseudo-element tooltips clip inside dialog */
@@ -3454,8 +3726,15 @@ textarea[data-testid="card-name-input"],
     transition: background 0.15s ease, border-color 0.15s ease !important;
 }
 
+#s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,
+#s4t-export-dialog .s4t-sheet-cell:has(.s4t-custom-dropdown) {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+}
+
 #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell {
-    background: #f8fafc !important;
+    background: #f4f5f7 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-empty {
@@ -3465,8 +3744,8 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell {
-    background: #e8f0fe !important;
-    border-color: #a3d9bc !important;
+    background: #f0fdfa !important;
+    border-color: #14b8a6 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-separator-row td {
@@ -3516,6 +3795,31 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-sheet-cell-select:focus {
     border-color: #0052cc !important;
+    box-shadow: 0 0 0 2px #deebff !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-input {
+    width: 100% !important;
+    padding: 3px 6px !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    border: 1px solid transparent !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    color: #172b4d !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.15s ease, background-color 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-input:hover {
+    border-color: #dfe1e6 !important;
+    background: #ffffff !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-input:focus {
+    border-color: #0052cc !important;
+    background: #ffffff !important;
     box-shadow: 0 0 0 2px #deebff !important;
 }
 
@@ -3617,61 +3921,107 @@ textarea[data-testid="card-name-input"],
     font-weight: 600 !important;
     padding: 9px 20px !important;
     border-radius: 6px !important;
-    background: var(--ds-background-brand-bold, #0052cc) !important;
+    background: #0f766e !important;
     color: #ffffff !important;
     border: none !important;
     cursor: pointer !important;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12) !important;
+    box-shadow: 0 1px 3px rgba(15, 118, 110, 0.25) !important;
     transition: all 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-btn-generate-preview:hover {
-    background: var(--ds-background-brand-bold-hovered, #0065ff) !important;
-    box-shadow: 0 4px 12px rgba(9, 30, 66, 0.2) !important;
+    background: #0d9488 !important;
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3) !important;
     transform: translateY(-1px) !important;
 }
 
-#s4t-export-dialog .s4t-sheet-dirty-row td {
-    padding: 0 !important;
+#s4t-export-dialog .s4t-sheet-dirty-row td,
+#s4t-export-dialog .s4t-sheet-dirty-td {
+    padding: 32px 16px !important;
+    text-align: center !important;
     border: none !important;
+    background: transparent !important;
 }
 
+#s4t-export-dialog .s4t-sheet-dirty-banner,
 #s4t-export-dialog .s4t-dirty-banner {
-    background: #fffae6 !important;
-    border: 1px solid #ffe380 !important;
-    border-radius: 6px !important;
-    color: #172b4d !important;
-    padding: 8px 16px !important;
-    display: flex !important;
+    background: #f0fdfa !important;
+    border: 1.5px solid #14b8a6 !important;
+    border-radius: 12px !important;
+    color: #0f766e !important;
+    padding: 16px 28px !important;
+    display: inline-flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    justify-content: space-between !important;
-    font-size: 12px !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    margin: 10px auto !important;
+    max-width: 480px !important;
+    position: sticky !important;
+    left: 24px !important;
+    box-shadow: 0 4px 16px rgba(20, 184, 166, 0.16) !important;
+    text-align: center !important;
+}
+
+#s4t-export-dialog .s4t-dirty-msg,
+#s4t-export-dialog .s4t-dirty-msg-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    text-align: center !important;
+}
+
+#s4t-export-dialog .s4t-dirty-icon {
+    font-size: 16px !important;
+}
+
+#s4t-export-dialog .s4t-dirty-text {
+    font-size: 13px !important;
     font-weight: 600 !important;
+    color: #0f766e !important;
 }
 
 #s4t-export-dialog .s4t-dirty-refresh-btn {
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    padding: 4px 12px !important;
-    border-radius: 4px !important;
-    background: #ffab00 !important;
-    color: #172b4d !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    padding: 8px 24px !important;
+    border-radius: 8px !important;
+    background: #0f766e !important;
+    color: #ffffff !important;
     border: none !important;
     cursor: pointer !important;
-    transition: background 0.15s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.15s ease !important;
+    box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25) !important;
+    margin: 0 auto !important;
 }
 
 #s4t-export-dialog .s4t-dirty-refresh-btn:hover {
-    background: #ff991f !important;
+    background: #0d9488 !important;
+    box-shadow: 0 4px 10px rgba(15, 118, 110, 0.35) !important;
+    transform: translateY(-1px) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-note-row td {
     font-size: 12px !important;
     color: #626f86 !important;
-    padding: 6px 4px !important;
+    padding: 8px 12px !important;
     background: transparent !important;
-    text-align: right !important;
+    text-align: left !important;
     border: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-note-content {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    position: sticky !important;
+    left: 12px !important;
+    font-weight: 500 !important;
+    color: #626f86 !important;
 }
 
 /* Tab 2: Exclusions & Attention Style Columns - SCOPED TO #s4t-export-dialog */
@@ -3767,11 +4117,49 @@ textarea[data-testid="card-name-input"],
     margin-bottom: 2px !important;
 }
 
-#s4t-export-dialog .s4t-export-att-column-heading h4 {
+#s4t-export-dialog .s4t-export-att-heading-title {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+#s4t-export-dialog .s4t-export-att-heading-title h4 {
     margin: 0 !important;
     font-size: 13px !important;
     font-weight: 700 !important;
     color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-att-info-icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    padding: 0 !important;
+    color: var(--ds-text, #172b4d) !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: help !important;
+    flex-shrink: 0 !important;
+    border-radius: 50% !important;
+    transition: color 0.15s ease, transform 0.15s ease, opacity 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-att-info-icon svg {
+    display: block !important;
+    width: 14px !important;
+    height: 14px !important;
+    stroke: currentColor !important;
+    stroke-width: 2 !important;
+}
+
+#s4t-export-dialog .s4t-att-info-icon:hover,
+#s4t-export-dialog .s4t-att-info-icon:focus-visible {
+    color: var(--ds-text, #172b4d) !important;
+    opacity: 0.8 !important;
+    transform: scale(1.15) !important;
+    outline: none !important;
 }
 
 #s4t-export-dialog .s4t-export-att-list-groups {
@@ -3790,29 +4178,37 @@ textarea[data-testid="card-name-input"],
     padding: 2px 4px !important;
     cursor: pointer !important;
     border-radius: 4px !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
     background: var(--ds-surface-overlay, #ffffff) !important;
     transition: all 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-export-att-group-toggle:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    border-color: var(--ds-border-focused, #388bff) !important;
+    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
+    border-color: #14b8a6 !important;
 }
 
 #s4t-export-dialog .s4t-export-att-group-toggle input[type=checkbox] {
     margin: 0 !important;
     width: 14px !important;
     height: 14px !important;
-    accent-color: var(--ds-background-brand-bold, #0052cc) !important;
+    accent-color: #0f766e !important;
     cursor: pointer !important;
 }
 
 #s4t-export-dialog .s4t-export-att-col-hint {
     margin: 0 0 6px 0 !important;
     font-size: 11px !important;
-    color: var(--ds-text-subtle, #626f86) !important;
+    color: var(--ds-text-subtle, #71717a) !important;
     font-style: italic !important;
+}
+
+#s4t-export-dialog .s4t-export-att-note {
+    font-size: 12px !important;
+    color: var(--ds-text-subtle, #71717a) !important;
+    font-style: italic !important;
+    margin: 8px 0 !important;
+    padding: 0 4px !important;
 }
 
 #s4t-export-dialog .s4t-export-att-lists,
@@ -3833,41 +4229,50 @@ textarea[data-testid="card-name-input"],
     align-items: center !important;
     gap: 8px !important;
     font-size: 13px !important;
-    color: var(--ds-text, #172b4d) !important;
+    color: var(--ds-text, #27272a) !important;
     cursor: pointer !important;
-    padding: 7px 10px !important;
-    border-radius: 6px !important;
+    padding: 7px 8px !important;
+    border-radius: 8px !important;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
     user-select: none !important;
     background: var(--ds-surface-overlay, #ffffff) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
 }
 
 #s4t-export-dialog .s4t-export-att-option:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    background: var(--ds-background-neutral-subtle-hovered, #f4f4f5) !important;
 }
 
 #s4t-export-dialog .s4t-export-att-option:has(input:checked) {
-    background: var(--ds-background-selected, #deebff) !important;
-    color: var(--ds-text-selected, #0052cc) !important;
-    border-color: var(--ds-border-selected, #b3d4ff) !important;
-    font-weight: 600 !important;
+    background: var(--ds-background-neutral, #f0fdfa) !important;
+    color: var(--ds-text, #0f766e) !important;
+    border-color: #14b8a6 !important;
+    font-weight: 500 !important;
 }
 
 #s4t-export-dialog .s4t-export-att-option input[type=checkbox] {
     width: 16px !important;
     height: 16px !important;
-    accent-color: var(--ds-background-brand-bold, #0052cc) !important;
+    accent-color: #0f766e !important;
     flex-shrink: 0 !important;
     cursor: pointer !important;
 }
 
 #s4t-export-dialog .s4t-export-att-label-dot {
-    width: 10px !important;
-    height: 10px !important;
+    width: 12px !important;
+    height: 12px !important;
     border-radius: 3px !important;
     display: inline-block !important;
     flex-shrink: 0 !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-export-att-label-dot.s4t-label-dot-none {
+    background: transparent !important;
+    border: 1px dashed var(--ds-border, #dfe1e6) !important;
+    box-shadow: none !important;
 }
 
 /* Footer & Action Buttons */
@@ -3875,12 +4280,18 @@ textarea[data-testid="card-name-input"],
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 14px 22px !important;
-    border-top: 1px solid var(--ds-border, #dfe1e6) !important;
-    background: var(--ds-background-neutral, #f4f5f7) !important;
+    padding: 12px 20px !important;
+    border-top: 1px solid var(--ds-border, #e4e4e7) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
     gap: 12px !important;
     flex-shrink: 0 !important;
-    min-height: 60px !important;
+    min-height: 56px !important;
+}
+
+#s4t-export-dialog .s4t-export-footer-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
 }
 
 #s4t-export-dialog .s4t-export-footer-buttons {
@@ -3891,81 +4302,124 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-btn {
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     font-size: 13px !important;
-    font-weight: 600 !important;
-    padding: 8px 16px !important;
+    font-weight: 500 !important;
+    padding: 7px 14px !important;
     cursor: pointer !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 6px !important;
     border: 1px solid transparent !important;
-    transition: all 0.15s ease !important;
-    font-family: var(--s4t-font-family, inherit) !important;
+    transition: background 0.15s ease, box-shadow 0.15s ease !important;
+    font-family: inherit !important;
+}
+
+#s4t-export-dialog .s4t-btn.s4t-btn-disabled,
+#s4t-export-dialog .s4t-btn.s4t-btn-disabled:hover,
+#s4t-export-dialog .s4t-btn.s4t-btn-disabled:focus,
+#s4t-export-dialog .s4t-btn.s4t-btn-disabled:active,
+#s4t-export-dialog .s4t-btn[aria-disabled="true"],
+#s4t-export-dialog .s4t-btn[aria-disabled="true"]:hover,
+#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled,
+#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled *,
+#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover,
+#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover * {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+    box-shadow: none !important;
+    transform: none !important;
+    filter: grayscale(30%) !important;
+}
+
+#s4t-export-dialog .s4t-btn-primary.s4t-btn-disabled:hover,
+#s4t-export-dialog .s4t-btn-primary[aria-disabled="true"]:hover,
+#s4t-export-dialog .s4t-split-download-group.s4t-group-disabled .s4t-btn-primary:hover {
+    background: #0f766e !important;
+    box-shadow: none !important;
+}
+
+#s4t-export-dialog .s4t-btn-secondary.s4t-btn-disabled:hover,
+#s4t-export-dialog .s4t-btn-secondary[aria-disabled="true"]:hover {
+    background: var(--ds-background-neutral, #f4f4f5) !important;
+    border-color: var(--ds-border, #e4e4e7) !important;
+    color: var(--ds-text, #27272a) !important;
+    box-shadow: none !important;
 }
 
 #s4t-export-dialog .s4t-btn-primary {
-    background: var(--ds-background-brand-bold, #0052cc) !important;
+    background: #0f766e !important;
     color: #ffffff !important;
     border: 0 !important;
+    border-radius: 8px !important;
     font-weight: 600 !important;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12) !important;
+    box-shadow: none !important;
 }
 
 #s4t-export-dialog .s4t-btn-primary:hover {
-    background: var(--ds-background-brand-bold-hovered, #0065ff) !important;
-    box-shadow: 0 4px 12px rgba(9, 30, 66, 0.2) !important;
+    background: #115e59 !important;
+    box-shadow: none !important;
 }
 
 #s4t-export-dialog .s4t-btn-primary:active {
-    background: var(--ds-background-brand-bold-pressed, #0747a6) !important;
+    background: #134e4a !important;
 }
 
 #s4t-export-dialog .s4t-btn-primary:focus-visible {
-    outline: 2px solid var(--ds-border-focused, #4c9aff) !important;
+    outline: 2px solid #14b8a6 !important;
     outline-offset: 2px !important;
 }
 
 #s4t-export-dialog .s4t-btn-secondary {
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    color: var(--ds-text, #172b4d) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.08) !important;
+    background: var(--ds-background-neutral, #f4f4f5) !important;
+    color: var(--ds-text, #27272a) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
 }
 
 #s4t-export-dialog .s4t-btn-secondary:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    border-color: var(--ds-border-focused, #388bff) !important;
-    color: var(--ds-text, #172b4d) !important;
+    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
+    border-color: #14b8a6 !important;
+    color: var(--ds-text, #27272a) !important;
 }
 
 #s4t-export-dialog .s4t-btn-subtle {
     background: transparent !important;
-    color: var(--ds-text-subtle, #626f86) !important;
+    color: var(--ds-text-subtle, #71717a) !important;
+    border: 0 !important;
+    border-radius: 8px !important;
 }
 
 #s4t-export-dialog .s4t-btn-subtle:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    color: var(--ds-text, #172b4d) !important;
+    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
+    color: var(--ds-text, #27272a) !important;
 }
 
 /* Split Download Group */
 #s4t-export-dialog .s4t-split-download-group {
     display: inline-flex !important;
     position: relative !important;
+    border-radius: 8px !important;
 }
 
 #s4t-export-dialog .s4t-split-download-group #s4t-btn-main-download {
     border-top-right-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
+    border-top-left-radius: 8px !important;
+    border-bottom-left-radius: 8px !important;
     border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
 }
 
 #s4t-export-dialog .s4t-split-arrow {
     border-top-left-radius: 0 !important;
     border-bottom-left-radius: 0 !important;
-    padding: 8px 10px !important;
+    border-top-right-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+    padding: 7px 10px !important;
     font-size: 12px !important;
 }
 
@@ -3974,14 +4428,23 @@ textarea[data-testid="card-name-input"],
     bottom: calc(100% + 6px) !important;
     right: 0 !important;
     background: var(--ds-surface-overlay, #ffffff) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
     border-radius: 8px !important;
-    box-shadow: var(--ds-shadow-overlay, 0 8px 24px rgba(9, 30, 66, 0.2)) !important;
+    box-shadow: 0 4px 20px #091e4230 !important;
     min-width: 220px !important;
     z-index: 100 !important;
     display: flex !important;
     flex-direction: column !important;
     padding: 4px !important;
+}
+
+#s4t-export-dialog .s4t-split-menu::after {
+    content: '' !important;
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: -8px !important;
+    height: 8px !important;
 }
 
 #s4t-export-dialog .s4t-split-menu[hidden] {
@@ -3992,13 +4455,13 @@ textarea[data-testid="card-name-input"],
     background: transparent !important;
     border: none !important;
     text-align: left !important;
-    padding: 8px 12px !important;
+    padding: 7px 12px !important;
     font-size: 13px !important;
     font-weight: 500 !important;
-    color: var(--ds-text, #172b4d) !important;
+    color: var(--ds-text, #27272a) !important;
     cursor: pointer !important;
     width: 100% !important;
-    border-radius: 4px !important;
+    border-radius: 6px !important;
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
@@ -4006,16 +4469,16 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-split-item:hover {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    color: var(--ds-text, #172b4d) !important;
+    background: var(--ds-background-neutral-hovered, #f0fdfa) !important;
+    color: #0f766e !important;
 }
 
 /* Status / Toast & Metric Copied Feedback */
 #s4t-export-dialog .s4t-btn.s4t-metric-copied {
-    background: #36b37e !important;
+    background: #0f766e !important;
     color: #ffffff !important;
-    border-color: #36b37e !important;
-    box-shadow: 0 0 0 3px rgba(54, 179, 126, 0.3) !important;
+    border-color: #0f766e !important;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.3) !important;
     transform: scale(0.98) !important;
 }
 
@@ -4023,13 +4486,14 @@ textarea[data-testid="card-name-input"],
     position: absolute !important;
     bottom: 68px !important;
     right: 20px !important;
-    background: #172b4d !important;
-    color: #ffffff !important;
-    border-radius: 6px !important;
-    padding: 10px 16px !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    color: var(--ds-text, #172b4d) !important;
+    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    border-radius: 8px !important;
+    padding: 8px 14px !important;
     font-size: 13px !important;
-    font-weight: 600 !important;
-    box-shadow: 0 6px 20px rgba(9, 30, 66, 0.25) !important;
+    font-weight: 500 !important;
+    box-shadow: 0 4px 20px #091e4240 !important;
     z-index: 200 !important;
     display: flex !important;
     align-items: center !important;
@@ -4043,6 +4507,16 @@ textarea[data-testid="card-name-input"],
 #s4t-export-dialog .s4t-export-footer-status.s4t-metric-toast-success {
     opacity: 1 !important;
     transform: translateY(0) !important;
+    background: var(--ds-background-success, #dcfff1) !important;
+    color: var(--ds-text-success, #216e4e) !important;
+    border-color: #14b8a6 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #s4t-export-dialog *, #s4t-export-dialog ::after {
+        transition: none !important;
+        animation: none !important;
+    }
 }
 
 #s4t-export-dialog .s4t-export-loading,
@@ -4096,18 +4570,18 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog,
 .theme-dark #s4t-export-dialog,
 .dark-theme #s4t-export-dialog {
-    background: #1c1c1f !important;
-    color: #f4f4f5 !important;
-    border-color: #2e2e33 !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+    background: #22272b !important;
+    color: #b6c2cf !important;
+    border-color: #38414a !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-header,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-header,
 .theme-dark #s4t-export-dialog .s4t-export-header,
 .dark-theme #s4t-export-dialog .s4t-export-header {
-    background: #18181b !important;
-    border-bottom: 1px solid #2e2e33 !important;
+    background: #282e33 !important;
+    border-bottom: 1px solid #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-title-row h2,
@@ -4121,50 +4595,51 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-board-tag,
 .theme-dark #s4t-export-dialog .s4t-export-board-tag,
 .dark-theme #s4t-export-dialog .s4t-export-board-tag {
-    background: #1c2b42 !important;
-    color: #579dff !important;
+    background: #134e4a !important;
+    color: #2dd4bf !important;
+    border: 1px solid #0f766e !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-match-count,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-match-count,
 .theme-dark #s4t-export-dialog .s4t-export-match-count,
 .dark-theme #s4t-export-dialog .s4t-export-match-count {
-    background: #27272a !important;
-    color: #a1a1aa !important;
-    border: 1px solid #3f3f46 !important;
+    background: #282e33 !important;
+    color: #8c9bab !important;
+    border: 1px solid #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-close-btn,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-close-btn,
 .theme-dark #s4t-export-dialog .s4t-export-close-btn,
 .dark-theme #s4t-export-dialog .s4t-export-close-btn {
-    background: #27272a !important;
-    border: 1px solid #3f3f46 !important;
-    color: #d4d4d8 !important;
+    background: #282e33 !important;
+    border: 1px solid #38414a !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-close-btn:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-close-btn:hover,
 .theme-dark #s4t-export-dialog .s4t-export-close-btn:hover,
 .dark-theme #s4t-export-dialog .s4t-export-close-btn:hover {
-    background: #3f3f46 !important;
+    background: #323940 !important;
     color: #ffffff !important;
-    border-color: #52525b !important;
+    border-color: #14b8a6 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-tabs-bar,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-tabs-bar,
 .theme-dark #s4t-export-dialog .s4t-export-tabs-bar,
 .dark-theme #s4t-export-dialog .s4t-export-tabs-bar {
-    background: #18181b !important;
-    border-bottom: 1px solid #2e2e33 !important;
+    background: #282e33 !important;
+    border-bottom: 1px solid #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-tab,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-tab,
 .theme-dark #s4t-export-dialog .s4t-export-tab,
 .dark-theme #s4t-export-dialog .s4t-export-tab {
-    color: #a1a1aa !important;
+    color: #8c9bab !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-tab:hover,
@@ -4172,68 +4647,92 @@ textarea[data-testid="card-name-input"],
 .theme-dark #s4t-export-dialog .s4t-export-tab:hover,
 .dark-theme #s4t-export-dialog .s4t-export-tab:hover {
     color: #ffffff !important;
-    background: #27272a !important;
+    background: #323940 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
 .theme-dark #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
 .dark-theme #s4t-export-dialog .s4t-export-tab.s4t-tab-active {
-    color: #579dff !important;
-    background: #1c1c1f !important;
-    border-bottom: 2px solid #579dff !important;
+    color: #14b8a6 !important;
+    background: #22272b !important;
+    border-bottom: 2px solid #14b8a6 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-body,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-body,
 .theme-dark #s4t-export-dialog .s4t-export-body,
 .dark-theme #s4t-export-dialog .s4t-export-body {
-    background: #1c1c1f !important;
+    background: #22272b !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-top-bar,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-top-bar,
 .theme-dark #s4t-export-dialog .s4t-sheet-top-bar,
 .dark-theme #s4t-export-dialog .s4t-sheet-top-bar {
-    background: #202024 !important;
-    border-color: #2e2e33 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-hint,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-hint,
 .theme-dark #s4t-export-dialog .s4t-sheet-hint,
 .dark-theme #s4t-export-dialog .s4t-sheet-hint {
-    color: #f4f4f5 !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-feature-help,
 [data-theme="dark"] #s4t-export-dialog .s4t-feature-help,
 .theme-dark #s4t-export-dialog .s4t-feature-help,
-.dark-theme #s4t-export-dialog .s4t-feature-help,
+.dark-theme #s4t-export-dialog .s4t-feature-help {
+    background: transparent !important;
+    border: none !important;
+    color: var(--ds-text-subtle, #9fadbc) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-feature-help:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-feature-help:hover,
+.theme-dark #s4t-export-dialog .s4t-feature-help:hover,
+.dark-theme #s4t-export-dialog .s4t-feature-help:hover {
+    background: transparent !important;
+    color: #ffffff !important;
+}
+
 [data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-icon,
 [data-theme="dark"] #s4t-export-dialog .s4t-field-info-icon,
 .theme-dark #s4t-export-dialog .s4t-field-info-icon,
-.dark-theme #s4t-export-dialog .s4t-field-info-icon {
+.dark-theme #s4t-export-dialog .s4t-field-info-icon,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-icon:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-field-info-icon:hover,
+.theme-dark #s4t-export-dialog .s4t-field-info-icon:hover,
+.dark-theme #s4t-export-dialog .s4t-field-info-icon:hover {
     background: transparent !important;
     border: none !important;
-    color: #a1a1aa !important;
+    color: #000000 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-svg,
+[data-theme="dark"] #s4t-export-dialog .s4t-field-info-svg,
+.theme-dark #s4t-export-dialog .s4t-field-info-svg,
+.dark-theme #s4t-export-dialog .s4t-field-info-svg {
+    stroke: #000000 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-count-badge,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-count-badge,
 .theme-dark #s4t-export-dialog .s4t-sheet-col-count-badge,
 .dark-theme #s4t-export-dialog .s4t-sheet-col-count-badge {
-    background: #27272a !important;
-    border-color: #3f3f46 !important;
-    color: #a1a1aa !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
 .theme-dark #s4t-export-dialog .s4t-sheet-guide-banner,
 .dark-theme #s4t-export-dialog .s4t-sheet-guide-banner {
-    background: #202024 !important;
-    border-color: #2e2e33 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
@@ -4247,21 +4746,23 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-header:hover,
 .theme-dark #s4t-export-dialog .s4t-sheet-guide-header:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-guide-header:hover {
-    background: #27272a !important;
+    background: #323940 !important;
 }
 
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header {
-    border-bottom-color: #2e2e33 !important;
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid {
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.7) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
 .theme-dark #s4t-export-dialog .s4t-sheet-guide-item,
 .dark-theme #s4t-export-dialog .s4t-sheet-guide-item {
-    color: #a1a1aa !important;
+    color: #8c9bab !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
@@ -4275,34 +4776,44 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-reset-btn,
 .theme-dark #s4t-export-dialog .s4t-sheet-reset-btn,
 .dark-theme #s4t-export-dialog .s4t-sheet-reset-btn {
-    background: #27272a !important;
-    border-color: #3f3f46 !important;
-    color: #f4f4f5 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-reset-btn:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-reset-btn:hover,
 .theme-dark #s4t-export-dialog .s4t-sheet-reset-btn:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-reset-btn:hover {
-    background: #3f3f46 !important;
-    border-color: #579dff !important;
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-grid-wrapper,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-wrapper,
 .theme-dark #s4t-export-dialog .s4t-sheet-grid-wrapper,
 .dark-theme #s4t-export-dialog .s4t-sheet-grid-wrapper {
-    background: #18181b !important;
-    border-color: #2e2e33 !important;
+    background: #22272b !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-add-btn,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-add-btn,
 .theme-dark #s4t-export-dialog .s4t-sheet-add-btn,
 .dark-theme #s4t-export-dialog .s4t-sheet-add-btn {
-    background: #202024 !important;
-    border-color: #2e2e33 !important;
-    color: #f4f4f5 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-add-btn:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-add-btn:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-add-btn:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-add-btn:hover {
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-header-input,
@@ -4313,13 +4824,87 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-source-select,
 .theme-dark #s4t-export-dialog .s4t-sheet-source-select,
 .dark-theme #s4t-export-dialog .s4t-sheet-source-select,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-type-select,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-type-select,
+.theme-dark #s4t-export-dialog .s4t-sheet-type-select,
+.dark-theme #s4t-export-dialog .s4t-sheet-type-select,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input,
+.theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input,
+.dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input,
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-select,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-select,
 .theme-dark #s4t-export-dialog .s4t-export-select,
-.dark-theme #s4t-export-dialog .s4t-export-select {
-    background: #18181b !important;
-    color: #f4f4f5 !important;
-    border-color: #3f3f46 !important;
+.dark-theme #s4t-export-dialog .s4t-export-select,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell-select,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell-select {
+    background: #282e33 !important;
+    color: #ffffff !important;
+    border-color: #38414a !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-input,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-input,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell-input,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell-input {
+    background: transparent !important;
+    color: #c7d1db !important;
+    border-color: transparent !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-input:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-input:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell-input:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell-input:hover {
+    background: #282e33 !important;
+    border-color: #454f59 !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-input:focus,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-input:focus,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell-input:focus,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell-input:focus {
+    background: #22272b !important;
+    border-color: #14b8a6 !important;
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.25) !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-header-input:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-header-input:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-header-input:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-header-input:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-source-select:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-source-select:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-source-select:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-source-select:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-type-select:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-type-select:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-type-select:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-type-select:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-select:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-select:hover,
+.theme-dark #s4t-export-dialog .s4t-export-select:hover,
+.dark-theme #s4t-export-dialog .s4t-export-select:hover {
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error,
+.theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error,
+.dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error {
+    border-color: #f43f5e !important;
+    background: rgba(244, 63, 94, 0.16) !important;
+    box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.25) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell,
@@ -4330,16 +4915,54 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-table td,
 .theme-dark #s4t-export-dialog .s4t-sheet-grid-table td,
 .dark-theme #s4t-export-dialog .s4t-sheet-grid-table td {
-    background: #18181b !important;
-    border-color: #2e2e33 !important;
-    color: #e4e4e7 !important;
+    background: #22272b !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell:has(.s4t-custom-dropdown),
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell:has(.s4t-custom-dropdown),
+.theme-dark #s4t-export-dialog .s4t-sheet-cell:has(.s4t-custom-dropdown),
+.dark-theme #s4t-export-dialog .s4t-sheet-cell:has(.s4t-custom-dropdown) {
+    overflow: visible !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-cell-dropdown-active,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-cell-dropdown-active,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell.s4t-cell-dropdown-active,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell.s4t-cell-dropdown-active,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell:has(.s4t-dropdown-open),
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell:has(.s4t-dropdown-open),
+.theme-dark #s4t-export-dialog .s4t-sheet-cell:has(.s4t-dropdown-open),
+.dark-theme #s4t-export-dialog .s4t-sheet-cell:has(.s4t-dropdown-open) {
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 500 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row.s4t-row-dropdown-active,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-row.s4t-row-dropdown-active,
+.theme-dark #s4t-export-dialog .s4t-sheet-row.s4t-row-dropdown-active,
+.dark-theme #s4t-export-dialog .s4t-sheet-row.s4t-row-dropdown-active,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:has(.s4t-dropdown-open),
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-row:has(.s4t-dropdown-open),
+.theme-dark #s4t-export-dialog .s4t-sheet-row:has(.s4t-dropdown-open),
+.dark-theme #s4t-export-dialog .s4t-sheet-row:has(.s4t-dropdown-open) {
+    position: relative !important;
+    z-index: 500 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
 .theme-dark #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
 .dark-theme #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell {
-    background: #141417 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell,
@@ -4350,26 +4973,28 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-table tr:hover td,
 .theme-dark #s4t-export-dialog .s4t-sheet-grid-table tr:hover td,
 .dark-theme #s4t-export-dialog .s4t-sheet-grid-table tr:hover td {
-    background: #202024 !important;
+    background: rgba(20, 184, 166, 0.18) !important;
+    border-color: #14b8a6 !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-empty-td,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-empty-td,
 .theme-dark #s4t-export-dialog .s4t-sheet-empty-td,
 .dark-theme #s4t-export-dialog .s4t-sheet-empty-td {
-    background: #1c1c1f !important;
-    border-color: #3f3f46 !important;
-    color: #a1a1aa !important;
+    background: #22272b !important;
+    border-color: #38414a !important;
+    color: #8c9bab !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-split-menu,
 [data-theme="dark"] #s4t-export-dialog .s4t-split-menu,
 .theme-dark #s4t-export-dialog .s4t-split-menu,
 .dark-theme #s4t-export-dialog .s4t-split-menu {
-    background: #202024 !important;
-    border-color: #3f3f46 !important;
-    color: #f4f4f5 !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-split-item,
@@ -4380,7 +5005,7 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-split-menu-item,
 .theme-dark #s4t-export-dialog .s4t-split-menu-item,
 .dark-theme #s4t-export-dialog .s4t-split-menu-item {
-    color: #f4f4f5 !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-split-item:hover,
@@ -4391,25 +5016,25 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-split-menu-item:hover,
 .theme-dark #s4t-export-dialog .s4t-split-menu-item:hover,
 .dark-theme #s4t-export-dialog .s4t-split-menu-item:hover {
-    background: #2e2e33 !important;
-    color: #579dff !important;
+    background: #323940 !important;
+    color: #14b8a6 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary,
 [data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary,
 .theme-dark #s4t-export-dialog .s4t-btn-secondary,
 .dark-theme #s4t-export-dialog .s4t-btn-secondary {
-    background: #27272a !important;
-    color: #f4f4f5 !important;
-    border-color: #3f3f46 !important;
+    background: #282e33 !important;
+    color: #b6c2cf !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary:hover,
 .theme-dark #s4t-export-dialog .s4t-btn-secondary:hover,
 .dark-theme #s4t-export-dialog .s4t-btn-secondary:hover {
-    background: #3f3f46 !important;
-    border-color: #579dff !important;
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
     color: #ffffff !important;
 }
 
@@ -4417,39 +5042,56 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-blur-overlay,
 .theme-dark #s4t-export-dialog .s4t-sheet-preview-blur-overlay,
 .dark-theme #s4t-export-dialog .s4t-sheet-preview-blur-overlay {
-    background: rgba(20, 20, 22, 0.65) !important;
+    background: rgba(34, 39, 43, 0.75) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-card,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-card,
 .theme-dark #s4t-export-dialog .s4t-sheet-preview-cta-card,
 .dark-theme #s4t-export-dialog .s4t-sheet-preview-cta-card {
-    background: #202024 !important;
-    border-color: #3f3f46 !important;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
-    color: #f4f4f5 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7) !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-title,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-title,
 .theme-dark #s4t-export-dialog .s4t-sheet-preview-cta-title,
 .dark-theme #s4t-export-dialog .s4t-sheet-preview-cta-title {
-    color: #f4f4f5 !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-text,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-preview-cta-text,
 .theme-dark #s4t-export-dialog .s4t-sheet-preview-cta-text,
 .dark-theme #s4t-export-dialog .s4t-sheet-preview-cta-text {
-    color: #a1a1aa !important;
+    color: #8c9bab !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-dirty-banner,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-dirty-banner,
+.theme-dark #s4t-export-dialog .s4t-sheet-dirty-banner,
+.dark-theme #s4t-export-dialog .s4t-sheet-dirty-banner {
+    background: #282e33 !important;
+    border-color: #14b8a6 !important;
+    color: #2dd4bf !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-dirty-text,
+[data-theme="dark"] #s4t-export-dialog .s4t-dirty-text,
+.theme-dark #s4t-export-dialog .s4t-dirty-text,
+.dark-theme #s4t-export-dialog .s4t-dirty-text {
+    color: #2dd4bf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-header,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-header,
 .theme-dark #s4t-export-dialog .s4t-export-att-header,
 .dark-theme #s4t-export-dialog .s4t-export-att-header {
-    background: #202024 !important;
-    border-color: #2e2e33 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-heading h3,
@@ -4459,20 +5101,27 @@ textarea[data-testid="card-name-input"],
     color: #ffffff !important;
 }
 
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-sub,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-sub,
+.theme-dark #s4t-export-dialog .s4t-export-att-sub,
+.dark-theme #s4t-export-dialog .s4t-export-att-sub {
+    color: #8c9bab !important;
+}
+
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-col,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-col,
 .theme-dark #s4t-export-dialog .s4t-export-att-col,
 .dark-theme #s4t-export-dialog .s4t-export-att-col {
-    background: #202024 !important;
-    border-color: #2e2e33 !important;
-    color: #f4f4f5 !important;
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-column-heading,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-column-heading,
 .theme-dark #s4t-export-dialog .s4t-export-att-column-heading,
 .dark-theme #s4t-export-dialog .s4t-export-att-column-heading {
-    border-bottom-color: #2e2e33 !important;
+    border-bottom-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-column-heading h4,
@@ -4486,63 +5135,100 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-col-hint,
 .theme-dark #s4t-export-dialog .s4t-export-att-col-hint,
 .dark-theme #s4t-export-dialog .s4t-export-att-col-hint {
-    color: #a1a1aa !important;
+    color: #8c9bab !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-att-info-icon,
+[data-theme="dark"] #s4t-export-dialog .s4t-att-info-icon,
+.theme-dark #s4t-export-dialog .s4t-att-info-icon,
+.dark-theme #s4t-export-dialog .s4t-att-info-icon {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-att-info-icon:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-att-info-icon:hover,
+.theme-dark #s4t-export-dialog .s4t-att-info-icon:hover,
+.dark-theme #s4t-export-dialog .s4t-att-info-icon:hover {
+    color: #ffffff !important;
+    opacity: 0.8 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-note,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-note,
+.theme-dark #s4t-export-dialog .s4t-export-att-note,
+.dark-theme #s4t-export-dialog .s4t-export-att-note {
+    color: #8c9bab !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-label-dot,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-label-dot,
+.theme-dark #s4t-export-dialog .s4t-export-att-label-dot,
+.dark-theme #s4t-export-dialog .s4t-export-att-label-dot {
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-label-dot.s4t-label-dot-none,
+[data-theme="dark"] #s4t-export-dialog .s4t-export-att-label-dot.s4t-label-dot-none,
+.theme-dark #s4t-export-dialog .s4t-export-att-label-dot.s4t-label-dot-none,
+.dark-theme #s4t-export-dialog .s4t-export-att-label-dot.s4t-label-dot-none {
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-option,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-option,
 .theme-dark #s4t-export-dialog .s4t-export-att-option,
 .dark-theme #s4t-export-dialog .s4t-export-att-option {
-    background: #27272a !important;
-    border-color: #3f3f46 !important;
-    color: #d4d4d8 !important;
+    background: #22272b !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-option:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-option:hover,
 .theme-dark #s4t-export-dialog .s4t-export-att-option:hover,
 .dark-theme #s4t-export-dialog .s4t-export-att-option:hover {
-    background: #3f3f46 !important;
+    background: #323940 !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-option:has(input:checked),
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-option:has(input:checked),
 .theme-dark #s4t-export-dialog .s4t-export-att-option:has(input:checked),
 .dark-theme #s4t-export-dialog .s4t-export-att-option:has(input:checked) {
-    background: #1c2b42 !important;
-    border-color: #254d7f !important;
-    color: #579dff !important;
+    background: rgba(20, 184, 166, 0.16) !important;
+    border-color: #14b8a6 !important;
+    color: #2dd4bf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-group-toggle,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-group-toggle,
 .theme-dark #s4t-export-dialog .s4t-export-att-group-toggle,
 .dark-theme #s4t-export-dialog .s4t-export-att-group-toggle {
-    background: #27272a !important;
-    border-color: #3f3f46 !important;
+    background: #22272b !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-group-toggle:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-group-toggle:hover,
 .theme-dark #s4t-export-dialog .s4t-export-att-group-toggle:hover,
 .dark-theme #s4t-export-dialog .s4t-export-att-group-toggle:hover {
-    background: #3f3f46 !important;
-    border-color: #579dff !important;
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-virtual-cell,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-virtual-cell,
 .theme-dark #s4t-export-dialog .s4t-sheet-virtual-cell,
 .dark-theme #s4t-export-dialog .s4t-sheet-virtual-cell {
-    background: #202024 !important;
-    border-color: #2e2e33 !important;
+    background: #22272b !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-skeleton-line,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-skeleton-line,
 .theme-dark #s4t-export-dialog .s4t-sheet-skeleton-line,
 .dark-theme #s4t-export-dialog .s4t-sheet-skeleton-line {
-    background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%) !important;
+    background: linear-gradient(90deg, #22272b 25%, #323940 50%, #22272b 75%) !important;
     background-size: 200% 100% !important;
 }
 
@@ -4550,103 +5236,236 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle,
 .theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle,
 .dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle {
-    background: #202024 !important;
-    color: #f4f4f5 !important;
-    border-color: #2e2e33 !important;
+    background: #22272b !important;
+    color: #b6c2cf !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:hover,
 .theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle:hover {
-    background: #27272a !important;
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
 .theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
 .dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked) {
-    background: #1c2b42 !important;
-    border-color: #254d7f !important;
-    color: #579dff !important;
-}
-
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner {
-    background: #202024 !important;
-    border-color: #2e2e33 !important;
-}
-
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-header,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-header {
-    color: #f4f4f5 !important;
-}
-
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-item,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-item {
-    color: #a1a1aa !important;
-}
-
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-item strong,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-item strong {
-    color: #e4e4e7 !important;
+    background: rgba(20, 184, 166, 0.16) !important;
+    border-color: #14b8a6 !important;
+    color: #2dd4bf !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-badge,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-badge,
 .theme-dark #s4t-export-dialog .s4t-sheet-guide-badge,
 .dark-theme #s4t-export-dialog .s4t-sheet-guide-badge {
-    background: #27272a !important;
-    border-color: #3f3f46 !important;
-    color: #d4d4d8 !important;
-}
-
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-type-select,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-type-select,
-.theme-dark #s4t-export-dialog .s4t-sheet-type-select,
-.dark-theme #s4t-export-dialog .s4t-sheet-type-select,
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input,
-.theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input,
-.dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input,
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
-.theme-dark #s4t-export-dialog .s4t-sheet-cell-select,
-.dark-theme #s4t-export-dialog .s4t-sheet-cell-select {
-    background: #18181b !important;
-    color: #f4f4f5 !important;
-    border-color: #3f3f46 !important;
+    background: #22272b !important;
+    border-color: #38414a !important;
+    color: #8c9bab !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-separator-row td,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-separator-row td,
 .theme-dark #s4t-export-dialog .s4t-sheet-separator-row td,
 .dark-theme #s4t-export-dialog .s4t-sheet-separator-row td {
-    background: #2e2e33 !important;
+    background: #323940 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-footer,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-footer,
 .theme-dark #s4t-export-dialog .s4t-export-footer,
 .dark-theme #s4t-export-dialog .s4t-export-footer {
-    background: #18181b !important;
-    border-top: 1px solid #2e2e33 !important;
+    background: #282e33 !important;
+    border-top: 1px solid #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-footer-status,
 [data-theme="dark"] #s4t-export-dialog .s4t-export-footer-status,
 .theme-dark #s4t-export-dialog .s4t-export-footer-status,
 .dark-theme #s4t-export-dialog .s4t-export-footer-status {
-    background: #27272a !important;
-    color: #f4f4f5 !important;
-    border: 1px solid #3f3f46 !important;
+    background: #22272b !important;
+    color: #b6c2cf !important;
+    border: 1px solid #38414a !important;
 }
 
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-note-row td,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-note-row td,
+.theme-dark #s4t-export-dialog .s4t-sheet-note-row td,
+.dark-theme #s4t-export-dialog .s4t-sheet-note-row td,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-note-content,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-note-content,
+.theme-dark #s4t-export-dialog .s4t-sheet-note-content,
+.dark-theme #s4t-export-dialog .s4t-sheet-note-content {
+    color: #8c9bab !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-trigger {
+    background: #282e33 !important;
+    color: #ffffff !important;
+    border-color: #38414a !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:hover,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-trigger:hover,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-trigger:hover {
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-arrow,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-arrow,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-arrow,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-arrow {
+    color: #9fadbc !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-menu,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-menu,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-menu,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-menu {
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-item,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-item,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-item,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-item {
+    color: #b6c2cf !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-item:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-item:hover,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-item:hover,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-item:hover {
+    background: #323940 !important;
+    color: #14b8a6 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected {
+    background: rgba(20, 184, 166, 0.16) !important;
+    color: #2dd4bf !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn.s4t-btn-disabled,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn.s4t-btn-disabled,
+.theme-dark #s4t-export-dialog .s4t-btn.s4t-btn-disabled,
+.dark-theme #s4t-export-dialog .s4t-btn.s4t-btn-disabled,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn.s4t-btn-disabled:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn.s4t-btn-disabled:hover,
+.theme-dark #s4t-export-dialog .s4t-btn.s4t-btn-disabled:hover,
+.dark-theme #s4t-export-dialog .s4t-btn.s4t-btn-disabled:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn.s4t-btn-disabled:active,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn.s4t-btn-disabled:active,
+.theme-dark #s4t-export-dialog .s4t-btn.s4t-btn-disabled:active,
+.dark-theme #s4t-export-dialog .s4t-btn.s4t-btn-disabled:active,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn[aria-disabled="true"],
+[data-theme="dark"] #s4t-export-dialog .s4t-btn[aria-disabled="true"],
+.theme-dark #s4t-export-dialog .s4t-btn[aria-disabled="true"],
+.dark-theme #s4t-export-dialog .s4t-btn[aria-disabled="true"],
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn[aria-disabled="true"]:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn[aria-disabled="true"]:hover,
+.theme-dark #s4t-export-dialog .s4t-btn[aria-disabled="true"]:hover,
+.dark-theme #s4t-export-dialog .s4t-btn[aria-disabled="true"]:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled,
+.theme-dark #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled,
+.dark-theme #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled *,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled *,
+.theme-dark #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled *,
+.dark-theme #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled *,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover,
+.theme-dark #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover,
+.dark-theme #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover *,
+[data-theme="dark"] #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover *,
+.theme-dark #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover *,
+.dark-theme #s4t-export-dialog .s4t-split-download-group.s4t-group-disabled:hover * {
+    cursor: not-allowed !important;
+    opacity: 0.45 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    filter: grayscale(30%) !important;
+    pointer-events: auto !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary.s4t-btn-disabled:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary.s4t-btn-disabled:hover,
+.theme-dark #s4t-export-dialog .s4t-btn-secondary.s4t-btn-disabled:hover,
+.dark-theme #s4t-export-dialog .s4t-btn-secondary.s4t-btn-disabled:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary[aria-disabled="true"]:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary[aria-disabled="true"]:hover,
+.theme-dark #s4t-export-dialog .s4t-btn-secondary[aria-disabled="true"]:hover,
+.dark-theme #s4t-export-dialog .s4t-btn-secondary[aria-disabled="true"]:hover {
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
+    box-shadow: none !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-primary,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-primary,
+.theme-dark #s4t-export-dialog .s4t-btn-primary,
+.dark-theme #s4t-export-dialog .s4t-btn-primary {
+    background: #0f766e !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-primary:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-primary:hover,
+.theme-dark #s4t-export-dialog .s4t-btn-primary:hover,
+.dark-theme #s4t-export-dialog .s4t-btn-primary:hover {
+    background: #115e59 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary,
+.theme-dark #s4t-export-dialog .s4t-btn-secondary,
+.dark-theme #s4t-export-dialog .s4t-btn-secondary {
+    background: #282e33 !important;
+    color: #c7d1db !important;
+    border: 1px solid #38414a !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-secondary:hover,
+.theme-dark #s4t-export-dialog .s4t-btn-secondary:hover,
+.dark-theme #s4t-export-dialog .s4t-btn-secondary:hover {
+    background: #323940 !important;
+    border-color: #14b8a6 !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-subtle,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-subtle,
+.theme-dark #s4t-export-dialog .s4t-btn-subtle,
+.dark-theme #s4t-export-dialog .s4t-btn-subtle {
+    background: transparent !important;
+    color: #8c9bab !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-subtle:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-subtle:hover,
+.theme-dark #s4t-export-dialog .s4t-btn-subtle:hover,
+.dark-theme #s4t-export-dialog .s4t-btn-subtle:hover {
+    background: #323940 !important;
+    color: #ffffff !important;
+}
