@@ -1318,10 +1318,11 @@ test('card-export: guide view scrolls preview to leftmost, spotlights unblurred 
     assert.ok(ce.includes("id: 'col-drag'"), 'Guide must include Drag & Drop item');
     assert.ok(ce.includes("id: 'col-rename'"), 'Guide must include Column Rename item');
     assert.ok(ce.includes("id: 'col-mapping'"), 'Guide must include Field Mapping item');
-    assert.ok(ce.includes("ℹ️ Shows: Field Info & Dropdown"), 'Guide col-mapping must mention Shows: Field Info & Dropdown');
+    assert.ok(ce.includes("title: 'Trello Field Mapping'"), 'Guide col-mapping must mention Trello Field Mapping');
     assert.ok(ce.includes("id: 'col-dtype'"), 'Guide must include dtype Data Type Format item');
-    assert.ok(ce.includes("⚙️ dtype: Data Type Format"), 'Guide col-dtype must mention dtype: Data Type Format');
+    assert.ok(ce.includes("title: 'Data Type Format'"), 'Guide col-dtype must mention Data Type Format');
     assert.ok(ce.includes("id: 'col-custom'"), 'Guide must include Custom Dropdowns item');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(6) .s4t-sheet-custom-options-input'"), 'Guide col-custom must target COL 7 input to prevent double highlight');
     assert.ok(ce.includes("id: 'preview-card'"), 'Guide must include Live Preview CTA item');
     assert.ok(ce.includes("id: 'col-count'"), 'Guide must include Column Counter item');
     assert.ok(ce.includes("target: '#s4t-sheet-col-count'"), 'Guide column counter item must target #s4t-sheet-col-count');
@@ -1330,13 +1331,19 @@ test('card-export: guide view scrolls preview to leftmost, spotlights unblurred 
     assert.ok(ce.includes("id: 'download-file'"), 'Guide must include Download Spreadsheet item');
     assert.ok(ce.includes("target: '.s4t-split-download-group'"), 'Guide download item must target .s4t-split-download-group');
 
-    // 4. Two-tier uncluttered vertical staggering and SVG stem lines
+    // 4. Two-tier uncluttered vertical staggering, SVG stem lines, and 3-step tour
     assert.ok(css.includes('.s4t-cloud-tooltip.arrow-left'), 'sprint-helper.css must style arrow-left tooltip variant');
     assert.ok(css.includes('.s4t-guide-stem-line'), 'sprint-helper.css must style SVG guide stem lines');
     assert.ok(ce.includes('s4t-guide-stem-line'), 'card-export.js must draw long-reach stem lines in SVG overlay');
     assert.ok(ce.includes('maxCardBottom'), 'card-export.js must measure physical bottom of column cards to prevent any row overlap');
     assert.ok(ce.includes('tier: 1') && ce.includes('tier: 2'), 'card-export.js must distribute column tooltips across two distinct vertical tiers');
     assert.ok(ce.includes("left = dialogWidth - (tipW * 2) - 28;"), 'Copy button tooltip must offset from download tooltip to avoid footer overlap');
+    assert.ok(ce.includes('gutterRoute: true'), 'COL 4 title must route stem line through side gutter to avoid passing through lower inputs');
+    assert.ok(!ce.includes('s4t-cloud-icon">☁️'), 'Cloud icon ☁️ must be removed from all tooltip headers');
+    assert.ok(!ce.includes('id="s4t-export-guide-btn" data-tooltip="Interactive Guide Tour"'), 'Floating guide button tooltip badge must be removed to prevent collision');
+    assert.ok(ce.includes('s4t-guide-stepper-pill'), 'card-export.js must render 3-step navigation stepper pill');
+    assert.ok(ce.includes('Step 1 of 3: Top Controls & Export') && ce.includes('Step 2 of 3: Column Configuration') && ce.includes('Step 3 of 3: Live Preview'), 'card-export.js must define all 3 tour step titles');
+    assert.ok(css.includes('.s4t-guide-stepper-pill'), 'sprint-helper.css must style 3-step stepper pill bar');
 });
 
 test('card-export: guide mode freezes screen completely, aligns boxes with subpixel precision, and adapts preview highlight when generated', () => {
@@ -1362,7 +1369,7 @@ test('card-export: guide mode freezes screen completely, aligns boxes with subpi
     // 4. Preview generated state: highlights compact sample cell rather than entire 800px table
     assert.ok(ce.includes('isPreviewGenerated = !isDirtyBanner && state.previewVisible'), 'Guide mode must detect when live preview rows are generated');
     assert.ok(ce.includes('#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(3)'), 'Live preview highlight must target compact sample cell');
-    assert.ok(ce.includes("previewTitle = '📊 Live 20-Card Preview'"), 'Guide must define live 20-card preview tooltip title');
+    assert.ok(ce.includes("previewTitle = 'Live 20-Card Preview'"), 'Guide must define live 20-card preview tooltip title');
 });
 
 test('card-export: guide mode ripple bubble on click, enter/exit and warning toasts, and header highlights matching members burndown', () => {
@@ -1398,3 +1405,117 @@ test('card-export: guide mode ripple bubble on click, enter/exit and warning toa
     assert.ok(css.includes('background: #161a1d !important;'), 'Dark mode export header must use #161a1d matching members modal');
     assert.ok(css.includes('background: #1c2b41 !important;'), 'Dark mode board tag must use #1c2b41 matching members burndown badge');
 });
+
+test('card-export: 3-step tour organization, clean tooltip copy, and single highlight per column for COL 1 to 7', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+
+    // 1. Verify exact copy for all 13 tooltips
+    const expectedTooltips = [
+        { title: 'Matching Cards Count', desc: 'Total cards matching active filters. Double-click to copy.' },
+        { title: 'Exclusions & Sorting', desc: 'Exclude specific lists, members, or labels, and set custom row sort order.' },
+        { title: 'Column Number', desc: 'Left-to-right column position in your exported sheet.' },
+        { title: 'Hide / Show Column', desc: 'Toggle column visibility in export without losing its setup.' },
+        { title: 'Reorder Columns', desc: 'Drag the 6-dot handle to change column order.' },
+        { title: 'Column Title', desc: 'Edit the header name exported to your spreadsheet.' },
+        { title: 'Trello Field Mapping', desc: 'Map to 14 Trello fields. Hover ℹ️ to view field details.' },
+        { title: 'Data Type Format', desc: 'Format cells as String text, Dev member select, or Custom dropdown.' },
+        { title: 'Custom Dropdown Options', desc: 'Enter comma-separated options to create cell dropdowns.' },
+        { title: 'Live 20-Card Preview', desc: 'Preview formatted rows with your rules before exporting.' },
+        { title: 'Active Column Count', desc: 'Total visible columns included in the export.' },
+        { title: 'Copy for Google Sheets', desc: 'Copy formatted TSV to paste directly into Google Sheets.' },
+        { title: 'Download Spreadsheet', desc: 'Export as Excel (.xls), or click ▼ for CSV format.' }
+    ];
+
+    expectedTooltips.forEach(t => {
+        assert.ok(ce.includes(`title: '${t.title}'`) || ce.includes(`previewTitle = '${t.title}'`), `card-export.js must define tooltip title: ${t.title}`);
+        assert.ok(ce.includes(`desc: '${t.desc}'`) || ce.includes(`previewDesc = '${t.desc}'`), `card-export.js must define tooltip desc: ${t.desc}`);
+    });
+
+    // 2. Verify single clean column assignment across COL 1 through COL 7 (indices 0 to 6)
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(0) .s4t-sheet-col-badge'"), 'COL 1 must target badge');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(1) .s4t-sheet-col-hide'"), 'COL 2 must target eye hide button');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(2) .s4t-sheet-drag-handle'"), 'COL 3 must target drag handle');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(3) .s4t-sheet-header-input'"), 'COL 4 must target header input');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(4) .s4t-sheet-source-row'"), 'COL 5 must target source row');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(5) .s4t-sheet-type-row'"), 'COL 6 must target type row');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(6) .s4t-sheet-custom-options-input'"), 'COL 7 must target custom options input');
+
+    // 3. Verify step assignments and controls
+    assert.ok(ce.includes("currentGuideStep = 1;"), 'Guide mode must start on Step 1');
+    assert.ok(ce.includes("s4t-guide-pill-back"), 'Stepper pill must have back button');
+    assert.ok(ce.includes("s4t-guide-pill-next"), 'Stepper pill must have next button');
+    assert.ok(ce.includes("s4t-guide-pill-toggle-all"), 'Stepper pill must have show all toggle');
+    assert.ok(ce.includes("s4t-guide-pill-close"), 'Stepper pill must have close button');
+});
+
+test('card-export: stepper pill is freely draggable with grip handle, bounded clamping, and persistent repositioning', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Grip handle markup and styling
+    assert.ok(ce.includes('s4t-guide-pill-grip'), 'card-export.js must create .s4t-guide-pill-grip handle');
+    assert.ok(ce.includes('viewBox="0 0 10 14"'), 'card-export.js grip handle must use 6-dot SVG icon');
+    assert.ok(css.includes('.s4t-guide-pill-grip'), 'sprint-helper.css must style .s4t-guide-pill-grip');
+    assert.ok(css.includes('cursor: grab !important;'), 'sprint-helper.css must set cursor: grab on stepper pill and grip handle');
+    assert.ok(css.includes('.s4t-guide-stepper-pill.s4t-is-dragging'), 'sprint-helper.css must style active dragging state');
+    assert.ok(css.includes('cursor: grabbing !important;'), 'sprint-helper.css must set cursor: grabbing when dragging');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-guide-pill-grip'), 'sprint-helper.css must style dark mode grip');
+
+    // 2. Drag-and-drop event binding and target filtering
+    assert.ok(ce.includes('mousedown.s4tPillDrag touchstart.s4tPillDrag'), 'card-export.js must bind mouse and touch drag start handlers');
+    assert.ok(ce.includes("$(e.target).closest('.s4t-guide-stepper-actions, button, a').length"), 'card-export.js must ignore drag on action buttons');
+    assert.ok(ce.includes('mousemove.s4tPillDrag touchmove.s4tPillDrag'), 'card-export.js must bind pointer move handler');
+    assert.ok(ce.includes('mouseup.s4tPillDrag touchend.s4tPillDrag touchcancel.s4tPillDrag'), 'card-export.js must bind release/cancel handler');
+
+    // 3. Clamping within dialog boundaries
+    assert.ok(ce.includes('Math.max(minX, Math.min(startPillLeft + deltaX, maxX))'), 'card-export.js must clamp horizontal drag within dialog');
+    assert.ok(ce.includes('Math.max(minY, Math.min(startPillTop + deltaY, maxY))'), 'card-export.js must clamp vertical drag within dialog');
+
+    // 4. Position preservation across step changes and cleanup
+    assert.ok(ce.includes('stepperPillPos = { top: newTop, left: newLeft };'), 'card-export.js must store dragged position');
+    assert.ok(ce.includes('if (stepperPillPos && typeof stepperPillPos.top === \'number\''), 'card-export.js must restore dragged position on re-render');
+    assert.ok(ce.includes('$(document).off(\'mousemove.s4tPillDrag'), 'card-export.js must clean up drag listeners on modal close and guide exit');
+});
+
+test('card-export: stepper pill is strictly hidden when guide mode is not active and thoroughly cleaned up on exit', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. CSS rules enforce display none when guide mode is not active
+    assert.ok(css.includes('#s4t-export-dialog:not(.s4t-guide-active-mode) .s4t-guide-stepper-pill'), 'CSS must define display: none for stepper pill when guide mode is not active');
+    assert.ok(css.includes('#s4t-export-dialog.s4t-guide-active-mode .s4t-guide-stepper-pill'), 'CSS must define display: inline-flex only when guide mode is active');
+
+    // 2. JS removes pill on exiting guide mode, modal close, and render guard
+    assert.ok(ce.includes("dialog.find('.s4t-guide-stepper-pill').remove();"), 'card-export.js must remove stepper pill element');
+    assert.ok(ce.includes("overlay.find('.s4t-guide-stepper-pill').remove();"), 'card-export.js must remove stepper pill from overlay');
+    assert.ok(ce.includes("$('.s4t-guide-stepper-pill').remove();"), 'card-export.js must remove stepper pill globally');
+    assert.ok(ce.includes('if (!isGuideActive) {') && ce.includes('renderCloudyTooltips'), 'renderCloudyTooltips must guard against execution when guide mode is inactive');
+    assert.ok(ce.includes("if (isGuideActive && tab !== 'sheet')"), 'switchView must exit guide mode when switching away from sheet view');
+});
+
+test('card-export: exportCards feature preference completely hides three-dots menu items and burndown export button', () => {
+    const sh = fs.readFileSync('sprint-helper.js', 'utf8');
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const fp = fs.readFileSync('feature-preferences.js', 'utf8');
+
+    // 1. Feature preferences registers all menu item and modal selectors
+    assert.ok(fp.includes(".js-export-excel"), 'feature-preferences.js must hide .js-export-excel when disabled');
+    assert.ok(fp.includes("#s4t-excel-export-menu-item"), 'feature-preferences.js must hide #s4t-excel-export-menu-item when disabled');
+    assert.ok(fp.includes("#s4t-burndown-export-btn"), 'feature-preferences.js must hide #s4t-burndown-export-btn when disabled');
+
+    // 2. checkExport() cleans up existing items and skips injection when exportCards is disabled
+    assert.ok(sh.includes("!s4tPreferences.enabled('exportCards')") && sh.includes('checkExport'), 'checkExport must check exportCards preference');
+
+    // 3. showExcelExport() guards against opening when disabled
+    assert.ok(sh.includes("!s4tPreferences.enabled('exportCards')") && sh.includes('showExcelExport'), 'showExcelExport must check exportCards preference');
+
+    // 4. s4tOpenCardExport() guards against opening when disabled
+    assert.ok(ce.includes("!s4tPreferences.enabled('exportCards')") && ce.includes('s4tOpenCardExport'), 's4tOpenCardExport must check exportCards preference');
+
+    // 5. applyFeaturePreferences() removes menu items and closes export dialog when unchecked
+    assert.ok(sh.includes('s4tCloseCardExport'), 'sprint-helper.js must call s4tCloseCardExport when exportCards is disabled');
+    assert.ok(ce.includes('s4tCloseCardExport'), 'card-export.js must export s4tCloseCardExport');
+});
+
+
+

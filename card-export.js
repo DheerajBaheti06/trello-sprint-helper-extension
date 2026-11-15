@@ -6,6 +6,7 @@
     } else {
         var api = factory();
         root.s4tOpenCardExport = api.s4tOpenCardExport;
+        root.s4tCloseCardExport = api.s4tCloseCardExport;
         root.s4tExportCardFields = api.s4tExportCardFields;
         root.s4tExtractFieldValue = api.s4tExtractFieldValue;
         root.s4tBuildExportCsv = api.s4tBuildExportCsv;
@@ -583,8 +584,18 @@
 
     var activeOverlay = null;
 
+    function s4tCloseCardExport() {
+        if (activeOverlay) {
+            activeOverlay.remove();
+            activeOverlay = null;
+        }
+    }
+
     function s4tOpenCardExport(options) {
         if (typeof document === 'undefined') return;
+        if (typeof s4tPreferences !== 'undefined' && !s4tPreferences.enabled('exportCards')) {
+            return;
+        }
         var opts = options || {};
 
         if (activeOverlay) {
@@ -665,6 +676,11 @@
             if (isGuideActive) {
                 toggleGuideMode();
             }
+            dialog.find('.s4t-guide-stepper-pill').remove();
+            overlay.find('.s4t-guide-stepper-pill').remove();
+            $('.s4t-guide-stepper-pill').remove();
+            $(document).off('mousemove.s4tPillDrag touchmove.s4tPillDrag mouseup.s4tPillDrag touchend.s4tPillDrag touchcancel.s4tPillDrag');
+            stepperPillPos = null;
             if (activeOverlay === overlay) activeOverlay = null;
             overlay.remove();
             $(document).off('keydown.s4tExportClose');
@@ -681,6 +697,14 @@
                     return;
                 }
                 close();
+            } else if (isGuideActive) {
+                if ((e.key === 'ArrowRight' || e.keyCode === 39) && currentGuideStep !== 'all' && currentGuideStep < 3) {
+                    currentGuideStep++;
+                    renderCloudyTooltips();
+                } else if ((e.key === 'ArrowLeft' || e.keyCode === 37) && currentGuideStep !== 'all' && currentGuideStep > 1) {
+                    currentGuideStep--;
+                    renderCloudyTooltips();
+                }
             }
         });
 
@@ -704,7 +728,7 @@
             '    <span class="s4t-export-match-count s4t-metric-badge" id="s4t-export-count-badge" role="button" tabindex="0" data-tooltip="Double-click to copy matching card count" data-copy-value="0">0 cards matching</span>',
             '  </div>',
             '  <div class="s4t-export-header-actions" role="tablist">',
-            '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-guide-btn" id="s4t-export-guide-btn" data-tooltip="Interactive Guide Tour" aria-pressed="false"><svg class="s4t-guide-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span>Guide</span></button>',
+            '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-guide-btn" id="s4t-export-guide-btn" aria-pressed="false" aria-label="Interactive Guide Tour"><svg class="s4t-guide-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span>Guide</span></button>',
             '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-reset-btn" id="s4t-header-reset-btn" data-tooltip="Reset to default columns">↺ Reset Template</button>',
             '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-export-tab s4t-sheet-settings-btn" id="s4t-tab-btn-exclusions" data-tab="exclusions" role="tab" aria-selected="false" data-tooltip="Exclusions &amp; Ordering Settings" aria-label="Exclusions &amp; Ordering Settings"><svg class="s4t-settings-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-.5 2-2 1.2-2-.6-2 3.4 1.5 1.4v2.4L2.5 14l2 3.4 2-.6 2 1.2.5 3h6l.5-3 2-1.2 2 .6 2-3.4-1.5-1.2v-2.4L21.5 9l-2-3.4-2 .6-2-1.2-.5-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></button>',
             '    <button type="button" class="s4t-export-close-btn s4t-close-btn" aria-label="Close" data-tooltip="Close">✕</button>',
@@ -739,6 +763,8 @@
         }
 
         var isGuideActive = false;
+        var currentGuideStep = 1;
+        var stepperPillPos = null;
         var guideToastTimer = null;
 
         function showGuideToast(msg, type) {
@@ -788,10 +814,15 @@
                 guideBtn.removeClass('s4t-guide-active').attr('aria-pressed', 'false');
                 dialog.find('#s4t-guide-freeze-overlay').remove();
                 dialog.find('.s4t-cloud-tooltip').remove();
+                dialog.find('.s4t-guide-stepper-pill').remove();
+                overlay.find('.s4t-guide-stepper-pill').remove();
+                $('.s4t-guide-stepper-pill').remove();
                 dialog.find('.s4t-guide-spotlight-active').removeClass('s4t-guide-spotlight-active');
                 $(window).off('resize.s4tGuide');
                 dialog.off('wheel.s4tGuideFreeze touchmove.s4tGuideFreeze scroll.s4tGuideFreeze');
                 dialog.find('.s4t-sheet-grid-wrapper').off('scroll.s4tGuide scroll.s4tGuideFreeze');
+                $(document).off('mousemove.s4tPillDrag touchmove.s4tPillDrag mouseup.s4tPillDrag touchend.s4tPillDrag touchcancel.s4tPillDrag');
+                stepperPillPos = null;
                 showGuideToast('Exited Guide Mode');
                 return;
             }
@@ -817,6 +848,9 @@
             // Prevent any wheel, touchmove, or scroll gestures so rows cannot move during guide mode
             dialog.off('wheel.s4tGuideFreeze touchmove.s4tGuideFreeze scroll.s4tGuideFreeze');
             dialog.on('wheel.s4tGuideFreeze touchmove.s4tGuideFreeze scroll.s4tGuideFreeze', function (e) {
+                if ($(e.target).closest('.s4t-guide-stepper-pill').length) {
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 return false;
@@ -843,9 +877,24 @@
             }
         }
 
-        function renderCloudyTooltips() {
+        function renderCloudyTooltips(step) {
+            if (!isGuideActive) {
+                dialog.find('#s4t-guide-freeze-overlay').remove();
+                dialog.find('.s4t-cloud-tooltip').remove();
+                dialog.find('.s4t-guide-stepper-pill').remove();
+                overlay.find('.s4t-guide-stepper-pill').remove();
+                $('.s4t-guide-stepper-pill').remove();
+                dialog.find('.s4t-guide-spotlight-active').removeClass('s4t-guide-spotlight-active');
+                return;
+            }
+            if (typeof step !== 'undefined') {
+                currentGuideStep = step;
+            }
             dialog.find('#s4t-guide-freeze-overlay').remove();
             dialog.find('.s4t-cloud-tooltip').remove();
+            dialog.find('.s4t-guide-stepper-pill').remove();
+            overlay.find('.s4t-guide-stepper-pill').remove();
+            $('.s4t-guide-stepper-pill').remove();
             dialog.find('.s4t-guide-spotlight-active').removeClass('s4t-guide-spotlight-active');
 
             var dRect = dialog[0].getBoundingClientRect();
@@ -860,107 +909,117 @@
             var previewTarget = '.s4t-sheet-preview-cta-card';
             var previewFallback = '.s4t-btn-generate-preview';
             var previewSecond = null;
-            var previewTitle = '📊 Live 20-Card Preview';
-            var previewDesc = 'Click \'Generate 20-Card Preview\' to inspect formatted rows before exporting.';
+            var previewTitle = 'Live 20-Card Preview';
+            var previewDesc = 'Preview formatted rows with your rules before exporting.';
 
             if (isDirtyBanner) {
                 previewTarget = '.s4t-dirty-dark-card';
                 previewFallback = '.s4t-dirty-refresh-btn';
-                previewTitle = '⚡ Refresh Preview';
+                previewTitle = 'Refresh Preview';
                 previewDesc = 'Click to regenerate the 20-card preview with your updated columns.';
             } else if (isPreviewGenerated) {
                 previewTarget = '#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(3)';
                 previewFallback = '#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(1)';
                 previewSecond = '#s4t-sheet-table tbody tr:first td:first';
-                previewTitle = '📊 Live 20-Card Preview';
-                previewDesc = 'Review live card rows with custom columns, exclusions, and dropdowns.';
+                previewTitle = 'Live 20-Card Preview';
+                previewDesc = 'Preview formatted rows with your rules before exporting.';
             }
 
-            // Guide items covering each distinct feature across the modal without crowding
+            // Guide items covering each distinct feature across the modal organized into 3 tour steps
             var guideItems = [
                 {
                     id: 'match-count',
                     target: '#s4t-export-count-badge',
                     fallbackTarget: '.s4t-export-match-count',
-                    title: '🎯 Matching Cards Count',
-                    desc: 'Displays the total count of cards matching active exclusions. Double-click to copy.',
-                    placement: 'right'
+                    title: 'Matching Cards Count',
+                    desc: 'Total cards matching active filters. Double-click to copy.',
+                    placement: 'right',
+                    step: 1
                 },
                 {
                     id: 'exclusions',
                     target: '#s4t-tab-btn-exclusions',
                     fallbackTarget: '.s4t-sheet-settings-btn',
-                    title: '⚙️ Exclusions & Ordering',
-                    desc: 'Exclude specific lists, members, or labels, and configure custom row sort orders.',
-                    placement: 'bottom'
+                    title: 'Exclusions & Sorting',
+                    desc: 'Exclude specific lists, members, or labels, and set custom row sort order.',
+                    placement: 'bottom',
+                    step: 1
                 },
                 {
                     id: 'col-number',
                     target: '.s4t-sheet-th:eq(0) .s4t-sheet-col-badge',
                     fallbackTarget: '.s4t-sheet-col-badge:first',
-                    title: '🔢 Column Number',
-                    desc: 'Shows sequential column index (Col 1, Col 2...) indicating left-to-right export sequence.',
+                    title: 'Column Number',
+                    desc: 'Left-to-right column position in your exported sheet.',
                     colIdx: 0,
-                    tier: 1
+                    tier: 1,
+                    step: 2
                 },
                 {
                     id: 'col-hide',
                     target: '.s4t-sheet-th:eq(1) .s4t-sheet-col-hide',
                     fallbackTarget: '.s4t-sheet-col-hide:first',
-                    title: '👁️ Eye Icon (Hide Column)',
-                    desc: 'Click 👁 to hide or restore a column from your export without losing custom configuration.',
+                    title: 'Hide / Show Column',
+                    desc: 'Toggle column visibility in export without losing its setup.',
                     colIdx: 1,
-                    tier: 2
+                    tier: 2,
+                    step: 2
                 },
                 {
                     id: 'col-drag',
                     target: '.s4t-sheet-th:eq(2) .s4t-sheet-drag-handle',
                     fallbackTarget: '.s4t-sheet-drag-handle:first',
                     secondFallback: '.s4t-sheet-th:eq(2)',
-                    title: '↔ Drag & Drop Sequence',
-                    desc: 'Grab the 6-dot grip handle to reorder columns in your export spreadsheet.',
+                    title: 'Reorder Columns',
+                    desc: 'Drag the 6-dot handle to change column order.',
                     colIdx: 2,
-                    tier: 1
+                    tier: 1,
+                    step: 2
                 },
                 {
                     id: 'col-rename',
                     target: '.s4t-sheet-th:eq(3) .s4t-sheet-header-input',
                     fallbackTarget: '.s4t-sheet-header-input:first',
-                    secondFallback: '.s4t-sheet-th:eq(1) .s4t-sheet-header-input',
-                    title: '✏️ Column Rename',
-                    desc: 'Click inside the header input to customize the column title exported to your sheet.',
+                    secondFallback: '.s4t-sheet-th:eq(3)',
+                    title: 'Column Title',
+                    desc: 'Edit the header name exported to your spreadsheet.',
                     colIdx: 3,
-                    tier: 2
+                    tier: 2,
+                    step: 2,
+                    gutterRoute: true
                 },
                 {
                     id: 'col-mapping',
                     target: '.s4t-sheet-th:eq(4) .s4t-sheet-source-row',
                     fallbackTarget: '.s4t-sheet-source-row:first',
                     secondFallback: '.s4t-sheet-source-select:first',
-                    title: 'ℹ️ Shows: Field Info & Dropdown',
-                    desc: 'Maps to 14 Trello fields (points, devs, dates). Hover ℹ️ to read field description.',
+                    title: 'Trello Field Mapping',
+                    desc: 'Map to 14 Trello fields. Hover ℹ️ to view field details.',
                     colIdx: 4,
-                    tier: 1
+                    tier: 1,
+                    step: 2
                 },
                 {
                     id: 'col-dtype',
                     target: '.s4t-sheet-th:eq(5) .s4t-sheet-type-row',
                     fallbackTarget: '.s4t-sheet-type-select:first',
                     secondFallback: '.s4t-sheet-type-row:first',
-                    title: '⚙️ dtype: Data Type Format',
-                    desc: 'Format cell output as plain String text, Devs member select, or Custom dropdown.',
+                    title: 'Data Type Format',
+                    desc: 'Format cells as String text, Dev member select, or Custom dropdown.',
                     colIdx: 5,
-                    tier: 2
+                    tier: 2,
+                    step: 2
                 },
                 {
                     id: 'col-custom',
-                    target: '.s4t-sheet-custom-options-input:visible:first',
-                    fallbackTarget: '.s4t-sheet-th:eq(6) .s4t-sheet-custom-options-input',
-                    secondFallback: '.s4t-sheet-th:eq(3)',
-                    title: '🏷️ Custom Dropdowns',
-                    desc: 'Enter comma-separated options to generate custom dropdowns for each card.',
+                    target: '.s4t-sheet-th:eq(6) .s4t-sheet-custom-options-input',
+                    fallbackTarget: '.s4t-sheet-th:eq(6)',
+                    secondFallback: '.s4t-sheet-custom-options-input:visible:first',
+                    title: 'Custom Dropdown Options',
+                    desc: 'Enter comma-separated options to create cell dropdowns.',
                     colIdx: 6,
-                    tier: 1
+                    tier: 1,
+                    step: 2
                 },
                 {
                     id: 'preview-card',
@@ -969,33 +1028,41 @@
                     secondFallback: previewSecond,
                     title: previewTitle,
                     desc: previewDesc,
-                    placement: 'bottom'
+                    placement: 'bottom',
+                    step: 3
                 },
                 {
                     id: 'col-count',
                     target: '#s4t-sheet-col-count',
                     fallbackTarget: '.s4t-export-footer-left',
-                    title: '📊 Column Counter',
-                    desc: 'Shows the total count of active, visible columns included in your export.',
-                    placement: 'top'
+                    title: 'Active Column Count',
+                    desc: 'Total visible columns included in the export.',
+                    placement: 'top',
+                    step: 1
                 },
                 {
                     id: 'copy-tsv',
                     target: '#s4t-btn-copy-tsv',
                     fallbackTarget: '.s4t-export-footer-buttons',
-                    title: '📋 Copy for Google Sheets',
-                    desc: 'One-click copy formatted TSV to clipboard, ready to paste directly into Google Sheets.',
-                    placement: 'top'
+                    title: 'Copy for Google Sheets',
+                    desc: 'Copy formatted TSV to paste directly into Google Sheets.',
+                    placement: 'top',
+                    step: 1
                 },
                 {
                     id: 'download-file',
                     target: '.s4t-split-download-group',
                     fallbackTarget: '#s4t-btn-main-download',
-                    title: '📥 Download Spreadsheet',
-                    desc: 'Download as Excel (.xls) directly, or click ▾ to select CSV format.',
-                    placement: 'top'
+                    title: 'Download Spreadsheet',
+                    desc: 'Export as Excel (.xls), or click ▼ for CSV format.',
+                    placement: 'top',
+                    step: 1
                 }
             ];
+
+            var activeItems = (currentGuideStep === 'all')
+                ? guideItems
+                : guideItems.filter(function (it) { return it.step === currentGuideStep; });
 
             var maskCutouts = [];
             var spotlightRings = [];
@@ -1014,7 +1081,7 @@
                 });
             }
 
-            guideItems.forEach(function (item) {
+            activeItems.forEach(function (item) {
                 var $el = dialog.find(item.target);
                 if ((!$el.length || !$el.is(':visible')) && item.fallbackTarget) {
                     $el = dialog.find(item.fallbackTarget);
@@ -1068,7 +1135,6 @@
                 $tooltip.html([
                     '<div class="s4t-cloud-arrow"></div>',
                     '<div class="s4t-cloud-header">',
-                    '  <span class="s4t-cloud-icon">☁️</span>',
                     '  <strong class="s4t-cloud-title">' + s4tEscapeHtml(item.title) + '</strong>',
                     '</div>',
                     '<div class="s4t-cloud-desc">' + s4tEscapeHtml(item.desc) + '</div>'
@@ -1085,7 +1151,7 @@
 
                 var top, left;
                 var arrowClass = 'arrow-top';
-                var hasSvgStem = false;
+                var hasSvgStem = true;
 
                 if (item.id === 'match-count') {
                     // Position in the empty header space to the right of the badge with an arrow-left pointing to it
@@ -1098,7 +1164,6 @@
                     left = Math.min(dialogWidth - tipW - 14, Math.max(14, left));
                     top = Math.round(targetBottomY + 16);
                     arrowClass = 'arrow-top';
-                    hasSvgStem = true;
                 } else if (item.tier === 1) {
                     // Tier 1 column features (Cols 0, 2, 4, 6): positioned just below column cards with glowing SVG stem
                     var colTh1 = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
@@ -1106,7 +1171,6 @@
                     left = Math.round(cCenterX1 - (tipW / 2));
                     top = Math.round(maxCardBottom + 16);
                     arrowClass = 'arrow-top';
-                    hasSvgStem = true;
                 } else if (item.tier === 2) {
                     // Tier 2 column features (Cols 1, 3, 5): positioned in the lower middle row with extended SVG stems
                     var colTh2 = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
@@ -1114,7 +1178,6 @@
                     left = Math.round(cCenterX2 - (tipW / 2));
                     top = Math.round(maxCardBottom + 115);
                     arrowClass = 'arrow-top';
-                    hasSvgStem = true;
                 } else if (item.id === 'preview-card') {
                     left = Math.round(targetCenterX - (tipW / 2));
                     top = Math.round(targetBottomY + 14);
@@ -1123,7 +1186,6 @@
                     left = 14;
                     top = Math.round(targetTopY - tipH - 18);
                     arrowClass = 'arrow-bottom';
-                    hasSvgStem = true;
                 } else if (item.id === 'copy-tsv') {
                     left = dialogWidth - (tipW * 2) - 28;
                     top = Math.round(targetTopY - tipH - 12);
@@ -1152,6 +1214,29 @@
                         svgStemLines.push(
                             '<line class="s4t-guide-stem-line" x1="' + lineStartX + '" y1="' + stemY1 + '" x2="' + stemX + '" y2="' + stemY2 + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
                             '<polygon class="s4t-guide-stem-arrow" points="' + (stemX - 5) + ',' + (stemY2 - 6) + ' ' + (stemX + 5) + ',' + (stemY2 - 6) + ' ' + stemX + ',' + stemY2 + '" fill="#10b981" />'
+                        );
+                    } else if (item.gutterRoute) {
+                        // Clean side gutter route: rises in the empty space between columns and points into the input side
+                        var colTh = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
+                        var colLeft = colTh.length ? (colTh[0].getBoundingClientRect().left - originX) : v.ringX;
+                        var gutterX = Math.round(Math.min(v.ringX - 8, colLeft - 4));
+                        var targetCenterY = Math.round(v.targetTop + (v.elH / 2));
+                        var lineStartX = Math.max(left + 16, Math.min(gutterX, left + tipW - 16));
+                        var stemY2 = Math.round(top - 2);
+                        var targetArrowX = Math.round(v.ringX - 2);
+
+                        svgStemLines.push(
+                            '<path class="s4t-guide-stem-line" d="M ' + lineStartX + ' ' + stemY2 + ' L ' + gutterX + ' ' + stemY2 + ' L ' + gutterX + ' ' + targetCenterY + ' L ' + targetArrowX + ' ' + targetCenterY + '" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                            '<polygon class="s4t-guide-stem-arrow" points="' + targetArrowX + ',' + targetCenterY + ' ' + (targetArrowX - 6) + ',' + (targetCenterY - 5) + ' ' + (targetArrowX - 6) + ',' + (targetCenterY + 5) + '" fill="#10b981" />'
+                        );
+                    } else if (arrowClass === 'arrow-left') {
+                        var targetRightX = Math.round(v.ringX + v.ringW + 2);
+                        var targetCenterY = Math.round(v.targetTop + (v.elH / 2));
+                        var lineEndX = Math.round(left - 2);
+                        if (lineEndX <= targetRightX) lineEndX = targetRightX + 10;
+                        svgStemLines.push(
+                            '<line class="s4t-guide-stem-line" x1="' + lineEndX + '" y1="' + targetCenterY + '" x2="' + targetRightX + '" y2="' + targetCenterY + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
+                            '<polygon class="s4t-guide-stem-arrow" points="' + targetRightX + ',' + targetCenterY + ' ' + (targetRightX + 6) + ',' + (targetCenterY - 5) + ' ' + (targetRightX + 6) + ',' + (targetCenterY + 5) + '" fill="#10b981" />'
                         );
                     } else {
                         var stemY1 = Math.round(v.ringY + v.ringH + 2);
@@ -1210,6 +1295,178 @@
                 showGuideToast('Not allowed, click on Guide button again to exit guide mode', 'warning');
             });
             dialog.append($freezeOverlay);
+
+            // Top floating 3-step navigation stepper pill bar
+            var stepTitles = {
+                1: 'Step 1 of 3: Top Controls & Export',
+                2: 'Step 2 of 3: Column Configuration',
+                3: 'Step 3 of 3: Live Preview',
+                'all': 'All Features (13 Tooltips)'
+            };
+            var currentTitle = stepTitles[currentGuideStep] || stepTitles[1];
+            var isAll = (currentGuideStep === 'all');
+
+            var $stepperPill = $('<div class="s4t-guide-stepper-pill" role="navigation" aria-label="Interactive Guide Tour">');
+            var $dragGrip = $('<span class="s4t-guide-pill-grip" aria-hidden="true" title="Drag to reposition">')
+                .html('<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">' +
+                      '<circle cx="2.5" cy="2.5" r="1.5"/>' +
+                      '<circle cx="7.5" cy="2.5" r="1.5"/>' +
+                      '<circle cx="2.5" cy="7" r="1.5"/>' +
+                      '<circle cx="7.5" cy="7" r="1.5"/>' +
+                      '<circle cx="2.5" cy="11.5" r="1.5"/>' +
+                      '<circle cx="7.5" cy="11.5" r="1.5"/>' +
+                      '</svg>');
+            var $stepTitle = $('<span class="s4t-guide-step-title">').text(currentTitle);
+            var $actions = $('<div class="s4t-guide-stepper-actions">');
+
+            var $backBtn = $('<button type="button" class="s4t-guide-pill-btn s4t-guide-pill-back" aria-label="Previous step">◀ Back</button>')
+                .prop('disabled', isAll || currentGuideStep <= 1)
+                .on('click', function (e) {
+                    e.stopPropagation();
+                    if (!isAll && currentGuideStep > 1) {
+                        currentGuideStep--;
+                        renderCloudyTooltips();
+                    }
+                });
+
+            var $nextBtn = $('<button type="button" class="s4t-guide-pill-btn s4t-guide-pill-next" aria-label="Next step">Next ▶</button>')
+                .prop('disabled', isAll || currentGuideStep >= 3)
+                .on('click', function (e) {
+                    e.stopPropagation();
+                    if (!isAll && currentGuideStep < 3) {
+                        currentGuideStep++;
+                        renderCloudyTooltips();
+                    }
+                });
+
+            var $toggleAllBtn = $('<button type="button" class="s4t-guide-pill-btn s4t-guide-pill-toggle-all">')
+                .text(isAll ? 'Step View' : 'Show All')
+                .attr('aria-label', isAll ? 'Switch to Step View' : 'Show all tooltips at once')
+                .on('click', function (e) {
+                    e.stopPropagation();
+                    currentGuideStep = isAll ? 1 : 'all';
+                    renderCloudyTooltips();
+                });
+
+            var $closeBtn = $('<button type="button" class="s4t-guide-pill-btn s4t-guide-pill-close" aria-label="Exit Guide Mode" title="Exit Guide Mode">✕</button>')
+                .on('click', function (e) {
+                    e.stopPropagation();
+                    toggleGuideMode();
+                });
+
+            $actions.append($backBtn, $nextBtn, $toggleAllBtn, $closeBtn);
+            $stepperPill.append($dragGrip, $stepTitle, $actions);
+
+            // Re-apply preserved user-dragged coordinates if user repositioned the pill
+            function applyPillPosition(left, top) {
+                if (typeof left !== 'number' || typeof top !== 'number') return;
+                var pEl = $stepperPill[0];
+                if (!pEl) return;
+                pEl.style.setProperty('top', Math.round(top) + 'px', 'important');
+                pEl.style.setProperty('left', Math.round(left) + 'px', 'important');
+                pEl.style.setProperty('transform', 'none', 'important');
+                $stepperPill.addClass('s4t-pill-repositioned');
+            }
+
+            // Re-apply preserved user-dragged coordinates if user repositioned the pill
+            if (stepperPillPos && typeof stepperPillPos.top === 'number' && typeof stepperPillPos.left === 'number') {
+                var estW = 320;
+                var estH = 40;
+                var maxClampedL = Math.max(8, dialogWidth - estW - 8);
+                var maxClampedT = Math.max(8, dialogHeight - estH - 8);
+                var appliedLeft = Math.max(8, Math.min(stepperPillPos.left, maxClampedL));
+                var appliedTop = Math.max(8, Math.min(stepperPillPos.top, maxClampedT));
+                applyPillPosition(appliedLeft, appliedTop);
+            }
+
+            // Draggable repositioning handler so user can move pill away from any overlapping content
+            $stepperPill.on('mousedown.s4tPillDrag touchstart.s4tPillDrag', function (e) {
+                if ($(e.target).closest('.s4t-guide-stepper-actions, button, a').length) {
+                    return;
+                }
+                if (e.type === 'mousedown' && e.button !== 0) {
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
+
+                var dElem = dialog[0];
+                var pElem = $stepperPill[0];
+                if (!dElem || !pElem) return;
+
+                var dBox = dElem.getBoundingClientRect();
+                var pBox = pElem.getBoundingClientRect();
+                var curLeft = pBox.left - dBox.left;
+                var curTop = pBox.top - dBox.top;
+
+                applyPillPosition(curLeft, curTop);
+                stepperPillPos = { top: curTop, left: curLeft };
+
+                var orig = e.originalEvent || e;
+                var startPointerX = (e.type.indexOf('touch') === 0)
+                    ? (orig.touches && orig.touches[0] ? orig.touches[0].clientX : 0)
+                    : e.clientX;
+                var startPointerY = (e.type.indexOf('touch') === 0)
+                    ? (orig.touches && orig.touches[0] ? orig.touches[0].clientY : 0)
+                    : e.clientY;
+                var startPillLeft = curLeft;
+                var startPillTop = curTop;
+                var isDragging = true;
+
+                $stepperPill.addClass('s4t-is-dragging');
+                $('body').addClass('s4t-stepper-dragging');
+
+                $(document).off('mousemove.s4tPillDrag touchmove.s4tPillDrag mouseup.s4tPillDrag touchend.s4tPillDrag touchcancel.s4tPillDrag blur.s4tPillDrag');
+
+                $(document).on('mousemove.s4tPillDrag touchmove.s4tPillDrag', function (moveEvt) {
+                    if (!isDragging) return;
+                    var moveOrig = moveEvt.originalEvent || moveEvt;
+                    var moveX = (moveEvt.type.indexOf('touch') === 0)
+                        ? (moveOrig.touches && moveOrig.touches[0] ? moveOrig.touches[0].clientX : 0)
+                        : moveEvt.clientX;
+                    var moveY = (moveEvt.type.indexOf('touch') === 0)
+                        ? (moveOrig.touches && moveOrig.touches[0] ? moveOrig.touches[0].clientY : 0)
+                        : moveEvt.clientY;
+                    var deltaX = moveX - startPointerX;
+                    var deltaY = moveY - startPointerY;
+
+                    var dW = dialog.outerWidth() || dialogWidth || 1000;
+                    var dH = dialog.outerHeight() || dialogHeight || 700;
+                    var pW = $stepperPill.outerWidth() || 320;
+                    var pH = $stepperPill.outerHeight() || 40;
+
+                    var minX = 8;
+                    var maxX = Math.max(minX, dW - pW - 8);
+                    var minY = 8;
+                    var maxY = Math.max(minY, dH - pH - 8);
+
+                    var newLeft = Math.max(minX, Math.min(startPillLeft + deltaX, maxX));
+                    var newTop = Math.max(minY, Math.min(startPillTop + deltaY, maxY));
+
+                    stepperPillPos = { top: newTop, left: newLeft };
+                    applyPillPosition(newLeft, newTop);
+
+                    if (moveEvt.cancelable) {
+                        moveEvt.preventDefault();
+                    }
+                });
+
+                $(document).add(window).on('mouseup.s4tPillDrag touchend.s4tPillDrag touchcancel.s4tPillDrag blur.s4tPillDrag', function () {
+                    if (isDragging) {
+                        isDragging = false;
+                        $('body').removeClass('s4t-stepper-dragging');
+                        $stepperPill.removeClass('s4t-is-dragging');
+                        $(document).add(window).off('mousemove.s4tPillDrag touchmove.s4tPillDrag mouseup.s4tPillDrag touchend.s4tPillDrag touchcancel.s4tPillDrag blur.s4tPillDrag');
+                    }
+                });
+            });
+
+            $stepperPill.on('dragstart', function (e) {
+                e.preventDefault();
+                return false;
+            });
+
+            dialog.append($stepperPill);
 
             // Finalize coordinates and arrow positions
             placedTooltips.forEach(function (t) {
@@ -1594,6 +1851,9 @@
             var body = dialog.find('.s4t-export-body').empty();
 
             function switchView(tab) {
+                if (isGuideActive && tab !== 'sheet') {
+                    toggleGuideMode();
+                }
                 state.currentTab = tab;
                 if (tab === 'sheet') {
                     dialog.find('#s4t-tab-sheet-view').prop('hidden', false);
@@ -3034,6 +3294,7 @@
 
     return {
         s4tOpenCardExport: s4tOpenCardExport,
+        s4tCloseCardExport: s4tCloseCardExport,
         s4tExportCardFields: FIELD_DEFINITIONS,
         s4tExtractFieldValue: s4tExtractFieldValue,
         s4tBuildExportCsv: s4tBuildExportCsv,

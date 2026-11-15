@@ -1389,10 +1389,12 @@ function renderMembersBurndownModal(data) {
             '<span>Push to Sheets</span>',
             '</button>'
         ].join('') : ''),
-        '<button type="button" id="s4t-burndown-export-btn" class="s4t-sheets-btn s4t-export-modal-btn" data-tooltip="Export cards to Excel, CSV or Google Sheets">',
-        '<svg class="s4t-sheets-btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
-        '<span>Export Cards</span>',
-        '</button>',
+        ((typeof s4tPreferences === 'undefined' || s4tPreferences.enabled('exportCards')) ? [
+            '<button type="button" id="s4t-burndown-export-btn" class="s4t-sheets-btn s4t-export-modal-btn" data-tooltip="Export cards to Excel, CSV or Google Sheets">',
+            '<svg class="s4t-sheets-btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
+            '<span>Export Cards</span>',
+            '</button>'
+        ].join('') : ''),
         '<label data-tooltip="Exclude Not Sure list cards from member points, progress and card counts. Team summaries stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list</label>',
         '</div>',
         '<div class="s4t-members-list" id="s4t-members-container">',
@@ -2059,6 +2061,19 @@ var $excel_btn, $excel_dl;
 window.URL = window.URL || window.webkitURL;
 
 function checkExport() {
+    if (typeof s4tPreferences !== 'undefined' && !s4tPreferences.enabled('exportCards')) {
+        $('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').each(function () {
+            var $item = $(this);
+            var $li = $item.closest('li');
+            if ($li.length && $li.children().length === 1 && $li.find('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').length) {
+                $li.remove();
+            } else {
+                $item.remove();
+            }
+        });
+        $excel_btn = null;
+        return;
+    }
     if ($excel_btn && $excel_btn.filter(':visible').length) return;
     if ($('.pop-over-list').find('.js-export-excel').length) return;
     if ($('.js-export-excel:visible').length) return;
@@ -2153,6 +2168,9 @@ function checkExport() {
 
 function showExcelExport(e) {
     if (e && e.preventDefault) e.preventDefault();
+    if (typeof s4tPreferences !== 'undefined' && !s4tPreferences.enabled('exportCards')) {
+        return false;
+    }
     if (typeof s4tOpenCardExport === 'function') {
         s4tOpenCardExport({
             boardData: cachedBoardData,
@@ -2724,6 +2742,21 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         if (!s4tPreferences.enabled('attention')) {
             selected = []; excluded = []; memberFilters = []; labelFilters = []; matchAll = false; hideEmptyLists = false;
             commentRequest++; commentLoading = false; commentError = ''; close();
+        }
+        if (!s4tPreferences.enabled('exportCards')) {
+            $('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').each(function () {
+                var $item = $(this);
+                var $li = $item.closest('li');
+                if ($li.length && $li.children().length === 1 && $li.find('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').length) {
+                    $li.remove();
+                } else {
+                    $item.remove();
+                }
+            });
+            $excel_btn = null;
+            if (typeof s4tCloseCardExport === 'function') {
+                s4tCloseCardExport();
+            }
         }
     }
     document.addEventListener('s4t-preferences-changed', function () { applyFeaturePreferences(); clearHiddenNativeFilters(); apply(); });

@@ -3161,6 +3161,130 @@ textarea[data-testid="card-name-input"],
     pointer-events: none !important;
 }
 
+/* Floating Guide Tour 3-Step Navigation Stepper Pill */
+#s4t-export-dialog:not(.s4t-guide-active-mode) .s4t-guide-stepper-pill,
+.s4t-guide-stepper-pill:not(#s4t-export-dialog.s4t-guide-active-mode *) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+#s4t-export-dialog .s4t-guide-stepper-pill {
+    position: absolute !important;
+    top: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9600 !important;
+    display: none !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 6px 14px 6px 10px !important;
+    border-radius: 9999px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    border: 1.5px solid #059669 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16), 0 0 12px rgba(16, 185, 129, 0.25) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    user-select: none !important;
+    animation: s4tFadeIn 0.2s ease !important;
+    pointer-events: auto !important;
+    cursor: grab !important;
+}
+
+#s4t-export-dialog .s4t-guide-stepper-pill.s4t-pill-repositioned {
+    transform: none !important;
+}
+
+#s4t-export-dialog.s4t-guide-active-mode .s4t-guide-stepper-pill {
+    display: inline-flex !important;
+}
+
+#s4t-export-dialog .s4t-guide-stepper-pill.s4t-is-dragging {
+    cursor: grabbing !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28), 0 0 18px rgba(16, 185, 129, 0.45) !important;
+    transition: none !important;
+}
+
+body.s4t-stepper-dragging,
+body.s4t-stepper-dragging * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+#s4t-export-dialog .s4t-guide-pill-grip {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #059669 !important;
+    opacity: 0.75 !important;
+    cursor: grab !important;
+    margin-right: -2px !important;
+    transition: opacity 0.15s ease !important;
+    flex-shrink: 0 !important;
+}
+
+#s4t-export-dialog .s4t-guide-stepper-pill:hover .s4t-guide-pill-grip {
+    opacity: 1 !important;
+}
+
+#s4t-export-dialog .s4t-guide-stepper-pill.s4t-is-dragging .s4t-guide-pill-grip {
+    cursor: grabbing !important;
+}
+
+#s4t-export-dialog .s4t-guide-step-title {
+    color: #065f46 !important;
+    font-size: 13px !important;
+    font-weight: bold !important;
+    letter-spacing: 0.3px !important;
+    white-space: nowrap !important;
+}
+
+#s4t-export-dialog .s4t-guide-stepper-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+#s4t-export-dialog .s4t-guide-pill-btn {
+    border: 1px solid rgba(5, 150, 105, 0.45) !important;
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #065f46 !important;
+    padding: 3px 10px !important;
+    border-radius: 9999px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    outline: none !important;
+    line-height: 1.4 !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    pointer-events: auto !important;
+}
+
+#s4t-export-dialog .s4t-guide-pill-btn:hover:not(:disabled) {
+    background: #059669 !important;
+    color: #ffffff !important;
+    border-color: #059669 !important;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4) !important;
+}
+
+#s4t-export-dialog .s4t-guide-pill-btn:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    background: transparent !important;
+    color: rgba(0, 0, 0, 0.35) !important;
+}
+
+#s4t-export-dialog .s4t-guide-pill-close {
+    padding: 3px 8px !important;
+    font-size: 13px !important;
+    font-weight: bold !important;
+    margin-left: 2px !important;
+}
+
 #s4t-export-dialog .s4t-guide-spotlight-active {
     position: relative !important;
 }
@@ -5724,6 +5848,56 @@ textarea[data-testid="card-name-input"],
 .theme-dark #s4t-export-dialog .s4t-cloud-tooltip.arrow-bottom.has-long-arrow .s4t-cloud-arrow::after,
 .dark-theme #s4t-export-dialog .s4t-cloud-tooltip.arrow-bottom.has-long-arrow .s4t-cloud-arrow::after {
     border-color: #10b981 transparent transparent transparent !important;
+}
+
+/* Dark Mode Navigation Stepper Pill */
+[data-color-mode="dark"] #s4t-export-dialog .s4t-guide-stepper-pill,
+[data-theme="dark"] #s4t-export-dialog .s4t-guide-stepper-pill,
+.theme-dark #s4t-export-dialog .s4t-guide-stepper-pill,
+.dark-theme #s4t-export-dialog .s4t-guide-stepper-pill {
+    background: rgba(15, 23, 42, 0.94) !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(16, 185, 129, 0.35) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-guide-step-title,
+[data-theme="dark"] #s4t-export-dialog .s4t-guide-step-title,
+.theme-dark #s4t-export-dialog .s4t-guide-step-title,
+.dark-theme #s4t-export-dialog .s4t-guide-step-title {
+    color: #ecfdf5 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-guide-pill-grip,
+[data-theme="dark"] #s4t-export-dialog .s4t-guide-pill-grip,
+.theme-dark #s4t-export-dialog .s4t-guide-pill-grip,
+.dark-theme #s4t-export-dialog .s4t-guide-pill-grip {
+    color: #34d399 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-guide-pill-btn,
+[data-theme="dark"] #s4t-export-dialog .s4t-guide-pill-btn,
+.theme-dark #s4t-export-dialog .s4t-guide-pill-btn,
+.dark-theme #s4t-export-dialog .s4t-guide-pill-btn {
+    border-color: rgba(52, 211, 153, 0.45) !important;
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-guide-pill-btn:hover:not(:disabled),
+[data-theme="dark"] #s4t-export-dialog .s4t-guide-pill-btn:hover:not(:disabled),
+.theme-dark #s4t-export-dialog .s4t-guide-pill-btn:hover:not(:disabled),
+.dark-theme #s4t-export-dialog .s4t-guide-pill-btn:hover:not(:disabled) {
+    background: #10b981 !important;
+    color: #000000 !important;
+    border-color: #10b981 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-guide-pill-btn:disabled,
+[data-theme="dark"] #s4t-export-dialog .s4t-guide-pill-btn:disabled,
+.theme-dark #s4t-export-dialog .s4t-guide-pill-btn:disabled,
+.dark-theme #s4t-export-dialog .s4t-guide-pill-btn:disabled {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.35) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-reset-btn,

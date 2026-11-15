@@ -26,7 +26,7 @@ var s4tPreferences = (function () {
             ['attention', 'Attention filters', 'Find cards needing updates.', '#s4t-attention-controls, #s4t-attention-panel'],
             ['cardsList', 'Cards List', 'Select cards and create Slack messages.', '#s4t-cards-launch, #s4t-cards-overlay'],
             ['eow', 'EOW Update', 'Create weekly task reports.', '#s4t-eow-launch, #s4t-eow-overlay'],
-            ['exportCards', 'Export Cards', 'Interactive sheet designer and card exporter.', '#s4t-export-launch, #s4t-export-overlay']
+            ['exportCards', 'Export Cards', 'Interactive sheet designer and card exporter.', '#s4t-export-launch, #s4t-export-overlay, #s4t-burndown-export-btn, .js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export, li:has(> .js-export-excel), li:has(> #s4t-excel-export-menu-item)']
         ]],
         ['Charts', [
             ['charts', 'Sprint charts', 'Developer points and label distribution, including pop-out charts.', '#s4t-charts-action, .s4t-chart-overlay']
