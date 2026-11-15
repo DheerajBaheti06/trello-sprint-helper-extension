@@ -697,22 +697,13 @@
             '    <span class="s4t-export-board-tag s4t-board-badge">' + s4tEscapeHtml(boardName) + '</span>',
             '    <span class="s4t-export-match-count s4t-metric-badge" id="s4t-export-count-badge" role="button" tabindex="0" data-tooltip="Double-click to copy matching card count" data-copy-value="0">0 cards matching</span>',
             '  </div>',
-            '  <div class="s4t-export-header-actions">',
+            '  <div class="s4t-export-header-actions" role="tablist">',
             '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-guide-btn" id="s4t-export-guide-btn" data-tooltip="Interactive Guide Tour" aria-pressed="false"><svg class="s4t-guide-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span>Guide</span></button>',
             '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-reset-btn" id="s4t-header-reset-btn" data-tooltip="Reset to default columns">↺ Reset Template</button>',
+            '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-export-tab s4t-sheet-settings-btn" id="s4t-tab-btn-exclusions" data-tab="exclusions" role="tab" aria-selected="false" data-tooltip="Exclusions &amp; Ordering Settings" aria-label="Exclusions &amp; Ordering Settings"><svg class="s4t-settings-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-.5 2-2 1.2-2-.6-2 3.4 1.5 1.4v2.4L2.5 14l2 3.4 2-.6 2 1.2.5 3h6l.5-3 2-1.2 2 .6 2-3.4-1.5-1.2v-2.4L21.5 9l-2-3.4-2 .6-2-1.2-.5-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></button>',
             '    <button type="button" class="s4t-export-close-btn s4t-close-btn" aria-label="Close" data-tooltip="Close">✕</button>',
             '  </div>',
             '</header>',
-            '<div class="s4t-export-tabs-bar" role="tablist">',
-            '  <button type="button" class="s4t-export-tab s4t-tab-active" data-tab="sheet" role="tab" aria-selected="true" id="s4t-tab-btn-sheet">',
-            '    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>',
-            '    Sheet Designer & Preview',
-            '  </button>',
-            '  <button type="button" class="s4t-export-tab" data-tab="exclusions" role="tab" aria-selected="false" id="s4t-tab-btn-exclusions">',
-            '    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>',
-            '    Exclusions & Ordering',
-            '  </button>',
-            '</div>',
             '<div class="s4t-export-body">',
             '  <div class="s4t-export-loading"><div class="s4t-export-spinner"></div> Loading board cards...</div>',
             '</div>'
@@ -762,7 +753,12 @@
             }
 
             if (state.currentTab !== 'sheet') {
-                dialog.find('#s4t-tab-btn-sheet').trigger('click');
+                var sw = dialog.data('switchView');
+                if (typeof sw === 'function') {
+                    sw('sheet');
+                } else {
+                    dialog.find('#s4t-tab-btn-exclusions').trigger('click');
+                }
             }
 
             dialog.addClass('s4t-guide-active-mode');
@@ -797,8 +793,8 @@
             var guideItems = [
                 {
                     target: '#s4t-tab-btn-exclusions',
-                    title: '🔍 Exclusions & Ordering',
-                    desc: 'Switch tabs to exclude specific lists, members, or labels before exporting.',
+                    title: '⚙️ Exclusions & Ordering Settings',
+                    desc: 'Click Settings to exclude specific lists, members, or labels before exporting.',
                     placement: 'bottom'
                 },
                 {
@@ -1254,30 +1250,45 @@
         function renderLayout() {
             var body = dialog.find('.s4t-export-body').empty();
 
-            // Tab Navigation Handling
-            dialog.find('.s4t-export-tab').off('click').on('click', function () {
-                var tab = $(this).attr('data-tab');
+            function switchView(tab) {
                 state.currentTab = tab;
-                dialog.find('.s4t-export-tab').removeClass('s4t-tab-active').attr('aria-selected', 'false');
-                $(this).addClass('s4t-tab-active').attr('aria-selected', 'true');
                 if (tab === 'sheet') {
                     dialog.find('#s4t-tab-sheet-view').prop('hidden', false);
                     dialog.find('#s4t-tab-exclusions-view').prop('hidden', true);
                     dialog.find('#s4t-header-reset-btn').show();
+                    dialog.find('#s4t-tab-btn-exclusions').removeClass('s4t-settings-active s4t-tab-active').attr('aria-pressed', 'false').attr('aria-selected', 'false');
                 } else {
                     dialog.find('#s4t-tab-sheet-view').prop('hidden', true);
                     dialog.find('#s4t-tab-exclusions-view').prop('hidden', false);
                     dialog.find('#s4t-header-reset-btn').hide();
+                    dialog.find('#s4t-tab-btn-exclusions').addClass('s4t-settings-active s4t-tab-active').attr('aria-pressed', 'true').attr('aria-selected', 'true'); /* aria-selected="true" */
+                }
+            }
+            dialog.data('switchView', switchView);
+
+            // Tab / Settings Navigation Handling
+            dialog.find('#s4t-tab-btn-exclusions').off('click').on('click', function () {
+                var tab = $(this).attr('data-tab');
+                if (tab === 'exclusions' && state.currentTab === 'exclusions') {
+                    // Clicking settings icon again while on exclusions switches back to sheet view
+                    switchView('sheet');
+                } else {
+                    switchView(tab || 'sheet');
                 }
             });
 
             // Container for Tab 1 (Sheet View)
-            var sheetView = $('<div id="s4t-tab-sheet-view" class="s4t-tab-view" role="tabpanel" aria-labelledby="s4t-tab-btn-sheet">');
+            var sheetView = $('<div id="s4t-tab-sheet-view" class="s4t-tab-view" role="tabpanel">');
             body.append(sheetView);
 
             // Container for Tab 2 (Exclusions View)
             var exclusionsView = $('<div id="s4t-tab-exclusions-view" class="s4t-tab-view" role="tabpanel" aria-labelledby="s4t-tab-btn-exclusions" hidden>');
             body.append(exclusionsView);
+
+            // Allow returning to sheet view from within exclusions view
+            exclusionsView.on('click', '#s4t-btn-back-to-sheet', function () {
+                switchView('sheet');
+            });
 
             // Render Tab 1 (Sheet Designer & Preview Table)
             renderSheetTab(sheetView);
@@ -2043,8 +2054,10 @@
             var header = $('<div class="s4t-export-att-header">');
             header.append([
                 '<div class="s4t-export-att-heading">',
-                '  <h3>Exclusions & Sort Ordering</h3>',
-                '  <p class="s4t-export-att-sub">Check items to exclude them from the exported spreadsheet.</p>',
+                '  <div class="s4t-exclusions-title-row">',
+                '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-btn-back-to-sheet" id="s4t-btn-back-to-sheet" data-tooltip="Return to Sheet"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg><span>Back to Sheet</span></button>',
+                '    <h3>Exclusions &amp; Sort Ordering</h3>',
+                '  </div>',
                 '</div>',
                 '<div class="s4t-export-att-sort-box">',
                 '  <label class="s4t-sheet-topbar-toggle s4t-export-separator-toggle" data-tooltip="Insert an empty line break row between groups (e.g. per developer or list)">',

@@ -1265,5 +1265,34 @@ test('card-export: CS Owner default values unfilled, Excel menu enhancement, and
     assert.ok(css.includes('#s4t-export-dialog.s4t-is-dragging-col,') && css.includes('cursor: grabbing !important;'), 'active drag state must set grabbing cursor');
 });
 
+test('card-export: tab-2 moved to settings icon button in export popup header', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Tab-2 is positioned as a settings icon button in the header actions
+    assert.ok(ce.includes('id="s4t-tab-btn-exclusions" data-tab="exclusions" role="tab"'), 'Settings button must retain tab accessibility and data-tab attributes');
+    assert.ok(ce.includes('class="s4t-settings-icon"'), 'Settings button must render gear icon SVG');
+    assert.ok(ce.includes('<span>Settings</span>'), 'Settings button must display Settings label');
+
+    // 2. Exclusions view includes Back to Sheet button
+    assert.ok(ce.includes('id="s4t-btn-back-to-sheet"'), 'Exclusions header must provide Back to Sheet button');
+    assert.ok(ce.includes("exclusionsView.on('click', '#s4t-btn-back-to-sheet'"), 'Clicking back button must return to sheet view');
+
+    // 3. Settings button toggles view back to sheet if clicked while active
+    assert.ok(ce.includes("if (tab === 'exclusions' && state.currentTab === 'exclusions')"), 'Clicking settings button while active must toggle back to sheet');
+
+    // 4. CSS styles for settings button and back button
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-settings-btn'), 'CSS must style settings button');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-settings-btn.s4t-settings-active'), 'CSS must style active settings button');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-btn-back-to-sheet'), 'CSS must style back to sheet button');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-exclusions-title-row'), 'CSS must style exclusions title row');
+
+    // 5. Redundant tab bar and 'Sheet Designer & Preview' heading removed from dialog markup
+    assert.ok(!ce.includes('id="s4t-tab-btn-sheet"'), 'card-export.js must not contain s4t-tab-btn-sheet');
+    assert.ok(!ce.includes('Sheet Designer &amp; Preview'), 'card-export.js must not render Sheet Designer tab heading');
+    assert.ok(!ce.includes('<div class="s4t-export-tabs-bar"'), 'card-export.js dialog markup must not include tabs-bar');
+});
+
+
 
 

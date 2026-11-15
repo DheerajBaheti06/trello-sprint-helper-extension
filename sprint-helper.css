@@ -2826,6 +2826,87 @@ textarea[data-testid="card-name-input"],
     color: var(--ds-text, #27272a) !important;
 }
 
+/* Settings Icon Button in Header Actions */
+#s4t-export-dialog .s4t-sheet-settings-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-settings-btn:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: #059669 !important;
+    color: #059669 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-settings-btn.s4t-settings-active,
+#s4t-export-dialog .s4t-sheet-settings-btn.s4t-tab-active {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-settings-btn .s4t-settings-icon {
+    display: block !important;
+    width: 14px !important;
+    height: 14px !important;
+    flex-shrink: 0 !important;
+    transition: transform 0.25s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-settings-btn:hover .s4t-settings-icon {
+    transform: rotate(30deg) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-settings-btn.s4t-settings-active .s4t-settings-icon {
+    transform: rotate(90deg) !important;
+}
+
+/* Exclusions Back to Sheet Button & Title Row */
+#s4t-export-dialog .s4t-exclusions-title-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-bottom: 4px !important;
+}
+
+#s4t-export-dialog .s4t-exclusions-title-row h3 {
+    margin: 0 !important;
+}
+
+#s4t-export-dialog .s4t-btn-back-to-sheet {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    color: #059669 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-btn-back-to-sheet:hover {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    transform: translateX(-2px) !important;
+}
+
 /* Tabs Bar */
 #s4t-export-dialog .s4t-export-tabs-bar {
     display: flex !important;
@@ -5148,6 +5229,52 @@ textarea[data-testid="card-name-input"],
     background: #323940 !important;
     color: #ffffff !important;
     border-color: #38414a !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-settings-btn,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-settings-btn,
+.theme-dark #s4t-export-dialog .s4t-sheet-settings-btn,
+.dark-theme #s4t-export-dialog .s4t-sheet-settings-btn {
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-settings-btn:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-settings-btn:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-settings-btn:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-settings-btn:hover {
+    background: #323940 !important;
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-settings-btn.s4t-settings-active,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-settings-btn.s4t-settings-active,
+.theme-dark #s4t-export-dialog .s4t-sheet-settings-btn.s4t-settings-active,
+.dark-theme #s4t-export-dialog .s4t-sheet-settings-btn.s4t-settings-active {
+    background: #064e3b !important;
+    border-color: #10b981 !important;
+    color: #a7f3d0 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-back-to-sheet,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-back-to-sheet,
+.theme-dark #s4t-export-dialog .s4t-btn-back-to-sheet,
+.dark-theme #s4t-export-dialog .s4t-btn-back-to-sheet {
+    background: #282e33 !important;
+    border-color: #38414a !important;
+    color: #34d399 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-btn-back-to-sheet:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-btn-back-to-sheet:hover,
+.theme-dark #s4t-export-dialog .s4t-btn-back-to-sheet:hover,
+.dark-theme #s4t-export-dialog .s4t-btn-back-to-sheet:hover {
+    background: #1e293b !important;
+    border-color: #34d399 !important;
+    color: #6ee7b7 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-tabs-bar,
