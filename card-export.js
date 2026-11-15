@@ -45,9 +45,9 @@
         { id: 'c_dev_owner', header: 'Dev Owner', source: 'members', cellType: 'dev_select' },
         { id: 'c_dev_conf', header: 'Dev Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
         { id: 'c_mgr_conf', header: 'Mgr Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
-        { id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: 'Product Owner, CS Member, QA, Tech Lead' },
+        { id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: '' },
         { id: 'c_po_conf', header: 'Product Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
-        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: 'CS Member, QA, Tech Lead' },
+        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: 'Harshali, Tanisha' },
         { id: 'c_cs_conf', header: 'CS Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
         { id: 'c_risk', header: 'Risk (Comments)', source: 'blank', cellType: 'text' },
         { id: 'c_resolution', header: 'Resolution (Comments)', source: 'blank', cellType: 'text' }
@@ -69,6 +69,61 @@
             }
         });
         return deduplicated;
+    }
+
+    function s4tGetDotLabels(boardData) {
+        var seen = new Set();
+        var list = [];
+        function addLabel(name) {
+            var trimmed = String(name || '').trim();
+            if (/[.．…]$/.test(trimmed)) {
+                if (trimmed.length <= 80 && !/[\r\n]/.test(trimmed)) {
+                    var clean = trimmed.replace(/[.．…]+$/, '').trim();
+                    if (clean && !seen.has(clean.toLowerCase())) {
+                        seen.add(clean.toLowerCase());
+                        list.push(clean);
+                    }
+                }
+            }
+        }
+        if (boardData) {
+            if (Array.isArray(boardData.labels)) {
+                boardData.labels.forEach(function (lb) { if (lb && lb.name) addLabel(lb.name); });
+            }
+            if (Array.isArray(boardData.cards)) {
+                boardData.cards.forEach(function (c) {
+                    if (c && Array.isArray(c.labels)) {
+                        c.labels.forEach(function (lb) { if (lb && lb.name) addLabel(lb.name); });
+                    }
+                });
+            }
+            if (boardData.labelNames && typeof boardData.labelNames === 'object') {
+                Object.values(boardData.labelNames).forEach(function (val) {
+                    if (typeof val === 'string') addLabel(val);
+                });
+            }
+        }
+        if (typeof document !== 'undefined') {
+            try {
+                var domLabels = document.querySelectorAll(
+                    '[data-testid*="card-label"], [data-testid*="compact-card-label"], [data-testid*="labels-popover"], [data-testid*="label-suggestion"], .card-label, .js-card-label, .edit-labels-list li, .js-select-label, input[data-testid*="label-name"], input.js-label-name, span[class*="label"], div[class*="label"], [data-color]'
+                );
+                for (var i = 0; i < domLabels.length; i++) {
+                    var el = domLabels[i];
+                    if (!el) continue;
+                    var text = (el.textContent || '').trim();
+                    if (text) addLabel(text);
+                    var titleAttr = (el.getAttribute('title') || '').trim();
+                    if (titleAttr) addLabel(titleAttr);
+                    var ariaAttr = (el.getAttribute('aria-label') || '').trim();
+                    if (ariaAttr) addLabel(ariaAttr);
+                    if (el.tagName === 'INPUT' && el.value) {
+                        addLabel(el.value);
+                    }
+                }
+            } catch (_) { }
+        }
+        return list;
     }
 
     function s4tEscapeHtml(str) {
@@ -377,8 +432,9 @@
         var opts = options || {};
         var insertSeparator = !!opts.insertSeparatorRow;
         var sortBy = opts.sortBy || 'list';
+        var activeCols = (columns || []).filter(function (c) { return !c.hidden; });
         var lines = [];
-        var headers = columns.map(function (c) {
+        var headers = activeCols.map(function (c) {
             var h = String(c.header || '').replace(/"/g, '""');
             return '"' + s4tNeutralizeFormula(h) + '"';
         });
@@ -389,11 +445,11 @@
             if (insertSeparator) {
                 var grp = getCardGroupKey(card, sortBy, lookup);
                 if (prevGroup !== null && grp !== prevGroup) {
-                    lines.push(columns.map(function () { return '""'; }).join(','));
+                    lines.push(activeCols.map(function () { return '""'; }).join(','));
                 }
                 prevGroup = grp;
             }
-            var row = columns.map(function (c) {
+            var row = activeCols.map(function (c) {
                 var cellKey = card.id + '_' + c.id;
                 var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
                     ? opts.editedCells[cellKey]
@@ -416,6 +472,7 @@
         opts = opts || {};
         var insertSeparator = !!opts.insertSeparatorRow;
         var sortBy = opts.sortBy || 'list';
+        var activeCols = (columns || []).filter(function (c) { return !c.hidden; });
 
         var sheetTitle = s4tEscapeHtml(title || 'Sprint Cards');
         var s = [
@@ -439,7 +496,7 @@
             '<thead><tr>'
         ];
 
-        columns.forEach(function (c) {
+        activeCols.forEach(function (c) {
             s.push('<th>' + s4tSpreadsheetText(c.header || '') + '</th>');
         });
         s.push('</tr></thead><tbody>');
@@ -449,7 +506,7 @@
             var grp = getCardGroupKey(card, sortBy, lookup);
             if (prevGroup !== null && grp !== prevGroup) {
                 if (insertSeparator) {
-                    s.push('<tr class="s4t-sep"><td colspan="' + columns.length + '">&nbsp;</td></tr>');
+                    s.push('<tr class="s4t-sep"><td colspan="' + activeCols.length + '">&nbsp;</td></tr>');
                 }
             }
             prevGroup = grp;
@@ -457,7 +514,7 @@
             var trClass = (rIdx % 2 === 1) ? ' class="s4t-even"' : '';
 
             s.push('<tr' + trClass + '>');
-            columns.forEach(function (c) {
+            activeCols.forEach(function (c) {
                 var cellKey = card.id + '_' + c.id;
                 var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
                     ? opts.editedCells[cellKey]
@@ -486,19 +543,20 @@
         var opts = options || {};
         var insertSeparator = !!opts.insertSeparatorRow;
         var sortBy = opts.sortBy || 'list';
+        var activeCols = (columns || []).filter(function (c) { return !c.hidden; });
         var lines = [];
-        lines.push(columns.map(function (c) { return s4tNeutralizeFormula(c.header || '').replace(/\t/g, ' '); }).join('\t'));
+        lines.push(activeCols.map(function (c) { return s4tNeutralizeFormula(c.header || '').replace(/\t/g, ' '); }).join('\t'));
 
         var prevGroup = null;
         cards.forEach(function (card) {
             if (insertSeparator) {
                 var grp = getCardGroupKey(card, sortBy, lookup);
                 if (prevGroup !== null && grp !== prevGroup) {
-                    lines.push(columns.map(function () { return ''; }).join('\t'));
+                    lines.push(activeCols.map(function () { return ''; }).join('\t'));
                 }
                 prevGroup = grp;
             }
-            var row = columns.map(function (c) {
+            var row = activeCols.map(function (c) {
                 var cellKey = card.id + '_' + c.id;
                 var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
                     ? opts.editedCells[cellKey]
@@ -541,7 +599,7 @@
                     savedInsertSeparator = !!parsed.insertSeparatorRow;
                 }
             }
-        } catch (_) {}
+        } catch (_) { }
 
         var state = {
             currentTab: 'sheet',
@@ -561,6 +619,26 @@
             selectedFormat: 'excel' // 'excel' or 'csv'
         };
 
+        var dotLabels = s4tGetDotLabels(state.boardData);
+        var dotLabelsStr = dotLabels.join(', ');
+
+        // All columns ON by default when opening export dialog
+        (state.columns || []).forEach(function (c) {
+            c.hidden = false;
+            // Prevent Status column or custom dropdown from erroneously inheriting/pulling title
+            if ((c.id === 'c_status' || (c.header && c.header.trim().toLowerCase() === 'status') || c.cellType === 'custom_select') && (c.source === 'title' || c.source === 'title_raw')) {
+                c.source = 'blank';
+            }
+            // Product Owner dropdown values must only come from dot-terminated labels
+            if (c.source === 'product_owner' || (c.header && c.header.trim().toLowerCase() === 'product owner') || c.id === 'c_po_owner') {
+                if (c.customOptions && c.customOptions.includes('Product Owner, CS Member, QA, Tech Lead')) {
+                    c.customOptions = dotLabelsStr;
+                } else if (!c.customOptions) {
+                    c.customOptions = dotLabelsStr;
+                }
+            }
+        });
+
         var overlay = $('<div id="s4t-export-overlay" class="s4t-modal-backdrop" role="presentation">');
         var dialog = $('<section id="s4t-export-dialog" class="s4t-export-dialog" role="dialog" aria-modal="true" aria-labelledby="s4t-export-title">');
         overlay.append(dialog);
@@ -568,6 +646,9 @@
         activeOverlay = overlay;
 
         function close() {
+            if (isGuideActive) {
+                toggleGuideMode();
+            }
             if (activeOverlay === overlay) activeOverlay = null;
             overlay.remove();
             $(document).off('keydown.s4tExportClose');
@@ -578,7 +659,13 @@
         }
 
         $(document).on('keydown.s4tExportClose', function (e) {
-            if (e.key === 'Escape' || e.keyCode === 27) close();
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                if (isGuideActive) {
+                    toggleGuideMode();
+                    return;
+                }
+                close();
+            }
         });
 
         overlay.on('click', function (e) {
@@ -589,13 +676,13 @@
             '<header class="s4t-export-header s4t-modal-header">',
             '  <div class="s4t-export-title-row s4t-modal-title-area">',
             '    <div class="s4t-feature-title">',
-            '      <svg class="s4t-export-title-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
             '      <h2 id="s4t-export-title" class="s4t-modal-title">Export Board Cards</h2>',
             '    </div>',
             '    <span class="s4t-export-board-tag s4t-board-badge">' + s4tEscapeHtml(boardName) + '</span>',
             '    <span class="s4t-export-match-count s4t-metric-badge" id="s4t-export-count-badge" role="button" tabindex="0" data-tooltip="Double-click to copy matching card count" data-copy-value="0">0 cards matching</span>',
             '  </div>',
             '  <div class="s4t-export-header-actions">',
+            '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-guide-btn" id="s4t-export-guide-btn" data-tooltip="Interactive Guide Tour" aria-pressed="false"><svg class="s4t-guide-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span>Guide</span></button>',
             '    <button type="button" class="s4t-btn s4t-btn-subtle s4t-sheet-reset-btn" id="s4t-header-reset-btn" data-tooltip="Reset to default columns">↺ Reset Template</button>',
             '    <button type="button" class="s4t-export-close-btn s4t-close-btn" aria-label="Close" data-tooltip="Close">✕</button>',
             '  </div>',
@@ -638,8 +725,169 @@
             globalThis.s4tBindMetricCopy(dialog);
         }
 
+        var isGuideActive = false;
+
+        dialog.find('#s4t-export-guide-btn').on('click', function (e) {
+            e.stopPropagation();
+            toggleGuideMode();
+        });
+
+        function toggleGuideMode() {
+            isGuideActive = !isGuideActive;
+            var guideBtn = dialog.find('#s4t-export-guide-btn');
+
+            if (!isGuideActive) {
+                dialog.removeClass('s4t-guide-active-mode');
+                guideBtn.removeClass('s4t-guide-active').attr('aria-pressed', 'false');
+                dialog.find('#s4t-guide-freeze-overlay').remove();
+                dialog.find('.s4t-cloud-tooltip').remove();
+                $(window).off('resize.s4tGuide');
+                return;
+            }
+
+            if (state.currentTab !== 'sheet') {
+                dialog.find('#s4t-tab-btn-sheet').trigger('click');
+            }
+
+            dialog.addClass('s4t-guide-active-mode');
+            guideBtn.addClass('s4t-guide-active').attr('aria-pressed', 'true');
+
+            dialog.find('#s4t-guide-freeze-overlay').remove();
+            dialog.find('.s4t-cloud-tooltip').remove();
+
+            var freezeOverlay = $('<div id="s4t-guide-freeze-overlay" class="s4t-guide-freeze-overlay">');
+            freezeOverlay.on('click mousedown mouseup', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            dialog.append(freezeOverlay);
+
+            renderCloudyTooltips();
+
+            $(window).off('resize.s4tGuide').on('resize.s4tGuide', function () {
+                if (isGuideActive) {
+                    renderCloudyTooltips();
+                }
+            });
+        }
+
+        function renderCloudyTooltips() {
+            dialog.find('.s4t-cloud-tooltip').remove();
+
+            var dialogOffset = dialog.offset() || { top: 0, left: 0 };
+            var dialogWidth = dialog.outerWidth();
+            var dialogHeight = dialog.outerHeight();
+
+            var guideItems = [
+                {
+                    target: '#s4t-tab-btn-exclusions',
+                    title: '🔍 Exclusions & Ordering',
+                    desc: 'Switch tabs to exclude specific lists, members, or labels before exporting.',
+                    placement: 'bottom'
+                },
+                {
+                    target: '.s4t-sheet-topbar-left',
+                    title: '📂 Group Separators & Sort',
+                    desc: 'Auto-insert line breaks between groups, and sort cards by developer, list, or title.',
+                    placement: 'bottom'
+                },
+                {
+                    target: '.s4t-sheet-th-card:first .s4t-sheet-drag-handle',
+                    fallbackTarget: '.s4t-sheet-th-card:first',
+                    title: '↔ Drag & Drop Sequence',
+                    desc: 'Grab the 6-dot grip handle to rearrange column sequence in your export.',
+                    placement: 'bottom'
+                },
+                {
+                    target: '.s4t-sheet-th-card:first .s4t-sheet-header-input',
+                    fallbackTarget: '.s4t-sheet-th-card:first',
+                    title: '✏️ Rename & 👁️ Hide',
+                    desc: 'Edit header text directly, or click 👁 to hide this column without deleting it.',
+                    placement: 'bottom'
+                },
+                {
+                    target: '.s4t-sheet-th-card:first .s4t-sheet-source-header',
+                    fallbackTarget: '.s4t-sheet-th-card:first',
+                    title: '🎯 Field Mapping & Dtypes',
+                    desc: 'Map to 14 card fields (points, devs, dates) and select String, Devs, or Custom format.',
+                    placement: 'bottom'
+                },
+                {
+                    target: '#s4t-btn-copy',
+                    fallbackTarget: '.s4t-export-footer-actions',
+                    title: '⚡ Instant Export',
+                    desc: 'One-click copy formatted TSV directly to clipboard for Google Sheets, or download Excel & CSV.',
+                    placement: 'top'
+                }
+            ];
+
+            guideItems.forEach(function (item) {
+                var $el = dialog.find(item.target);
+                if ((!$el.length || !$el.is(':visible')) && item.fallbackTarget) {
+                    $el = dialog.find(item.fallbackTarget);
+                }
+                if (!$el.length || !$el.is(':visible')) return;
+
+                var elOffset = $el.offset();
+                var elW = $el.outerWidth();
+                var elH = $el.outerHeight();
+
+                var $tooltip = $('<div class="s4t-cloud-tooltip">');
+                $tooltip.html([
+                    '<div class="s4t-cloud-arrow"></div>',
+                    '<div class="s4t-cloud-header">',
+                    '  <span class="s4t-cloud-icon">☁️</span>',
+                    '  <strong class="s4t-cloud-title">' + s4tEscapeHtml(item.title) + '</strong>',
+                    '</div>',
+                    '<div class="s4t-cloud-desc">' + s4tEscapeHtml(item.desc) + '</div>'
+                ].join(''));
+
+                dialog.append($tooltip);
+
+                var tipW = $tooltip.outerWidth() || 240;
+                var tipH = $tooltip.outerHeight() || 85;
+
+                var targetCenterX = (elOffset.left - dialogOffset.left) + (elW / 2);
+                var targetTopY = (elOffset.top - dialogOffset.top);
+                var targetBottomY = targetTopY + elH;
+
+                var top, left;
+                var arrowClass = 'arrow-top';
+
+                if (item.placement === 'top' || (targetBottomY + tipH + 16 > dialogHeight && targetTopY - tipH - 16 > 0)) {
+                    top = targetTopY - tipH - 12;
+                    arrowClass = 'arrow-bottom';
+                } else {
+                    top = targetBottomY + 12;
+                    arrowClass = 'arrow-top';
+                }
+
+                left = targetCenterX - (tipW / 2);
+
+                var padding = 12;
+                var clampedLeft = Math.max(padding, Math.min(left, dialogWidth - tipW - padding));
+                var clampedTop = Math.max(padding, Math.min(top, dialogHeight - tipH - padding));
+                var arrowOffset = Math.max(16, Math.min(targetCenterX - clampedLeft, tipW - 16));
+
+                $tooltip.addClass(arrowClass);
+                $tooltip.find('.s4t-cloud-arrow').css('left', arrowOffset + 'px');
+                $tooltip.css({
+                    top: clampedTop + 'px',
+                    left: clampedLeft + 'px'
+                });
+            });
+        }
+
         dialog.find('#s4t-header-reset-btn').on('click', function () {
             state.columns = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+            var dotLabels = s4tGetDotLabels(state.boardData);
+            var dotLabelsStr = dotLabels.join(', ');
+            state.columns.forEach(function (c) {
+                c.hidden = false;
+                if (c.source === 'product_owner' || (c.header && c.header.trim().toLowerCase() === 'product owner') || c.id === 'c_po_owner') {
+                    c.customOptions = dotLabelsStr;
+                }
+            });
             state.insertSeparatorRow = false;
             state.editedCells = {};
             dialog.find('#s4t-toggle-separator').prop('checked', false);
@@ -647,12 +895,17 @@
             saveConfig();
             renderSheetTableContent();
             updateColumnsCountBadge();
+            updateActionButtonsState();
             showToast('Reset to default column layout.');
         });
 
         function updateColumnsCountBadge() {
             var count = state.columns ? state.columns.length : 0;
-            dialog.find('#s4t-sheet-col-count').text(count + (count === 1 ? ' column' : ' columns'));
+            var activeCount = state.columns ? state.columns.filter(function (c) { return !c.hidden; }).length : 0;
+            var text = (activeCount === count)
+                ? (count + (count === 1 ? ' column' : ' columns'))
+                : (activeCount + '/' + count + ' columns');
+            dialog.find('#s4t-sheet-col-count').text(text);
         }
 
         function isCustomDtypeMissing(col) {
@@ -663,22 +916,34 @@
             return validItems.length === 0;
         }
 
-        function hasValidationErrors() {
-            var hasErr = false;
+        function getFirstValidationError() {
+            var activeCols = (state.columns || []).filter(function (c) { return !c.hidden; });
+            if (activeCols.length === 0) {
+                return { type: 'all_hidden', msg: 'At least one column must be visible to export.' };
+            }
             for (var i = 0; i < state.columns.length; i++) {
-                if (isCustomDtypeMissing(state.columns[i])) {
-                    hasErr = true;
-                    break;
+                var c = state.columns[i];
+                if (!c.hidden && isCustomDtypeMissing(c)) {
+                    var isPo = c.source === 'product_owner' || (c.header && c.header.trim().toLowerCase() === 'product owner') || c.id === 'c_po_owner';
+                    if (isPo) {
+                        return { type: 'missing_po', col: c, msg: '⚠️ Required: Please fill in Product Owner options before exporting.' };
+                    }
+                    return { type: 'missing_custom', col: c, msg: '⚠️ Required: Please fill in custom options before exporting.' };
                 }
             }
-            if (!hasErr && dialog.find('.s4t-input-required-error').length > 0) {
-                hasErr = true;
+            if (dialog.find('.s4t-input-required-error').length > 0) {
+                return { type: 'input_error', msg: '⚠️ Required: Please fill in required options before exporting.' };
             }
-            return hasErr;
+            return null;
+        }
+
+        function hasValidationErrors() {
+            return getFirstValidationError() !== null;
         }
 
         function updateActionButtonsState() {
-            var hasErr = hasValidationErrors();
+            var valErr = getFirstValidationError();
+            var hasErr = (valErr !== null);
             var copyBtn = dialog.find('#s4t-btn-copy-tsv');
             var downloadBtn = dialog.find('#s4t-btn-main-download');
             var formatToggle = dialog.find('#s4t-btn-format-toggle');
@@ -686,8 +951,10 @@
             var formatMenu = dialog.find('#s4t-format-menu');
 
             if (hasErr) {
-                copyBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', 'Please fill in required custom options before copying');
-                downloadBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', 'Please fill in required custom options before downloading');
+                var copyTip = valErr.msg.replace('exporting.', 'copying table.').replace('export.', 'copying table.');
+                var downTip = valErr.msg.replace('exporting.', 'downloading file.').replace('export.', 'downloading file.');
+                copyBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', copyTip);
+                downloadBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', downTip);
                 formatToggle.addClass('s4t-btn-disabled').attr('aria-disabled', 'true');
                 splitGroup.addClass('s4t-group-disabled');
                 formatMenu.prop('hidden', true);
@@ -709,7 +976,7 @@
                 if (typeof el.showPicker === 'function') {
                     // showPicker is natively available
                 }
-            } catch (_) {}
+            } catch (_) { }
 
             // Hide native select visually while keeping it fully synchronized in the DOM
             $select.addClass('s4t-select-replaced').prop('hidden', true);
@@ -742,6 +1009,10 @@
                         .text(text);
                     if (isSelected) $item.addClass('s4t-selected');
 
+                    $item.on('mousedown', function (e) {
+                        e.preventDefault();
+                    });
+
                     $item.on('click', function (e) {
                         e.stopPropagation();
                         e.preventDefault();
@@ -757,6 +1028,14 @@
                     selectedText = firstOpt.length ? firstOpt.text() : '';
                 }
                 $label.text(selectedText);
+
+                if ($select.prop('disabled')) {
+                    $wrap.addClass('s4t-dropdown-disabled');
+                    $trigger.prop('disabled', true).attr('aria-disabled', 'true');
+                } else {
+                    $wrap.removeClass('s4t-dropdown-disabled');
+                    $trigger.prop('disabled', false).removeAttr('aria-disabled');
+                }
             }
 
             refreshOptions();
@@ -774,6 +1053,7 @@
 
             var openedAt = 0;
             function openDropdown() {
+                if ($select.prop('disabled')) return;
                 openedAt = Date.now();
                 dialog.find('.s4t-custom-dropdown-menu').not($menu).prop('hidden', true);
                 dialog.find('.s4t-custom-dropdown-trigger').not($trigger).attr('aria-expanded', 'false');
@@ -797,6 +1077,7 @@
                     var bottomBoundary = gridWrap.length ? Math.min(dialogRect.bottom, gridWrap[0].getBoundingClientRect().bottom) : dialogRect.bottom;
                     var topBoundary = gridWrap.length ? Math.max(dialogRect.top, gridWrap[0].getBoundingClientRect().top) : dialogRect.top;
                     var rightBoundary = gridWrap.length ? Math.min(dialogRect.right, gridWrap[0].getBoundingClientRect().right) : dialogRect.right;
+                    var leftBoundary = gridWrap.length ? Math.max(dialogRect.left, gridWrap[0].getBoundingClientRect().left) : dialogRect.left;
 
                     if (wrapRect.bottom + 180 > bottomBoundary && wrapRect.top - 180 > topBoundary) {
                         $wrap.addClass('s4t-dropdown-up');
@@ -804,18 +1085,25 @@
                         $wrap.removeClass('s4t-dropdown-up');
                     }
 
-                    if (wrapRect.left + 220 > rightBoundary && wrapRect.right - 220 >= dialogRect.left) {
+                    var menuHalfWidth = 110;
+                    var wrapCenter = wrapRect.left + wrapRect.width / 2;
+                    if (wrapCenter + menuHalfWidth > rightBoundary) {
                         $wrap.addClass('s4t-dropdown-align-right');
                     } else {
                         $wrap.removeClass('s4t-dropdown-align-right');
                     }
-                } catch (_) {}
+                    if (wrapCenter - menuHalfWidth < leftBoundary) {
+                        $wrap.addClass('s4t-dropdown-align-left');
+                    } else {
+                        $wrap.removeClass('s4t-dropdown-align-left');
+                    }
+                } catch (_) { }
             }
 
             function closeDropdown() {
                 $menu.prop('hidden', true);
                 $trigger.attr('aria-expanded', 'false');
-                $wrap.removeClass('s4t-dropdown-open s4t-dropdown-up s4t-dropdown-align-right');
+                $wrap.removeClass('s4t-dropdown-open s4t-dropdown-up s4t-dropdown-align-right s4t-dropdown-align-left');
                 $wrap.closest('.s4t-sheet-th').removeClass('s4t-th-dropdown-active');
                 $wrap.closest('.s4t-sheet-cell').removeClass('s4t-cell-dropdown-active');
                 $wrap.closest('.s4t-sheet-row').removeClass('s4t-row-dropdown-active');
@@ -824,6 +1112,7 @@
             // Open on hover (mouseover / mouseenter) & close on mouseleave
             var hoverTimer;
             $wrap.on('mouseenter', function () {
+                if ($select.prop('disabled')) return;
                 clearTimeout(hoverTimer);
                 openDropdown();
             }).on('mouseleave', function () {
@@ -832,10 +1121,16 @@
                 }, 140);
             });
 
+            // Prevent browser native button active white flash on mousedown
+            $trigger.on('mousedown', function (e) {
+                e.preventDefault();
+            });
+
             // Single click toggles dropdown
             $trigger.on('click', function (e) {
                 e.stopPropagation();
                 e.preventDefault();
+                if ($select.prop('disabled')) return;
                 if ($menu.prop('hidden')) {
                     openDropdown();
                 } else {
@@ -889,6 +1184,20 @@
             (data.members || []).forEach(function (m) { membersById.set(m.id, m); });
             (data.labels || []).forEach(function (lb) { labelsById.set(lb.id || lb.name, lb); });
             state.lookup = { listsById: listsById, membersById: membersById, labelsById: labelsById };
+
+            // Dynamically refresh Product Owner options from latest dot-terminated labels
+            var latestDotLabels = s4tGetDotLabels(data);
+            var latestDotStr = latestDotLabels.join(', ');
+            state.columns.forEach(function (c) {
+                if (c.source === 'product_owner' || (c.header && c.header.trim().toLowerCase() === 'product owner') || c.id === 'c_po_owner') {
+                    if (latestDotStr) {
+                        c.customOptions = latestDotStr;
+                    } else if (!c.customOptions || c.customOptions.includes('Product Owner, CS Member, QA, Tech Lead')) {
+                        c.customOptions = '';
+                    }
+                }
+            });
+
             updateFilteredCards();
             renderLayout();
         }
@@ -916,7 +1225,7 @@
                 };
                 localStorage.setItem(storageKey, JSON.stringify(cfg));
                 localStorage.setItem('s4t_card_export_cfg_v2_default', JSON.stringify(cfg));
-            } catch (_) {}
+            } catch (_) { }
         }
 
         function renderLayout() {
@@ -960,45 +1269,14 @@
         function renderSheetTab(container) {
             container.empty();
 
+            // Sheet Grid Container (viewport container that holds the scrollable grid & stationary overlay)
+            var gridContainer = $('<div class="s4t-sheet-grid-container">');
             // Sheet Grid Wrapper with horizontal & vertical scroll
             var gridWrapper = $('<div class="s4t-sheet-grid-wrapper">');
             var table = $('<table class="s4t-sheet-grid-table" id="s4t-sheet-table">');
             gridWrapper.append(table);
-            container.append(gridWrapper);
-
-            // Guide Banner below table grid
-            var guideBanner = $('<details class="s4t-sheet-guide-banner">');
-            guideBanner.html([
-                '<summary class="s4t-sheet-guide-header">',
-                '  <div class="s4t-sheet-guide-title-wrap">',
-                '    <span class="s4t-sheet-guide-icon">💡</span>',
-                '    <span class="s4t-sheet-guide-title">Spreadsheet Designer Tips & Quick Guide</span>',
-                '  </div>',
-                '  <span class="s4t-sheet-guide-toggle-hint">Click to expand tips ▾</span>',
-                '</summary>',
-                '<div class="s4t-sheet-guide-grid">',
-                '  <div class="s4t-sheet-guide-item"><strong>↔ Drag & Drop Columns:</strong> Grab the 6-dot grip handle on any column header to rearrange column sequence.</div>',
-                '  <div class="s4t-sheet-guide-item"><strong>✏️ Rename & Map:</strong> Edit header text directly and use <em>Shows: ⓘ</em> to map to 14 fields (lists, points, devs, dates, checklists, etc.).</div>',
-                '  <div class="s4t-sheet-guide-item"><strong>🎯 Selectable Dtypes:</strong> Set column dtype to <em>String</em>, <em>Devs</em>, or <em>Custom</em> for custom dropdown lists.</div>',
-                '  <div class="s4t-sheet-guide-item"><strong>🟢 Classic Green First Row:</strong> Headers are formatted with standard spreadsheet green, bold text, and Times New Roman font.</div>',
-                '  <div class="s4t-sheet-guide-item"><strong>📂 Group Separators:</strong> Enable <em>"Line break between groups"</em> to automatically insert divider rows between developers or lists.</div>',
-                '  <div class="s4t-sheet-guide-item"><strong>⚡ Instant Export:</strong> Click <em>Copy for Google Sheets</em> for immediate TSV paste, or download formatted <em>Excel (.xls)</em> or <em>CSV</em>.</div>',
-                '</div>'
-            ].join(''));
-            guideBanner.on('toggle', function () {
-                var isOpen = this.open;
-                guideBanner.find('.s4t-sheet-guide-toggle-hint').text(isOpen ? 'Click to close tips ▾' : 'Click to expand tips ▴');
-            });
-
-            $(document).off('click.s4tGuideClose').on('click.s4tGuideClose', function (e) {
-                var gb = dialog.find('.s4t-sheet-guide-banner');
-                if (gb.length && gb.prop('open') && !$(e.target).closest('.s4t-sheet-guide-banner').length) {
-                    gb.prop('open', false);
-                    gb.find('.s4t-sheet-guide-toggle-hint').text('Click to expand tips ▴');
-                }
-            });
-
-            container.append(guideBanner);
+            gridContainer.append(gridWrapper);
+            container.append(gridContainer);
 
             renderSheetTableContent();
             updateColumnsCountBadge();
@@ -1012,22 +1290,47 @@
             var trHead = $('<tr>');
 
             state.columns.forEach(function (col, idx) {
-                var th = $('<th class="s4t-sheet-th" draggable="true" data-col-idx="' + idx + '">');
+                var isHidden = !!col.hidden;
+                var th = $('<th class="s4t-sheet-th" draggable="' + (isHidden ? 'false' : 'true') + '" data-col-idx="' + idx + '">');
+                if (isHidden) th.addClass('s4t-sheet-th-hidden');
 
                 var card = $('<div class="s4t-sheet-th-card">');
 
-                // Card Top Row: Drag handle, Col Badge, Delete button
+                // Card Top Row: Drag handle, Col Badge, Hide button, Delete button
                 var cardTop = $('<div class="s4t-sheet-card-top">');
-                var dragHandle = $('<span class="s4t-sheet-drag-handle" data-tooltip="Drag to reorder column" aria-label="Drag to reorder column">' +
+                var dragHandle = $('<span class="s4t-sheet-drag-handle" data-tooltip="' + (isHidden ? 'Column is hidden from export (read-only)' : 'Drag to reorder column') + '" aria-label="' + (isHidden ? 'Column is hidden from export (read-only)' : 'Drag to reorder column') + '">' +
                     '<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">' +
                     '<circle cx="5" cy="3.5" r="1.3"/><circle cx="11" cy="3.5" r="1.3"/>' +
                     '<circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/>' +
                     '<circle cx="5" cy="12.5" r="1.3"/><circle cx="11" cy="12.5" r="1.3"/>' +
                     '</svg></span>');
                 var colBadge = $('<span class="s4t-sheet-col-badge">').text('Col ' + (idx + 1));
+
+                var eyeOnSvg = '<svg class="s4t-col-eye-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+                var eyeOffSvg = '<svg class="s4t-col-eye-svg" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+                var hideBtn = $('<button type="button" class="s4t-sheet-col-hide' + (isHidden ? ' s4t-is-hidden' : '') + '" data-tooltip="' + (isHidden ? 'Unhide column' : 'Hide column from export') + '" aria-label="' + (isHidden ? 'Unhide column' : 'Hide column') + '"></button>')
+                    .html(isHidden ? eyeOffSvg : eyeOnSvg);
+
+                if (isHidden) {
+                    card.addClass('s4t-col-card-hidden');
+                    colBadge.text('Col ' + (idx + 1) + ' (Hidden)');
+                }
+
+                hideBtn.on('click', function (e) {
+                    e.stopPropagation();
+                    col.hidden = !col.hidden;
+                    state.previewDirty = true;
+                    saveConfig();
+                    renderSheetTableContent();
+                    updateColumnsCountBadge();
+                    updateActionButtonsState();
+                });
+
                 var delBtn = $('<button type="button" class="s4t-sheet-col-del" data-tooltip="Remove column" aria-label="Remove column">✕</button>')
-                    .prop('disabled', state.columns.length <= 1)
+                    .prop('disabled', isHidden || state.columns.length <= 1)
                     .on('click', function () {
+                        if (isHidden) return;
                         if (state.columns.length > 1) {
                             state.columns.splice(idx, 1);
                             state.previewDirty = true;
@@ -1037,15 +1340,28 @@
                             updateActionButtonsState();
                         }
                     });
-                cardTop.append(dragHandle, colBadge, delBtn);
+                cardTop.append(dragHandle, colBadge, hideBtn, delBtn);
 
                 // Card Input Row
                 var cardInputRow = $('<div class="s4t-sheet-card-input-row">');
                 var headerInput = $('<input type="text" class="s4t-sheet-header-input" placeholder="Column Header" aria-label="Header Name">')
-                    .val(col.header || '');
+                    .val(col.header || '')
+                    .prop('readonly', isHidden);
+                if (isHidden) {
+                    headerInput.attr('tabindex', '-1').attr('title', 'Column is hidden from export (read-only)');
+                }
 
                 headerInput.on('input', function () {
+                    if (isHidden) return;
                     col.header = $(this).val();
+                    if (col.header && col.header.trim().toLowerCase() === 'status') {
+                        if (col.source === 'title' || col.source === 'title_raw') {
+                            col.source = 'blank';
+                            sourceSelect.val('blank');
+                            var updatedBlank = FIELD_MAP['blank'] || FIELD_DEFINITIONS[0];
+                            infoIcon.attr('data-tooltip', updatedBlank.desc);
+                        }
+                    }
                     state.previewDirty = true;
                     saveConfig();
                     renderDirtyIndicator();
@@ -1057,12 +1373,13 @@
                 var sourceHeader = $('<div class="s4t-sheet-source-header">');
                 var sourceLabel = $('<span class="s4t-sheet-source-label">Shows:</span>');
                 var currentField = FIELD_MAP[col.source] || FIELD_DEFINITIONS[0];
-                var infoSvg = '<svg class="s4t-field-info-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                var infoSvg = '<svg class="s4t-field-info-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
                 var infoIcon = $('<span class="s4t-field-info-icon" tabindex="0" role="button" aria-label="Field details" data-tooltip="' + s4tEscapeHtml(currentField.desc) + '"></span>').append(infoSvg);
                 sourceHeader.append(sourceLabel, infoIcon);
 
                 var selectWrap = $('<div class="s4t-sheet-source-select-wrap">');
-                var sourceSelect = $('<select class="s4t-sheet-source-select" aria-label="Field Mapping">');
+                var sourceSelect = $('<select class="s4t-sheet-source-select" aria-label="Field Mapping">')
+                    .prop('disabled', isHidden);
 
                 FIELD_DEFINITIONS.forEach(function (f) {
                     var opt = $('<option>').val(f.key).text(f.label);
@@ -1074,6 +1391,12 @@
                     col.source = $(this).val();
                     var updated = FIELD_MAP[col.source] || FIELD_DEFINITIONS[0];
                     infoIcon.attr('data-tooltip', updated.desc);
+                    if (col.source === 'product_owner') {
+                        var dotLabels = s4tGetDotLabels(state.boardData);
+                        col.customOptions = dotLabels.join(', ');
+                        customInput.val(col.customOptions);
+                    }
+                    validateCustomOptions();
                     state.previewDirty = true;
                     saveConfig();
                     if (state.previewVisible) renderSheetTableBody();
@@ -1085,7 +1408,8 @@
                 // Format / dtype Row
                 var typeRow = $('<div class="s4t-sheet-type-row">');
                 var typeHeader = $('<div class="s4t-sheet-type-header"><span class="s4t-sheet-type-label">dtype:</span></div>');
-                var typeSelect = $('<select class="s4t-sheet-type-select" aria-label="Cell Data Type">');
+                var typeSelect = $('<select class="s4t-sheet-type-select" aria-label="Cell Data Type">')
+                    .prop('disabled', isHidden);
 
                 var currentType = col.cellType;
                 if (!currentType || currentType === 'checkbox') currentType = 'text';
@@ -1099,15 +1423,22 @@
                     typeSelect.append(opt);
                 });
 
-                var customInput = $('<input type="text" class="s4t-sheet-custom-options-input" placeholder="e.g. In Progress, Blocked, Ready for QA" data-tooltip="Comma-separated custom dropdown options" aria-label="Custom dropdown values">')
+                var isPoCol = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
+                var customPlaceholder = isPoCol ? 'e.g. Prapti, Kashvi' : 'e.g. In Progress, Blocked, Ready for QA';
+                var customInput = $('<input type="text" class="s4t-sheet-custom-options-input" placeholder="' + customPlaceholder + '" data-tooltip="Comma-separated custom dropdown options" aria-label="Custom dropdown values">')
                     .val(col.customOptions || '')
-                    .prop('hidden', currentType !== 'custom_select');
+                    .prop('hidden', currentType !== 'custom_select')
+                    .prop('readonly', isHidden);
+                if (isHidden) {
+                    customInput.attr('tabindex', '-1');
+                }
 
                 function validateCustomOptions() {
-                    var isMissing = isCustomDtypeMissing(col);
+                    var isMissing = !col.hidden && isCustomDtypeMissing(col);
                     if (col.cellType === 'custom_select' && isMissing) {
                         customInput.addClass('s4t-input-required-error');
-                        customInput.attr('data-tooltip', 'Required: Enter comma-separated dropdown options');
+                        var isPo = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
+                        customInput.attr('data-tooltip', isPo ? 'Required: Enter Product Owner options (board has no dot labels)' : 'Required: Enter comma-separated dropdown options');
                     } else {
                         customInput.removeClass('s4t-input-required-error');
                         customInput.attr('data-tooltip', 'Comma-separated custom dropdown options');
@@ -1117,6 +1448,7 @@
                 validateCustomOptions();
 
                 customInput.on('input', function () {
+                    if (isHidden) return;
                     col.customOptions = $(this).val();
                     validateCustomOptions();
                     updateActionButtonsState();
@@ -1125,9 +1457,34 @@
                     if (state.previewVisible) renderSheetTableBody();
                 });
 
+                if (isPoCol) {
+                    customInput.on('focus click', function () {
+                        if (isHidden) return;
+                        var latest = s4tGetDotLabels(state.boardData);
+                        if (latest.length) {
+                            var latestStr = latest.join(', ');
+                            if (!col.customOptions || col.customOptions !== latestStr) {
+                                col.customOptions = latestStr;
+                                $(this).val(latestStr);
+                                validateCustomOptions();
+                                updateActionButtonsState();
+                                state.previewDirty = true;
+                                saveConfig();
+                                if (state.previewVisible) renderSheetTableBody();
+                            }
+                        }
+                    });
+                }
+
                 typeSelect.on('change', function () {
                     col.cellType = $(this).val();
                     var isCustom = col.cellType === 'custom_select';
+                    if (isCustom && (col.source === 'title' || col.source === 'title_raw')) {
+                        col.source = 'blank';
+                        sourceSelect.val('blank');
+                        var updated = FIELD_MAP['blank'] || FIELD_DEFINITIONS[0];
+                        infoIcon.attr('data-tooltip', updated.desc);
+                    }
                     customInput.prop('hidden', !isCustom);
                     validateCustomOptions();
                     updateActionButtonsState();
@@ -1157,7 +1514,7 @@
                 '</button>');
             addBtn.on('click', function () {
                 var newId = 'col_' + Date.now();
-                state.columns.push({ id: newId, header: 'New Column', source: 'title', cellType: 'text' });
+                state.columns.push({ id: newId, header: 'New Column', source: 'blank', cellType: 'text' });
                 state.previewDirty = true;
                 saveConfig();
                 renderSheetTableContent();
@@ -1184,7 +1541,7 @@
         }
 
         function renderDirtyIndicator() {
-            var banner = dialog.find('.s4t-sheet-dirty-row');
+            var banner = dialog.find('.s4t-dirty-blur-overlay');
             if (state.previewVisible && state.previewDirty && !banner.length) {
                 renderSheetTableBody();
             }
@@ -1196,19 +1553,15 @@
             dialog.find('.s4t-sheet-preview-blur-overlay').remove();
 
             if (!state.previewVisible) {
-                // Render 5 virtual skeleton spreadsheet rows so grid and columns are clear
-                for (var r = 0; r < 5; r++) {
-                    var virtTr = $('<tr class="s4t-sheet-virtual-row">');
-                    var widths = ['72%', '88%', '50%', '76%', '60%', '94%', '42%'];
-                    state.columns.forEach(function (col, cIdx) {
-                        var virtTd = $('<td class="s4t-sheet-cell s4t-sheet-virtual-cell">');
-                        var skeletonLine = $('<div class="s4t-sheet-skeleton-line">');
-                        skeletonLine.css('width', widths[(r * 2 + cIdx) % widths.length]);
-                        virtTd.append(skeletonLine);
-                        virtTr.append(virtTd);
-                    });
-                    virtTr.append($('<td class="s4t-sheet-cell-empty">'));
-                    tbody.append(virtTr);
+                // Render placeholder greyish rows so the entire spreadsheet grid spans full width and height
+                for (var r = 0; r < 14; r++) {
+                    var tr = $('<tr class="s4t-sheet-row s4t-sheet-placeholder-row">');
+                    for (var c = 0; c < state.columns.length; c++) {
+                        var td = $('<td class="s4t-sheet-cell s4t-sheet-placeholder-cell">&nbsp;</td>');
+                        tr.append(td);
+                    }
+                    tr.append($('<td class="s4t-sheet-cell s4t-sheet-placeholder-cell s4t-sheet-placeholder-add">&nbsp;</td>'));
+                    tbody.append(tr);
                 }
 
                 // Frosted glass overlay with crisp CTA button in center
@@ -1228,31 +1581,55 @@
                 });
 
                 blurOverlay.append(ctaCard);
-                dialog.find('.s4t-sheet-grid-wrapper').append(blurOverlay);
+                var mountContainer = dialog.find('.s4t-sheet-grid-container');
+                if (!mountContainer.length) mountContainer = dialog.find('.s4t-sheet-grid-wrapper');
+                mountContainer.append(blurOverlay);
+
+                var syncOverlayWidth = function () {
+                    var tableEl = dialog.find('#s4t-sheet-table');
+                    var tw = tableEl.outerWidth() || (tableEl[0] ? tableEl[0].scrollWidth : 0);
+                    var ww = dialog.find('.s4t-sheet-grid-wrapper').outerWidth() || 0;
+                    var w = Math.max(tw, ww);
+                    if (w > 0 && mountContainer.hasClass('s4t-sheet-grid-wrapper')) {
+                        blurOverlay.css('min-width', w + 'px');
+                    }
+                };
+                syncOverlayWidth();
+                setTimeout(syncOverlayWidth, 50);
                 return;
             }
 
-            // Dirty banner if settings changed: hide stale rows and show generate preview button
+            // Dirty banner if settings changed: consistent full-width gray blur overlay with dark theme card
             if (state.previewDirty) {
-                var dirtyTr = $('<tr class="s4t-sheet-dirty-row">');
-                var dirtyTd = $('<td colspan="' + totalColSpan + '" class="s4t-sheet-dirty-cell">');
-                dirtyTd.html([
-                    '<div class="s4t-dirty-banner">',
-                    '  <div class="s4t-dirty-msg-wrap">',
-                    '    <span class="s4t-dirty-icon">⚡</span>',
-                    '    <span class="s4t-dirty-text">Column or exclusion settings changed.</span>',
-                    '  </div>',
-                    '  <button type="button" class="s4t-btn s4t-btn-primary s4t-dirty-refresh-btn">👁️ Generate Preview</button>',
-                    '</div>'
+                var dirtyOverlay = $('<div class="s4t-sheet-preview-blur-overlay s4t-dirty-blur-overlay">');
+                var dirtyCard = $('<div class="s4t-dirty-dark-card">');
+                dirtyCard.html([
+                    '<div class="s4t-dirty-icon">⚡</div>',
+                    '<div class="s4t-dirty-title">Column or exclusion settings changed.</div>',
+                    '<button type="button" class="s4t-btn s4t-btn-primary s4t-dirty-refresh-btn">👁️ Generate Preview</button>'
                 ].join(''));
 
-                dirtyTd.find('.s4t-dirty-refresh-btn').on('click', function () {
+                dirtyCard.find('.s4t-dirty-refresh-btn').on('click', function () {
                     state.previewDirty = false;
                     renderSheetTableBody();
                 });
 
-                dirtyTr.append(dirtyTd);
-                tbody.append(dirtyTr);
+                dirtyOverlay.append(dirtyCard);
+                var mountContainer = dialog.find('.s4t-sheet-grid-container');
+                if (!mountContainer.length) mountContainer = dialog.find('.s4t-sheet-grid-wrapper');
+                mountContainer.append(dirtyOverlay);
+
+                var syncDirtyWidth = function () {
+                    var tableEl = dialog.find('#s4t-sheet-table');
+                    var tw = tableEl.outerWidth() || (tableEl[0] ? tableEl[0].scrollWidth : 0);
+                    var ww = dialog.find('.s4t-sheet-grid-wrapper').outerWidth() || 0;
+                    var w = Math.max(tw, ww);
+                    if (w > 0 && mountContainer.hasClass('s4t-sheet-grid-wrapper')) {
+                        dirtyOverlay.css('min-width', w + 'px');
+                    }
+                };
+                syncDirtyWidth();
+                setTimeout(syncDirtyWidth, 50);
                 return;
             }
 
@@ -1282,13 +1659,27 @@
                 var tr = $('<tr class="s4t-sheet-row">');
 
                 state.columns.forEach(function (col) {
+                    var td = $('<td class="s4t-sheet-cell">');
                     var cellKey = card.id + '_' + col.id;
                     var baseVal = s4tExtractFieldValue(card, col.source, state.lookup);
                     var val = (state.editedCells && state.editedCells[cellKey] !== undefined)
                         ? state.editedCells[cellKey]
                         : baseVal;
-                    var td = $('<td class="s4t-sheet-cell">');
                     var cellType = col.cellType || 'text';
+
+                    if (col.hidden) {
+                        td.addClass('s4t-sheet-cell-hidden');
+                        var displayVal = val || '';
+                        var hiddenSpan = $('<span class="s4t-sheet-hidden-placeholder">');
+                        if (displayVal) {
+                            hiddenSpan.text(displayVal).attr('title', displayVal + ' (Hidden from export - read-only)');
+                        } else {
+                            hiddenSpan.text('— Hidden —').attr('title', 'Hidden from export');
+                        }
+                        td.append(hiddenSpan);
+                        tr.append(td);
+                        return;
+                    }
 
                     if (cellType === 'checkbox') {
                         var chkWid = $('<label class="s4t-sheet-cell-checkbox-wrap">');
@@ -1307,19 +1698,22 @@
                         td.addClass('s4t-sheet-cell-has-dropdown');
                         var devSel = $('<select class="s4t-sheet-cell-select" aria-label="Assignee">');
                         devSel.append($('<option value="">').text('-- Select Dev --'));
+                        var isDevCellEdited = !!(state.editedCells && state.editedCells[cellKey] !== undefined);
+                        var isDevTitleLeak = (col.source === 'title' || col.source === 'title_raw') && !isDevCellEdited;
+                        var effectiveDevVal = isDevTitleLeak ? '' : (val || '');
                         var matchedDev = false;
                         (state.boardData.members || []).forEach(function (m) {
                             var mName = m.fullName || m.username || '';
                             if (!mName) return;
                             var opt = $('<option>').val(mName).text(mName);
-                            if (val && (val.toLowerCase() === mName.toLowerCase() || val.toLowerCase().includes(mName.toLowerCase()))) {
+                            if (effectiveDevVal && (effectiveDevVal.toLowerCase() === mName.toLowerCase() || effectiveDevVal.toLowerCase().includes(mName.toLowerCase()))) {
                                 opt.prop('selected', true);
                                 matchedDev = true;
                             }
                             devSel.append(opt);
                         });
-                        if (val && !matchedDev) {
-                            var customDevOpt = $('<option>').val(val).text(val).prop('selected', true);
+                        if (effectiveDevVal && !matchedDev && (isDevCellEdited || col.source === 'members' || col.source === 'member_names')) {
+                            var customDevOpt = $('<option>').val(effectiveDevVal).text(effectiveDevVal).prop('selected', true);
                             devSel.append(customDevOpt);
                         }
                         devSel.on('change', function () {
@@ -1332,8 +1726,11 @@
                         td.addClass('s4t-sheet-cell-has-dropdown');
                         var custSel = $('<select class="s4t-sheet-cell-select" aria-label="Role / Value">');
                         var optList = s4tParseCustomOptions(col.customOptions);
+                        var isCellEdited = !!(state.editedCells && state.editedCells[cellKey] !== undefined);
+                        var isTitleLeak = (col.source === 'title' || col.source === 'title_raw' || col.id === 'c_status' || (col.header && col.header.trim().toLowerCase() === 'status')) && !isCellEdited;
+                        var isPoCol = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
                         var hasMatched = false;
-                        if (val) {
+                        if (val && !isTitleLeak) {
                             hasMatched = optList.some(function (optVal) {
                                 return optVal.toLowerCase() === val.toLowerCase();
                             });
@@ -1341,12 +1738,14 @@
                                 optList.unshift(val);
                             }
                         }
-                        if (!val && col.source === 'blank') {
+                        if ((!val || isTitleLeak) && (col.source === 'blank' || isTitleLeak)) {
                             custSel.append($('<option value="">').text('-- Select --').prop('selected', true));
+                        } else if ((!val || isTitleLeak) && isPoCol) {
+                            custSel.append($('<option value="">').text('-- Select PO --').prop('selected', true));
                         }
                         optList.forEach(function (optVal) {
                             var opt = $('<option>').val(optVal).text(optVal);
-                            if (val && val.toLowerCase() === optVal.toLowerCase()) {
+                            if (val && !isTitleLeak && val.toLowerCase() === optVal.toLowerCase()) {
                                 opt.prop('selected', true);
                             }
                             custSel.append(opt);
@@ -1372,7 +1771,7 @@
                     tr.append(td);
                 });
                 // Empty cell under "+ Add Column"
-                tr.append($('<td class="s4t-sheet-cell-empty">'));
+                tr.append($('<td class="s4t-sheet-cell s4t-sheet-cell-empty">&nbsp;</td>'));
                 tbody.append(tr);
             });
 
@@ -1390,6 +1789,11 @@
         var draggedIdx = null;
 
         function bindColumnDragEvents(th, idx) {
+            var col = state.columns[idx];
+            if (col && col.hidden) {
+                th.attr('draggable', 'false');
+                return;
+            }
             th.on('dragstart', function (e) {
                 draggedIdx = idx;
                 $(this).addClass('s4t-col-dragging');
@@ -1470,7 +1874,7 @@
             // Columns Grid modeled strictly after Attention panel (.s4t-export-att-columns)
             var columnsGrid = $('<div class="s4t-export-att-columns">');
 
-            var attInfoSvg = '<svg class="s4t-field-info-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+            var attInfoSvg = '<svg class="s4t-att-info-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
             function makeAttInfoIcon(label, tooltip) {
                 return $('<span class="s4t-att-info-icon" tabindex="0" role="button" aria-label="' + s4tEscapeHtml(label) + '" data-tooltip="' + s4tEscapeHtml(tooltip) + '"></span>').append(attInfoSvg);
             }
@@ -1840,9 +2244,14 @@
 
             // Copy for Google Sheets (instant TSV copy of all cards)
             dialog.find('#s4t-btn-copy-tsv').on('click', function () {
-                if (hasValidationErrors()) {
+                var valErr = getFirstValidationError();
+                if (valErr) {
                     dialog.find('.s4t-input-required-error:first').focus();
-                    showToast('⚠️ Required: Please fill in custom options before copying table.');
+                    if (valErr.type === 'missing_po') {
+                        showToast('⚠️ Required: Please fill in Product Owner options before copying table.');
+                    } else {
+                        showToast('⚠️ Required: Please fill in custom options before copying table.');
+                    }
                     return;
                 }
                 updateFilteredCards();
@@ -1885,6 +2294,10 @@
                 }, 150);
             });
 
+            formatToggle.on('mousedown', function (e) {
+                e.preventDefault();
+            });
+
             formatToggle.on('click', function (e) {
                 e.stopPropagation();
                 if (hasValidationErrors()) {
@@ -1902,10 +2315,18 @@
             });
 
             // Format selection
+            dialog.find('.s4t-split-item').on('mousedown', function (e) {
+                e.preventDefault();
+            });
             dialog.find('.s4t-split-item').on('click', function () {
-                if (hasValidationErrors()) {
+                var valErr = getFirstValidationError();
+                if (valErr) {
                     dialog.find('.s4t-input-required-error:first').focus();
-                    showToast('⚠️ Required: Please fill in custom options before choosing export format.');
+                    if (valErr.type === 'missing_po') {
+                        showToast('⚠️ Required: Please fill in Product Owner options before choosing export format.');
+                    } else {
+                        showToast('⚠️ Required: Please fill in custom options before choosing export format.');
+                    }
                     return;
                 }
                 var fmt = $(this).attr('data-fmt');
@@ -1921,9 +2342,14 @@
 
             // Main download button click
             dialog.find('#s4t-btn-main-download').on('click', function () {
-                if (hasValidationErrors()) {
+                var valErr = getFirstValidationError();
+                if (valErr) {
                     dialog.find('.s4t-input-required-error:first').focus();
-                    showToast('⚠️ Required: Please fill in custom options before downloading file.');
+                    if (valErr.type === 'missing_po') {
+                        showToast('⚠️ Required: Please fill in Product Owner options before downloading file.');
+                    } else {
+                        showToast('⚠️ Required: Please fill in custom options before downloading file.');
+                    }
                     return;
                 }
                 updateFilteredCards();
@@ -1988,11 +2414,46 @@
             document.body.removeChild(ta);
         }
 
+        // Setup Window Focus Sync: Re-sync dot labels when switching back to tab/window
+        $(window).off('focus.s4tExportSync').on('focus.s4tExportSync', function () {
+            if (!dialog.is(':visible')) return;
+            var currentDotLabels = s4tGetDotLabels(state.boardData);
+            var currentDotStr = currentDotLabels.join(', ');
+            var changed = false;
+            state.columns.forEach(function (c) {
+                if (c.source === 'product_owner' || (c.header && c.header.trim().toLowerCase() === 'product owner') || c.id === 'c_po_owner') {
+                    if (currentDotStr && c.customOptions !== currentDotStr) {
+                        c.customOptions = currentDotStr;
+                        changed = true;
+                    }
+                }
+            });
+            if (changed) {
+                saveConfig();
+                renderSheetTableContent();
+                updateActionButtonsState();
+            }
+            if (typeof fetchBoardData === 'function' && boardShortLink) {
+                fetchBoardData(boardShortLink, true, function (err, freshData) {
+                    if (!err && freshData) {
+                        setupLookup(freshData);
+                    }
+                });
+            }
+        });
+
         // Fetch Board Data
         if (state.boardData) {
             setupLookup(state.boardData);
+            if (typeof fetchBoardData === 'function' && boardShortLink) {
+                fetchBoardData(boardShortLink, true, function (err, freshData) {
+                    if (!err && freshData) {
+                        setupLookup(freshData);
+                    }
+                });
+            }
         } else if (typeof fetchBoardData === 'function') {
-            fetchBoardData(boardShortLink, false, function (err, data) {
+            fetchBoardData(boardShortLink, true, function (err, data) {
                 if (err || !data) {
                     dialog.find('.s4t-export-body').html(
                         '<div class="s4t-export-error">Failed to load board data: ' + s4tEscapeHtml(err ? err.message : 'Unknown error') + '</div>'
@@ -2016,6 +2477,7 @@
         s4tBuildExportExcel: s4tBuildExportExcel,
         s4tBuildExportTsv: s4tBuildExportTsv,
         s4tFilterAndSortCards: s4tFilterAndSortCards,
-        s4tParseCustomOptions: s4tParseCustomOptions
+        s4tParseCustomOptions: s4tParseCustomOptions,
+        s4tGetDotLabels: s4tGetDotLabels
     };
 }));

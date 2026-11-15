@@ -2671,7 +2671,7 @@ textarea[data-testid="card-name-input"],
     bottom: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background: rgba(9, 30, 66, 0.54) !important;
+    background: #18181b66 !important;
     backdrop-filter: blur(4px) !important;
     -webkit-backdrop-filter: blur(4px) !important;
     z-index: 2147483640 !important;
@@ -2715,8 +2715,8 @@ textarea[data-testid="card-name-input"],
     align-items: center !important;
     justify-content: space-between !important;
     padding: 14px 20px 12px !important;
-    border-bottom: 1px solid var(--ds-border, #e4e4e7) !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
+    border-bottom: 1px solid var(--ds-border, #ebecf0) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
     flex-shrink: 0 !important;
     min-height: 52px !important;
 }
@@ -2830,9 +2830,9 @@ textarea[data-testid="card-name-input"],
 #s4t-export-dialog .s4t-export-tabs-bar {
     display: flex !important;
     gap: 6px !important;
-    padding: 0 20px 6px !important;
-    border-bottom: 1px solid var(--ds-border, #e4e4e7) !important;
-    background: transparent !important;
+    padding: 0 20px 8px !important;
+    border-bottom: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
     flex-shrink: 0 !important;
     height: auto !important;
     align-items: center !important;
@@ -2861,10 +2861,10 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-export-tab.s4t-tab-active {
-    background: var(--ds-background-neutral, #e4e4e7) !important;
+    background: var(--ds-surface-overlay, #ffffff) !important;
     color: var(--ds-text, #27272a) !important;
     font-weight: 600 !important;
-    box-shadow: inset 0 -2px #14b8a6 !important;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.08) !important;
     border-bottom: 0 !important;
 }
 
@@ -2903,8 +2903,8 @@ textarea[data-testid="card-name-input"],
     gap: 12px !important;
     flex-shrink: 0 !important;
     padding: 8px 16px !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
     border-radius: 8px !important;
 }
 
@@ -2945,20 +2945,21 @@ textarea[data-testid="card-name-input"],
     user-select: none !important;
     padding: 6px 12px !important;
     border-radius: 8px !important;
-    border: 1px solid var(--ds-border, #e4e4e7) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
     background: var(--ds-surface-overlay, #ffffff) !important;
     transition: all 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-sheet-topbar-toggle:hover {
-    background: var(--ds-background-neutral-hovered, #e4e4e7) !important;
-    border-color: #14b8a6 !important;
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: var(--ds-border, #c1c7d0) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked) {
-    background: var(--ds-background-neutral, #f0fdfa) !important;
-    border-color: #14b8a6 !important;
-    color: #0f766e !important;
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    border-color: var(--ds-border, #c1c7d0) !important;
+    color: var(--ds-text, #172b4d) !important;
+    font-weight: 600 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-topbar-toggle input[type="checkbox"] {
@@ -2990,105 +2991,142 @@ textarea[data-testid="card-name-input"],
     color: var(--ds-text, #27272a) !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-banner {
-    position: relative !important;
-    flex-shrink: 0 !important;
-    margin-top: 2px !important;
-    padding: 0 !important;
-    background: var(--ds-background-neutral, #f4f5f7) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.04) !important;
-    overflow: visible !important;
-}
-
-#s4t-export-dialog .s4t-sheet-guide-header {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    padding: 7px 14px !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-    color: var(--ds-text, #172b4d) !important;
-    cursor: pointer !important;
-    user-select: none !important;
-    list-style: none !important;
-}
-
-#s4t-export-dialog .s4t-sheet-guide-header::-webkit-details-marker {
-    display: none !important;
-}
-
-#s4t-export-dialog .s4t-sheet-guide-title-wrap {
+/* Header Guide Button & Interactive Tour */
+#s4t-export-dialog .s4t-sheet-guide-btn {
     display: inline-flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 5px 12px !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    position: relative !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-toggle-hint {
-    font-size: 11px !important;
-    font-weight: 500 !important;
-    color: var(--ds-text-subtle, #626f86) !important;
+#s4t-export-dialog .s4t-sheet-guide-btn:hover {
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+    border-color: #047857 !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-header {
-    border-bottom: none !important;
+#s4t-export-dialog .s4t-sheet-guide-btn.s4t-guide-active {
+    background: #059669 !important;
+    color: #ffffff !important;
+    border-color: #047857 !important;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.3) !important;
+    z-index: 9500 !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-icon {
-    font-size: 14px !important;
-}
-
-#s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid {
+#s4t-export-dialog #s4t-guide-freeze-overlay {
     position: absolute !important;
-    bottom: calc(100% + 6px) !important;
+    top: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    z-index: 100 !important;
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 8px 16px !important;
-    padding: 12px 16px !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 -8px 28px rgba(9, 30, 66, 0.18) !important;
-    animation: s4tFadeIn 0.15s ease-out !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(9, 30, 66, 0.45) !important;
+    backdrop-filter: blur(3px) !important;
+    -webkit-backdrop-filter: blur(3px) !important;
+    z-index: 9000 !important;
+    pointer-events: auto !important;
+    cursor: default !important;
+    border-radius: 18px !important;
+    animation: s4tFadeIn 0.2s ease !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-grid {
-    display: none;
+#s4t-export-dialog .s4t-cloud-tooltip {
+    position: absolute !important;
+    z-index: 9200 !important;
+    max-width: 270px !important;
+    min-width: 210px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1.5px solid #059669 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 16px 40px rgba(5, 150, 105, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    padding: 10px 14px !important;
+    pointer-events: none !important;
+    animation: s4tFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-sizing: border-box !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-item {
-    font-size: 11px !important;
-    line-height: 1.45 !important;
-    color: var(--ds-text-subtle, #42526e) !important;
+#s4t-export-dialog .s4t-cloud-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-bottom: 4px !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-item strong {
-    color: var(--ds-text, #172b4d) !important;
+#s4t-export-dialog .s4t-cloud-icon {
+    font-size: 14px !important;
+    line-height: 1 !important;
 }
 
-#s4t-export-dialog .s4t-sheet-guide-badge {
-    display: inline-block !important;
-    padding: 0 3px !important;
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
-    border-radius: 3px !important;
-    font-size: 10px !important;
+#s4t-export-dialog .s4t-cloud-title {
+    font-size: 12px !important;
     font-weight: 700 !important;
-    color: var(--ds-text, #172b4d) !important;
+    color: #047857 !important;
+    line-height: 1.25 !important;
+}
+
+#s4t-export-dialog .s4t-cloud-desc {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    color: #172b4d !important;
+}
+
+#s4t-export-dialog .s4t-cloud-arrow {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-style: solid !important;
+}
+
+#s4t-export-dialog .s4t-cloud-tooltip.arrow-top .s4t-cloud-arrow {
+    top: -8px !important;
+    left: 24px;
+    margin-left: -7px !important;
+    border-width: 0 7px 8px 7px !important;
+    border-color: transparent transparent #059669 transparent !important;
+}
+
+#s4t-export-dialog .s4t-cloud-tooltip.arrow-bottom .s4t-cloud-arrow {
+    bottom: -8px !important;
+    left: 24px;
+    margin-left: -7px !important;
+    border-width: 8px 7px 0 7px !important;
+    border-color: #059669 transparent transparent transparent !important;
+}
+
+#s4t-export-dialog .s4t-sheet-grid-container {
+    position: relative !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background: #f4f5f7 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-grid-wrapper {
     flex: 1 1 0 !important;
     min-height: 0 !important;
     overflow: auto !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border: 1px solid #dfe1e6 !important;
     border-radius: 8px !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
+    background: #f4f5f7 !important;
     position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
     padding: 0 !important;
     scrollbar-width: thin !important;
 }
@@ -3106,6 +3144,7 @@ textarea[data-testid="card-name-input"],
     min-width: 100% !important;
     font-size: 13px !important;
     font-family: 'Times New Roman', Times, serif !important;
+    background: #f4f5f7 !important;
 }
 
 /* Column Header Cells & Cards - Default Green Header Row with Black Bold Text */
@@ -3124,12 +3163,14 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-th-card {
-    background-color: #b7e1cd !important;
+    background: linear-gradient(150deg, rgba(224, 248, 234, 0.92) 0%, rgba(183, 225, 205, 0.95) 100%) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
     color: #000000 !important;
     font-weight: bold !important;
-    border: 1px solid #7cb594 !important;
-    border-radius: 6px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid rgba(52, 211, 153, 0.5) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
     padding: 8px 10px !important;
     display: flex !important;
     flex-direction: column !important;
@@ -3142,27 +3183,81 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-sheet-th-card:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16) !important;
-    border-color: #2e7d32 !important;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+    border-color: #10b981 !important;
 }
 
 #s4t-export-dialog .s4t-col-dragging .s4t-sheet-th-card {
     opacity: 0.45 !important;
-    border: 2px dashed #2e7d32 !important;
+    border: 2px dashed #059669 !important;
     transform: scale(0.98) !important;
 }
 
 #s4t-export-dialog .s4t-col-dragover .s4t-sheet-th-card {
-    background: #a3d9bc !important;
-    border-color: #2e7d32 !important;
-    box-shadow: 0 0 0 2px #2e7d32 !important;
+    background: #d1fae5 !important;
+    border-color: #059669 !important;
+    box-shadow: 0 0 0 2px #059669 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden,
+#s4t-export-dialog .s4t-col-card-hidden {
+    opacity: 0.72 !important;
+    border: 1px dashed #6ee7b7 !important;
+    background: rgba(240, 253, 244, 0.8) !important;
+    cursor: not-allowed !important;
+}
+
+#s4t-export-dialog .s4t-col-card-hidden *:not(.s4t-sheet-col-hide):not(.s4t-sheet-col-hide *) {
+    cursor: not-allowed !important;
+}
+
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-header-input,
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-custom-options-input {
+    background: rgba(241, 245, 249, 0.7) !important;
+    color: #64748b !important;
+    cursor: not-allowed !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+}
+
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-source-select,
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-type-select,
+#s4t-export-dialog .s4t-col-card-hidden .s4t-custom-dropdown-trigger {
+    background: rgba(241, 245, 249, 0.7) !important;
+    color: #64748b !important;
+    cursor: not-allowed !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
+}
+
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-drag-handle {
+    cursor: not-allowed !important;
+    opacity: 0.35 !important;
+    pointer-events: none !important;
+}
+
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-col-del {
+    cursor: not-allowed !important;
+    opacity: 0.25 !important;
+    pointer-events: none !important;
+}
+
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-col-hide,
+#s4t-export-dialog .s4t-col-card-hidden .s4t-sheet-col-hide *,
+#s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden .s4t-sheet-col-hide,
+#s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden .s4t-sheet-col-hide * {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    opacity: 1 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-card-top {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 6px !important;
+    gap: 4px !important;
 }
 
 #s4t-export-dialog .s4t-sheet-drag-handle {
@@ -3177,7 +3272,7 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-drag-handle:hover {
-    background: rgba(0, 0, 0, 0.08) !important;
+    background: rgba(255, 255, 255, 0.75) !important;
     color: #000000 !important;
 }
 
@@ -3186,7 +3281,9 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-col-badge {
-    background: rgba(0, 0, 0, 0.08) !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
     color: #000000 !important;
     font-size: 11px !important;
     font-weight: bold !important;
@@ -3194,13 +3291,49 @@ textarea[data-testid="card-name-input"],
     padding: 2px 6px !important;
     letter-spacing: 0.5px !important;
     text-transform: uppercase !important;
-    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    border: 1px solid rgba(52, 211, 153, 0.45) !important;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.06) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-hide {
+    width: 22px !important;
+    height: 22px !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    padding: 0 !important;
+    margin-left: auto !important;
+    transition: all 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-hide:hover {
+    background: rgba(255, 255, 255, 0.75) !important;
+    border-color: rgba(52, 211, 153, 0.45) !important;
+    color: #000000 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-hide.s4t-is-hidden {
+    color: #000000 !important;
+    background: #d1fae5 !important;
+    border-color: #34d399 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-col-hide.s4t-is-hidden:hover {
+    background: #a7f3d0 !important;
+    color: #000000 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-col-del {
     width: 22px !important;
     height: 22px !important;
-    border: none !important;
+    border: 1px solid transparent !important;
     background: transparent !important;
     color: #000000 !important;
     font-weight: bold !important;
@@ -3214,8 +3347,9 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-col-del:hover:not(:disabled) {
-    background: #ffcdd2 !important;
-    color: #b71c1c !important;
+    background: rgba(254, 226, 226, 0.8) !important;
+    border-color: #fca5a5 !important;
+    color: #dc2626 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-col-del:disabled {
@@ -3233,51 +3367,61 @@ textarea[data-testid="card-name-input"],
     font-size: 13px !important;
     font-weight: bold !important;
     color: #000000 !important;
-    background: #ffffff !important;
-    border: 1px solid #7cb594 !important;
-    border-radius: 4px !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    border: 1px solid rgba(52, 211, 153, 0.5) !important;
+    border-radius: 5px !important;
     box-sizing: border-box !important;
     outline: none !important;
     transition: all 0.15s ease !important;
     font-family: 'Times New Roman', Times, serif !important;
     text-align: center !important;
+    box-shadow: inset 0 1px 2px rgba(16, 185, 129, 0.04) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-header-input:hover {
-    background: #f0fdfa !important;
-    border-color: #0f766e !important;
-    box-shadow: 0 2px 6px rgba(15, 118, 110, 0.2) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 1px 4px rgba(16, 185, 129, 0.15) !important;
     cursor: text !important;
+    color: #000000 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-header-input:focus {
     background: #ffffff !important;
-    border-color: #0f766e !important;
+    border-color: #059669 !important;
     outline: none !important;
-    box-shadow: 0 0 0 2px #14b8a6 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+    color: #000000 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-source-row {
     display: grid !important;
-    grid-template-columns: 66px 1fr !important;
+    grid-template-columns: auto 1fr !important;
     align-items: center !important;
     gap: 6px !important;
     width: 100% !important;
     margin-top: 2px !important;
+    overflow: visible !important;
 }
 
 #s4t-export-dialog .s4t-sheet-source-header {
     display: inline-flex !important;
     align-items: center !important;
-    gap: 3px !important;
+    gap: 5px !important;
     overflow: visible !important;
     white-space: nowrap !important;
+    background: #059669 !important;
+    padding: 2px 7px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-source-label {
     font-size: 11px !important;
     font-weight: bold !important;
-    color: #000000 !important;
+    color: #ffffff !important;
     text-transform: uppercase !important;
     letter-spacing: 0.4px !important;
     font-family: 'Times New Roman', Times, serif !important;
@@ -3287,31 +3431,33 @@ textarea[data-testid="card-name-input"],
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 18px !important;
-    height: 18px !important;
-    color: #000000 !important;
+    width: 16px !important;
+    height: 16px !important;
+    color: #ffffff !important;
     background: transparent !important;
     border: none !important;
     cursor: help !important;
     flex-shrink: 0 !important;
     overflow: visible !important;
+    transform-origin: center center !important;
+    margin-right: 1px !important;
     transition: all 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-field-info-icon svg,
 #s4t-export-dialog .s4t-field-info-svg {
     display: block !important;
-    width: 14px !important;
-    height: 14px !important;
-    stroke: #000000 !important;
+    width: 13px !important;
+    height: 13px !important;
+    stroke: #ffffff !important;
     stroke-width: 2 !important;
 }
 
 #s4t-export-dialog .s4t-field-info-icon:hover,
 #s4t-export-dialog .s4t-field-info-icon:focus-visible {
     background: transparent !important;
-    color: #000000 !important;
-    transform: scale(1.18) !important;
+    color: #ffffff !important;
+    transform: scale(1.15) !important;
     outline: none !important;
 }
 
@@ -3328,28 +3474,37 @@ textarea[data-testid="card-name-input"],
     font-size: 11px !important;
     font-weight: bold !important;
     border-radius: 4px !important;
-    border: 1px solid #7cb594 !important;
-    background: #ffffff !important;
+    border: 1px solid rgba(52, 211, 153, 0.5) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
     color: #000000 !important;
     cursor: pointer !important;
     padding: 2px 4px !important;
-    text-align: left !important;
+    text-align: center !important;
+    text-align-last: center !important;
     outline: none !important;
     transition: all 0.15s ease !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.05) !important;
     font-family: 'Times New Roman', Times, serif !important;
 }
 
+#s4t-export-dialog .s4t-sheet-source-select option {
+    text-align: center !important;
+}
+
 #s4t-export-dialog .s4t-sheet-source-select:hover {
-    background: #f0fdfa !important;
-    border-color: #0f766e !important;
-    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.22) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-source-select:focus {
     background: #ffffff !important;
-    border-color: #0f766e !important;
-    outline: 2px solid #14b8a6 !important;
+    border-color: #059669 !important;
+    outline: 2px solid #059669 !important;
+    color: #047857 !important;
 }
 
 /* Cell Format Row in Column Header Card */
@@ -3361,7 +3516,7 @@ textarea[data-testid="card-name-input"],
     width: 100% !important;
     margin-top: 2px !important;
     padding-top: 2px !important;
-    border-top: 1px dashed rgba(0, 0, 0, 0.15) !important;
+    border-top: 1px dashed rgba(52, 211, 153, 0.45) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-type-header {
@@ -3384,26 +3539,64 @@ textarea[data-testid="card-name-input"],
     font-size: 11px !important;
     font-weight: bold !important;
     padding: 2px 4px !important;
-    border: 1px solid #7cb594 !important;
+    border: 1px solid rgba(52, 211, 153, 0.5) !important;
     border-radius: 4px !important;
-    background: #ffffff !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
     color: #000000 !important;
     cursor: pointer !important;
+    text-align: center !important;
+    text-align-last: center !important;
     outline: none !important;
     transition: all 0.15s ease !important;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.05) !important;
     font-family: 'Times New Roman', Times, serif !important;
 }
 
+#s4t-export-dialog .s4t-sheet-type-select option {
+    text-align: center !important;
+}
+
 #s4t-export-dialog .s4t-sheet-type-select:hover {
-    background: #f0fdfa !important;
-    border-color: #0f766e !important;
-    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.22) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-type-select:focus {
     background: #ffffff !important;
-    border-color: #0f766e !important;
-    outline: 2px solid #14b8a6 !important;
+    border-color: #059669 !important;
+    outline: 2px solid #059669 !important;
+    color: #047857 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown .s4t-custom-dropdown-trigger {
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    border: 1px solid rgba(52, 211, 153, 0.5) !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+#s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:hover {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.22) !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+#s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:focus,
+#s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:focus-visible,
+#s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:active {
+    background: #ffffff !important;
+    border-color: #059669 !important;
+    outline: 2px solid #059669 !important;
+    color: #000000 !important;
 }
 
 /* Replaced Native Selects & Custom Interactive Dropdowns */
@@ -3447,34 +3640,40 @@ textarea[data-testid="card-name-input"],
     font-size: 11px !important;
     font-weight: bold !important;
     border-radius: 4px !important;
-    border: 1px solid #7cb594 !important;
-    background: #ffffff !important;
+    border: 1px solid rgba(52, 211, 153, 0.6) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
     color: #000000 !important;
     cursor: pointer !important;
-    padding: 2px 6px !important;
+    padding: 2px 20px 2px 6px !important;
     display: flex !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
+    text-align: center !important;
+    position: relative !important;
     outline: none !important;
     transition: all 0.15s ease !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.06) !important;
     font-family: 'Times New Roman', Times, serif !important;
-    text-align: left !important;
     box-sizing: border-box !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
 #s4t-export-dialog .s4t-custom-dropdown-trigger:hover {
-    background: #f0fdfa !important;
-    border-color: #0f766e !important;
-    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.22) !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
-#s4t-export-dialog .s4t-custom-dropdown-trigger:focus-visible {
+#s4t-export-dialog .s4t-custom-dropdown-trigger:focus,
+#s4t-export-dialog .s4t-custom-dropdown-trigger:focus-visible,
+#s4t-export-dialog .s4t-custom-dropdown-trigger:active {
     background: #ffffff !important;
-    border-color: #0f766e !important;
-    outline: 2px solid #14b8a6 !important;
+    border-color: #059669 !important;
+    outline: 2px solid #059669 !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25) !important;
+    color: #047857 !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown-label {
@@ -3483,35 +3682,46 @@ textarea[data-testid="card-name-input"],
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
-    text-align: left !important;
+    text-align: center !important;
+    margin: 0 auto !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown-arrow {
-    flex: 0 0 auto !important;
+    position: absolute !important;
+    right: 6px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
     font-size: 9px !important;
-    margin-left: 4px !important;
-    color: #4b5563 !important;
+    color: #059669 !important;
+    font-weight: bold !important;
     line-height: 1 !important;
-    transition: transform 0.15s ease !important;
+    transition: transform 0.15s ease, color 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-arrow {
-    transform: rotate(180deg) !important;
+    transform: translateY(-50%) rotate(180deg) !important;
+    color: #047857 !important;
+}
+
+@keyframes s4tDropdownFadeInCenter {
+    from { opacity: 0; transform: translateX(-50%) scale(0.97); }
+    to { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
 #s4t-export-dialog .s4t-custom-dropdown-menu {
     position: absolute !important;
     top: 100% !important;
-    left: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
     min-width: 100% !important;
     width: max-content !important;
     max-width: 280px !important;
     max-height: 200px !important;
     overflow-y: auto !important;
     background: #ffffff !important;
-    border: 1px solid #7cb594 !important;
+    border: 1.5px solid #059669 !important;
     border-radius: 6px !important;
-    box-shadow: 0 8px 24px rgba(9, 30, 66, 0.2) !important;
+    box-shadow: 0 8px 24px rgba(5, 150, 105, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
     z-index: 1000 !important;
     padding: 4px !important;
     box-sizing: border-box !important;
@@ -3519,17 +3729,28 @@ textarea[data-testid="card-name-input"],
     flex-direction: column !important;
     gap: 2px !important;
     scrollbar-width: thin !important;
-    animation: s4tFadeIn 0.12s ease !important;
+    animation: s4tDropdownFadeInCenter 0.12s ease !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-up .s4t-custom-dropdown-menu {
     top: auto !important;
     bottom: 100% !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-align-right .s4t-custom-dropdown-menu {
     left: auto !important;
     right: 0 !important;
+    transform: none !important;
+    animation: s4tFadeIn 0.12s ease !important;
+}
+
+#s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-align-left .s4t-custom-dropdown-menu {
+    left: 0 !important;
+    right: auto !important;
+    transform: none !important;
+    animation: s4tFadeIn 0.12s ease !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown-menu[hidden] {
@@ -3545,26 +3766,29 @@ textarea[data-testid="card-name-input"],
     cursor: pointer !important;
     transition: background 0.12s ease, color 0.12s ease !important;
     white-space: nowrap !important;
-    text-align: left !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown-item:hover {
-    background: #f0fdfa !important;
-    color: #0f766e !important;
+    background: #ecfdf5 !important;
+    color: #047857 !important;
     font-weight: 600 !important;
 }
 
 #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected {
-    background: #e6fffa !important;
-    color: #0f766e !important;
+    background: #d1fae5 !important;
+    color: #065f46 !important;
     font-weight: bold !important;
 }
 
 /* Specific styling for cell dropdown in table body */
 #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger {
     height: 24px !important;
-    border: 1px solid #dfe1e6 !important;
+    border: 1px solid rgba(52, 211, 153, 0.6) !important;
     font-weight: 500 !important;
     font-size: 12px !important;
     font-family: 'Times New Roman', Times, serif !important;
@@ -3574,12 +3798,14 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
 #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger {
-    border-color: #0f766e !important;
-    background: #f0fdfa !important;
+    border-color: #059669 !important;
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2) !important;
 }
 
 #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-menu {
-    border-color: #14b8a6 !important;
+    border-color: #059669 !important;
     min-width: 140px !important;
 }
 
@@ -3591,19 +3817,44 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger {
     height: 32px !important;
-    padding: 6px 12px !important;
+    padding: 6px 28px 6px 12px !important;
     font-size: 13px !important;
     font-weight: 600 !important;
-    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    border: 1px solid rgba(52, 211, 153, 0.6) !important;
     border-radius: 6px !important;
     background: var(--ds-surface-overlay, #ffffff) !important;
     color: var(--ds-text, #172b4d) !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    text-align: center !important;
+    justify-content: center !important;
+    position: relative !important;
 }
 
-#s4t-export-dialog .s4t-custom-sort-dropdown:hover .s4t-custom-dropdown-trigger {
-    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
-    border-color: var(--ds-border-focused, #388bff) !important;
+#s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-label {
+    text-align: center !important;
+    margin: 0 auto !important;
+}
+
+#s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-arrow {
+    position: absolute !important;
+    right: 10px !important;
+}
+
+#s4t-export-dialog .s4t-custom-sort-dropdown:hover .s4t-custom-dropdown-trigger,
+#s4t-export-dialog .s4t-custom-sort-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2) !important;
+}
+
+#s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-item {
+    text-align: center !important;
+    justify-content: center !important;
+}
+
+#s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-menu {
+    border-color: #059669 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-custom-options-input {
@@ -3612,9 +3863,11 @@ textarea[data-testid="card-name-input"],
     font-size: 11px !important;
     padding: 3px 6px !important;
     margin-top: 2px !important;
-    border: 1px solid #7cb594 !important;
+    border: 1px solid rgba(52, 211, 153, 0.5) !important;
     border-radius: 4px !important;
-    background: #ffffff !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
     color: #000000 !important;
     font-weight: bold !important;
     box-sizing: border-box !important;
@@ -3624,14 +3877,17 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-sheet-custom-options-input:hover {
-    background: #f0fdfa !important;
-    border-color: #0f766e !important;
-    box-shadow: 0 1px 4px rgba(15, 118, 110, 0.18) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: #10b981 !important;
+    color: #000000 !important;
+    box-shadow: 0 1px 4px rgba(16, 185, 129, 0.15) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-custom-options-input:focus {
-    border-color: #0f766e !important;
-    box-shadow: 0 0 0 2px #14b8a6 !important;
+    background: #ffffff !important;
+    border-color: #059669 !important;
+    color: #000000 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error {
@@ -3664,7 +3920,8 @@ textarea[data-testid="card-name-input"],
     z-index: 10 !important;
     background: transparent !important;
     border: none !important;
-    padding: 0 !important;
+    padding: 2px !important;
+    box-sizing: border-box !important;
     vertical-align: top !important;
     min-width: 130px !important;
 }
@@ -3673,8 +3930,8 @@ textarea[data-testid="card-name-input"],
     width: 100% !important;
     height: 100% !important;
     min-height: 112px !important;
-    border: 2px dashed #7cb594 !important;
-    background: rgba(183, 225, 205, 0.25) !important;
+    border: 2px dashed #059669 !important;
+    background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%) !important;
     color: #000000 !important;
     font-weight: bold !important;
     font-size: 13px !important;
@@ -3686,36 +3943,46 @@ textarea[data-testid="card-name-input"],
     align-items: center !important;
     justify-content: center !important;
     gap: 4px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    box-sizing: border-box !important;
     transition: all 0.15s ease !important;
 }
 
 #s4t-export-dialog .s4t-sheet-add-btn:hover {
-    background: #b7e1cd !important;
-    border-color: #2e7d32 !important;
+    background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%) !important;
+    border: 2px dashed #047857 !important;
     color: #000000 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16) !important;
+    font-weight: bold !important;
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-add-icon {
-    font-size: 20px !important;
+    font-size: 22px !important;
     font-weight: bold !important;
     line-height: 1 !important;
+    color: #059669 !important;
+    transition: transform 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-add-btn:hover .s4t-sheet-add-icon {
+    color: #059669 !important;
+    transform: scale(1.1) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-add-label {
     font-size: 12px !important;
     font-weight: bold !important;
+    color: #000000 !important;
+    letter-spacing: 0.3px !important;
 }
 
-/* Sheet Grid Body & Cells */
 #s4t-export-dialog .s4t-sheet-cell {
     padding: 7px 10px !important;
-    background: #ffffff !important;
+    background: #f4f5f7 !important;
     border: 1px solid #dfe1e6 !important;
     border-radius: 0 !important;
-    color: #000000 !important;
+    color: #172b4d !important;
     max-width: 230px !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -3723,7 +3990,38 @@ textarea[data-testid="card-name-input"],
     font-size: 13px !important;
     font-family: 'Times New Roman', Times, serif !important;
     box-shadow: none !important;
+    text-align: center !important;
+    vertical-align: middle !important;
     transition: background 0.15s ease, border-color 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden,
+#s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell.s4t-sheet-cell-hidden,
+#s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell.s4t-sheet-cell-hidden,
+#s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden:hover {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    cursor: not-allowed !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden *,
+#s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden:hover * {
+    cursor: not-allowed !important;
+}
+
+#s4t-export-dialog .s4t-sheet-hidden-placeholder {
+    color: #475569 !important;
+    font-style: normal !important;
+    user-select: text !important;
+    cursor: not-allowed !important;
+    text-align: center !important;
+    display: inline-block !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,
@@ -3731,21 +4029,49 @@ textarea[data-testid="card-name-input"],
     overflow: visible !important;
     text-overflow: clip !important;
     white-space: normal !important;
+    text-align: center !important;
 }
 
 #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell {
-    background: #f4f5f7 !important;
+    background: #ebecf0 !important;
 }
 
+#s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-empty,
 #s4t-export-dialog .s4t-sheet-cell-empty {
-    border: none !important;
-    background: transparent !important;
+    background: #f4f5f7 !important;
+    border: 1px solid #dfe1e6 !important;
     box-shadow: none !important;
 }
 
+#s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell.s4t-sheet-cell-empty,
+#s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell-empty {
+    background: #ebecf0 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell.s4t-sheet-cell-empty,
+#s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell-empty {
+    background: #dfe1e6 !important;
+    border-color: #c1c7d0 !important;
+}
+
 #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell {
-    background: #f0fdfa !important;
-    border-color: #14b8a6 !important;
+    background: #dfe1e6 !important;
+    border-color: #c1c7d0 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell:hover {
+    background: #d0d7de !important;
+}
+
+#s4t-export-dialog .s4t-sheet-placeholder-row .s4t-sheet-placeholder-cell {
+    background: #f4f5f7 !important;
+    border: 1px solid #dfe1e6 !important;
+    height: 32px !important;
+    user-select: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-placeholder-row:nth-child(even) .s4t-sheet-placeholder-cell {
+    background: #ebecf0 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-separator-row td {
@@ -3755,22 +4081,25 @@ textarea[data-testid="card-name-input"],
     padding: 0 !important;
     border-radius: 4px !important;
     opacity: 0.65 !important;
+    text-align: center !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-checkbox-wrap {
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 6px !important;
     cursor: pointer !important;
     font-size: 12px !important;
     font-weight: 600 !important;
     user-select: none !important;
+    margin: 0 auto !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-checkbox {
     width: 15px !important;
     height: 15px !important;
-    accent-color: #0052cc !important;
+    accent-color: #059669 !important;
     margin: 0 !important;
     cursor: pointer !important;
 }
@@ -3780,22 +4109,31 @@ textarea[data-testid="card-name-input"],
     padding: 3px 6px !important;
     font-size: 12px !important;
     font-weight: 500 !important;
-    border: 1px solid #dfe1e6 !important;
+    border: 1px solid rgba(52, 211, 153, 0.6) !important;
     border-radius: 4px !important;
     background: #ffffff !important;
     color: #172b4d !important;
     outline: none !important;
     cursor: pointer !important;
-    transition: border-color 0.15s ease !important;
+    text-align: center !important;
+    text-align-last: center !important;
+    transition: border-color 0.15s ease, background-color 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-sheet-cell-select option {
+    text-align: center !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-select:hover {
-    border-color: #0052cc !important;
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-select:focus {
-    border-color: #0052cc !important;
-    box-shadow: 0 0 0 2px #deebff !important;
+    background: #ffffff !important;
+    border-color: #059669 !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25) !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-input {
@@ -3805,22 +4143,47 @@ textarea[data-testid="card-name-input"],
     font-weight: 400 !important;
     border: 1px solid transparent !important;
     border-radius: 4px !important;
-    background: transparent !important;
+    background: #f1f2f4 !important;
     color: #172b4d !important;
     outline: none !important;
     box-sizing: border-box !important;
+    text-align: center !important;
     transition: border-color 0.15s ease, background-color 0.15s ease !important;
 }
 
+#s4t-export-dialog .s4t-sheet-cell-input::placeholder {
+    text-align: center !important;
+}
+
 #s4t-export-dialog .s4t-sheet-cell-input:hover {
-    border-color: #dfe1e6 !important;
-    background: #ffffff !important;
+    border-color: #059669 !important;
+    background: #ecfdf5 !important;
+}
+
+#s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell-input {
+    background: #dfe1e6 !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-input:focus {
-    border-color: #0052cc !important;
+    border-color: #059669 !important;
     background: #ffffff !important;
-    box-shadow: 0 0 0 2px #deebff !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25) !important;
+}
+
+#s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger {
+    text-align: center !important;
+    justify-content: center !important;
+}
+
+#s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-label {
+    text-align: center !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+}
+
+#s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-item {
+    text-align: center !important;
+    justify-content: center !important;
 }
 
 /* Virtual Spreadsheet Skeleton Rows */
@@ -3853,28 +4216,38 @@ textarea[data-testid="card-name-input"],
 /* Blurred Overlay & Crisp Centered Preview CTA Card */
 #s4t-export-dialog .s4t-sheet-preview-blur-overlay {
     position: absolute !important;
-    top: 112px !important;
+    top: 130px !important;
+    margin-top: 10px !important;
     left: 0 !important;
     right: 0 !important;
-    bottom: 0 !important;
+    bottom: 16px !important;
+    width: 100% !important;
+    min-width: 100% !important;
     z-index: 8 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     backdrop-filter: blur(5px) !important;
     -webkit-backdrop-filter: blur(5px) !important;
-    background: rgba(244, 245, 247, 0.45) !important;
+    background: rgba(235, 237, 240, 0.88) !important;
     padding: 20px !important;
     box-sizing: border-box !important;
+    pointer-events: none !important;
+}
+
+@keyframes s4tFadeInCard {
+    from { opacity: 0; transform: translateX(-50%) scale(0.97); }
+    to { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
 #s4t-export-dialog .s4t-sheet-preview-cta-card {
+    pointer-events: auto !important;
     background: var(--ds-surface-overlay, rgba(255, 255, 255, 0.98)) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
     border: 1px solid var(--ds-border, #dfe1e6) !important;
-    border-radius: 10px !important;
-    box-shadow: var(--ds-shadow-overlay, 0 12px 36px rgba(9, 30, 66, 0.18)) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--ds-shadow-overlay, 0 14px 40px rgba(9, 30, 66, 0.2)) !important;
     padding: 26px 36px !important;
     text-align: center !important;
     max-width: 440px !important;
@@ -3882,8 +4255,12 @@ textarea[data-testid="card-name-input"],
     flex-direction: column !important;
     align-items: center !important;
     gap: 10px !important;
+    margin: 16px auto 0 auto !important;
+    position: sticky !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
     z-index: 9 !important;
-    animation: s4tFadeIn 0.2s ease !important;
+    animation: s4tFadeInCard 0.2s ease !important;
 }
 
 #s4t-export-dialog .s4t-sheet-preview-cta-icon {
@@ -3906,12 +4283,75 @@ textarea[data-testid="card-name-input"],
     margin: 0 0 6px 0 !important;
 }
 
+/* Dark Theme Dirty Banner Card */
+#s4t-export-dialog .s4t-dirty-dark-card {
+    pointer-events: auto !important;
+    background: #1f2428 !important;
+    border: 1px solid #38414a !important;
+    border-radius: 12px !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+    padding: 26px 36px !important;
+    text-align: center !important;
+    max-width: 440px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin: 0 auto !important;
+    position: sticky !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 9 !important;
+    color: #ffffff !important;
+    animation: s4tFadeInCard 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+#s4t-export-dialog .s4t-dirty-dark-card .s4t-dirty-icon {
+    font-size: 28px !important;
+    line-height: 1 !important;
+    color: #eab308 !important;
+}
+
+#s4t-export-dialog .s4t-dirty-dark-card .s4t-dirty-title {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    line-height: 1.4 !important;
+    text-align: center !important;
+}
+
+#s4t-export-dialog .s4t-dirty-dark-card .s4t-dirty-refresh-btn {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 9px 22px !important;
+    border-radius: 6px !important;
+    background: #0f766e !important;
+    color: #ffffff !important;
+    border: 1px solid #14b8a6 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.15s ease !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+    margin: 4px auto 0 auto !important;
+}
+
+#s4t-export-dialog .s4t-dirty-dark-card .s4t-dirty-refresh-btn:hover {
+    background: #0d9488 !important;
+    border-color: #2dd4bf !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.4) !important;
+}
+
 #s4t-export-dialog .s4t-sheet-empty-td {
     padding: 48px 20px !important;
     text-align: center !important;
     vertical-align: middle !important;
     color: var(--ds-text-subtle, #626f86) !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
+    background: #f4f5f7 !important;
     border: 1px dashed var(--ds-border, #dfe1e6) !important;
     border-radius: 8px !important;
 }
@@ -3945,10 +4385,10 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-sheet-dirty-banner,
 #s4t-export-dialog .s4t-dirty-banner {
-    background: #f0fdfa !important;
-    border: 1.5px solid #14b8a6 !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
     border-radius: 12px !important;
-    color: #0f766e !important;
+    color: var(--ds-text, #172b4d) !important;
     padding: 16px 28px !important;
     display: inline-flex !important;
     flex-direction: column !important;
@@ -3959,7 +4399,7 @@ textarea[data-testid="card-name-input"],
     max-width: 480px !important;
     position: sticky !important;
     left: 24px !important;
-    box-shadow: 0 4px 16px rgba(20, 184, 166, 0.16) !important;
+    box-shadow: 0 4px 16px rgba(9, 30, 66, 0.08) !important;
     text-align: center !important;
 }
 
@@ -3979,12 +4419,12 @@ textarea[data-testid="card-name-input"],
 #s4t-export-dialog .s4t-dirty-text {
     font-size: 13px !important;
     font-weight: 600 !important;
-    color: #0f766e !important;
+    color: var(--ds-text, #172b4d) !important;
 }
 
 #s4t-export-dialog .s4t-dirty-refresh-btn {
     font-size: 13px !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     padding: 8px 24px !important;
     border-radius: 8px !important;
     background: #0f766e !important;
@@ -3995,13 +4435,12 @@ textarea[data-testid="card-name-input"],
     align-items: center !important;
     justify-content: center !important;
     transition: all 0.15s ease !important;
-    box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
     margin: 0 auto !important;
 }
 
 #s4t-export-dialog .s4t-dirty-refresh-btn:hover {
-    background: #0d9488 !important;
-    box-shadow: 0 4px 10px rgba(15, 118, 110, 0.35) !important;
+    background: #115e59 !important;
     transform: translateY(-1px) !important;
 }
 
@@ -4146,7 +4585,9 @@ textarea[data-testid="card-name-input"],
     transition: color 0.15s ease, transform 0.15s ease, opacity 0.15s ease !important;
 }
 
-#s4t-export-dialog .s4t-att-info-icon svg {
+#s4t-export-dialog .s4t-att-info-icon svg,
+#s4t-export-dialog .s4t-att-info-icon .s4t-att-info-svg,
+#s4t-export-dialog .s4t-att-info-svg {
     display: block !important;
     width: 14px !important;
     height: 14px !important;
@@ -4244,10 +4685,10 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-export-att-option:has(input:checked) {
-    background: var(--ds-background-neutral, #f0fdfa) !important;
-    color: var(--ds-text, #0f766e) !important;
-    border-color: #14b8a6 !important;
-    font-weight: 500 !important;
+    background: var(--ds-background-neutral, #ebecf0) !important;
+    color: var(--ds-text, #172b4d) !important;
+    border-color: var(--ds-border, #c1c7d0) !important;
+    font-weight: 600 !important;
 }
 
 #s4t-export-dialog .s4t-export-att-option input[type=checkbox] {
@@ -4281,8 +4722,8 @@ textarea[data-testid="card-name-input"],
     align-items: center !important;
     justify-content: space-between !important;
     padding: 12px 20px !important;
-    border-top: 1px solid var(--ds-border, #e4e4e7) !important;
-    background: var(--ds-surface-overlay, #ffffff) !important;
+    border-top: 1px solid var(--ds-border, #ebecf0) !important;
+    background: var(--ds-background-neutral, #f4f5f7) !important;
     gap: 12px !important;
     flex-shrink: 0 !important;
     min-height: 56px !important;
@@ -4469,8 +4910,8 @@ textarea[data-testid="card-name-input"],
 }
 
 #s4t-export-dialog .s4t-split-item:hover {
-    background: var(--ds-background-neutral-hovered, #f0fdfa) !important;
-    color: #0f766e !important;
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+    color: var(--ds-text, #172b4d) !important;
 }
 
 /* Status / Toast & Metric Copied Feedback */
@@ -4595,9 +5036,9 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-board-tag,
 .theme-dark #s4t-export-dialog .s4t-export-board-tag,
 .dark-theme #s4t-export-dialog .s4t-export-board-tag {
-    background: #134e4a !important;
-    color: #2dd4bf !important;
-    border: 1px solid #0f766e !important;
+    background: #22272b !important;
+    color: #b6c2cf !important;
+    border: 1px solid #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-match-count,
@@ -4624,7 +5065,7 @@ textarea[data-testid="card-name-input"],
 .dark-theme #s4t-export-dialog .s4t-export-close-btn:hover {
     background: #323940 !important;
     color: #ffffff !important;
-    border-color: #14b8a6 !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-tabs-bar,
@@ -4654,9 +5095,10 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
 .theme-dark #s4t-export-dialog .s4t-export-tab.s4t-tab-active,
 .dark-theme #s4t-export-dialog .s4t-export-tab.s4t-tab-active {
-    color: #14b8a6 !important;
+    color: #ffffff !important;
     background: #22272b !important;
-    border-bottom: 2px solid #14b8a6 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    border-bottom: 0 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-body,
@@ -4722,61 +5164,88 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-count-badge,
 .theme-dark #s4t-export-dialog .s4t-sheet-col-count-badge,
 .dark-theme #s4t-export-dialog .s4t-sheet-col-count-badge {
-    background: #282e33 !important;
-    border-color: #38414a !important;
+    background: #22272b !important;
+    border-color: #2c333a !important;
     color: #b6c2cf !important;
 }
 
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner {
-    background: #282e33 !important;
-    border-color: #38414a !important;
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-btn,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-btn,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-btn,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-btn {
+    background: transparent !important;
+    border-color: #34d399 !important;
+    color: #34d399 !important;
 }
 
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-header,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-header,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-header {
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-btn:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-btn:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-btn:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-btn:hover {
+    background: rgba(52, 211, 153, 0.15) !important;
+    color: #6ee7b7 !important;
+    border-color: #34d399 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-btn.s4t-guide-active,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-btn.s4t-guide-active,
+.theme-dark #s4t-export-dialog .s4t-sheet-guide-btn.s4t-guide-active,
+.dark-theme #s4t-export-dialog .s4t-sheet-guide-btn.s4t-guide-active {
+    background: #059669 !important;
     color: #ffffff !important;
+    border-color: #34d399 !important;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.35) !important;
 }
 
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-header:hover,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-header:hover,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-header:hover,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-header:hover {
-    background: #323940 !important;
+[data-color-mode="dark"] #s4t-export-dialog #s4t-guide-freeze-overlay,
+[data-theme="dark"] #s4t-export-dialog #s4t-guide-freeze-overlay,
+.theme-dark #s4t-export-dialog #s4t-guide-freeze-overlay,
+.dark-theme #s4t-export-dialog #s4t-guide-freeze-overlay {
+    background: rgba(0, 0, 0, 0.65) !important;
 }
 
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-banner[open] .s4t-sheet-guide-grid {
-    background: #282e33 !important;
-    border-color: #38414a !important;
-    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.7) !important;
+[data-color-mode="dark"] #s4t-export-dialog .s4t-cloud-tooltip,
+[data-theme="dark"] #s4t-export-dialog .s4t-cloud-tooltip,
+.theme-dark #s4t-export-dialog .s4t-cloud-tooltip,
+.dark-theme #s4t-export-dialog .s4t-cloud-tooltip {
+    background: rgba(20, 30, 25, 0.96) !important;
+    border: 1.5px solid #10b981 !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4) !important;
 }
 
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-item,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-item {
-    color: #8c9bab !important;
+[data-color-mode="dark"] #s4t-export-dialog .s4t-cloud-title,
+[data-theme="dark"] #s4t-export-dialog .s4t-cloud-title,
+.theme-dark #s4t-export-dialog .s4t-cloud-title,
+.dark-theme #s4t-export-dialog .s4t-cloud-title {
+    color: #34d399 !important;
 }
 
-[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
-[data-theme="dark"] #s4t-export-dialog .s4t-sheet-guide-item strong,
-.theme-dark #s4t-export-dialog .s4t-sheet-guide-item strong,
-.dark-theme #s4t-export-dialog .s4t-sheet-guide-item strong {
-    color: #ffffff !important;
+[data-color-mode="dark"] #s4t-export-dialog .s4t-cloud-desc,
+[data-theme="dark"] #s4t-export-dialog .s4t-cloud-desc,
+.theme-dark #s4t-export-dialog .s4t-cloud-desc,
+.dark-theme #s4t-export-dialog .s4t-cloud-desc {
+    color: #cbd5e1 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-cloud-tooltip.arrow-top .s4t-cloud-arrow,
+[data-theme="dark"] #s4t-export-dialog .s4t-cloud-tooltip.arrow-top .s4t-cloud-arrow,
+.theme-dark #s4t-export-dialog .s4t-cloud-tooltip.arrow-top .s4t-cloud-arrow,
+.dark-theme #s4t-export-dialog .s4t-cloud-tooltip.arrow-top .s4t-cloud-arrow {
+    border-color: transparent transparent #10b981 transparent !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-cloud-tooltip.arrow-bottom .s4t-cloud-arrow,
+[data-theme="dark"] #s4t-export-dialog .s4t-cloud-tooltip.arrow-bottom .s4t-cloud-arrow,
+.theme-dark #s4t-export-dialog .s4t-cloud-tooltip.arrow-bottom .s4t-cloud-arrow,
+.dark-theme #s4t-export-dialog .s4t-cloud-tooltip.arrow-bottom .s4t-cloud-arrow {
+    border-color: #10b981 transparent transparent transparent !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-reset-btn,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-reset-btn,
 .theme-dark #s4t-export-dialog .s4t-sheet-reset-btn,
 .dark-theme #s4t-export-dialog .s4t-sheet-reset-btn {
-    background: #282e33 !important;
+    background: #22272b !important;
     border-color: #38414a !important;
     color: #b6c2cf !important;
 }
@@ -4785,35 +5254,159 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-reset-btn:hover,
 .theme-dark #s4t-export-dialog .s4t-sheet-reset-btn:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-reset-btn:hover {
-    background: #323940 !important;
-    border-color: #14b8a6 !important;
+    background: #2c333a !important;
+    border-color: #38414a !important;
     color: #ffffff !important;
 }
 
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-grid-container,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-container,
+.theme-dark #s4t-export-dialog .s4t-sheet-grid-container,
+.dark-theme #s4t-export-dialog .s4t-sheet-grid-container,
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-grid-wrapper,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-wrapper,
 .theme-dark #s4t-export-dialog .s4t-sheet-grid-wrapper,
 .dark-theme #s4t-export-dialog .s4t-sheet-grid-wrapper {
-    background: #22272b !important;
-    border-color: #38414a !important;
+    background: #f4f5f7 !important;
+    border-color: #dfe1e6 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-grid-table,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-table,
+.theme-dark #s4t-export-dialog .s4t-sheet-grid-table,
+.dark-theme #s4t-export-dialog .s4t-sheet-grid-table {
+    background: #f4f5f7 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-add-btn,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-add-btn,
 .theme-dark #s4t-export-dialog .s4t-sheet-add-btn,
 .dark-theme #s4t-export-dialog .s4t-sheet-add-btn {
-    background: #282e33 !important;
-    border-color: #38414a !important;
-    color: #b6c2cf !important;
+    background: linear-gradient(145deg, rgba(6, 78, 59, 0.5) 0%, rgba(4, 120, 87, 0.4) 100%) !important;
+    border: 2px dashed #10b981 !important;
+    color: #a7f3d0 !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-add-btn:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-add-btn:hover,
 .theme-dark #s4t-export-dialog .s4t-sheet-add-btn:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-add-btn:hover {
-    background: #323940 !important;
-    border-color: #14b8a6 !important;
+    background: linear-gradient(145deg, rgba(6, 78, 59, 0.75) 0%, rgba(4, 120, 87, 0.6) 100%) !important;
+    border-color: #34d399 !important;
     color: #ffffff !important;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.38) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-add-icon,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-add-icon,
+.theme-dark #s4t-export-dialog .s4t-sheet-add-icon,
+.dark-theme #s4t-export-dialog .s4t-sheet-add-icon {
+    color: #34d399 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th-card,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th-card,
+.theme-dark #s4t-export-dialog .s4t-sheet-th-card,
+.dark-theme #s4t-export-dialog .s4t-sheet-th-card {
+    background: linear-gradient(145deg, rgba(29, 66, 45, 0.88) 0%, rgba(20, 50, 33, 0.94) 100%) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(46, 125, 50, 0.65) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th-card:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th-card:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-th-card:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-th-card:hover {
+    border-color: #48bb78 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-badge,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-badge,
+.theme-dark #s4t-export-dialog .s4t-sheet-col-badge,
+.dark-theme #s4t-export-dialog .s4t-sheet-col-badge {
+    background: #ebecf0 !important;
+    color: #172b4d !important;
+    border: 1px solid #dfe1e6 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-del,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-del,
+.theme-dark #s4t-export-dialog .s4t-sheet-col-del,
+.dark-theme #s4t-export-dialog .s4t-sheet-col-del {
+    color: #6b778c !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-del:hover:not(:disabled),
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-del:hover:not(:disabled),
+.theme-dark #s4t-export-dialog .s4t-sheet-col-del:hover:not(:disabled),
+.dark-theme #s4t-export-dialog .s4t-sheet-col-del:hover:not(:disabled) {
+    background: #ffebe6 !important;
+    color: #bf2600 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-hide,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-hide,
+.theme-dark #s4t-export-dialog .s4t-sheet-col-hide,
+.dark-theme #s4t-export-dialog .s4t-sheet-col-hide {
+    color: #6b778c !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-hide:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-hide:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-col-hide:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-col-hide:hover {
+    background: #ebecf0 !important;
+    color: #172b4d !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-col-hide.s4t-is-hidden,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-col-hide.s4t-is-hidden,
+.theme-dark #s4t-export-dialog .s4t-sheet-col-hide.s4t-is-hidden,
+.dark-theme #s4t-export-dialog .s4t-sheet-col-hide.s4t-is-hidden {
+    color: #000000 !important;
+    background: #d1fae5 !important;
+    border-color: #34d399 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden,
+.theme-dark #s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden,
+.dark-theme #s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-col-card-hidden,
+[data-theme="dark"] #s4t-export-dialog .s4t-col-card-hidden,
+.theme-dark #s4t-export-dialog .s4t-col-card-hidden,
+.dark-theme #s4t-export-dialog .s4t-col-card-hidden {
+    opacity: 0.72 !important;
+    border-style: dashed !important;
+    background: #fafbfc !important;
+    cursor: not-allowed !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-col-card-hidden *:not(.s4t-sheet-col-hide):not(.s4t-sheet-col-hide *),
+[data-theme="dark"] #s4t-export-dialog .s4t-col-card-hidden *:not(.s4t-sheet-col-hide):not(.s4t-sheet-col-hide *),
+.theme-dark #s4t-export-dialog .s4t-col-card-hidden *:not(.s4t-sheet-col-hide):not(.s4t-sheet-col-hide *),
+.dark-theme #s4t-export-dialog .s4t-col-card-hidden *:not(.s4t-sheet-col-hide):not(.s4t-sheet-col-hide *) {
+    cursor: not-allowed !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-drag-handle,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-drag-handle,
+.theme-dark #s4t-export-dialog .s4t-sheet-drag-handle,
+.dark-theme #s4t-export-dialog .s4t-sheet-drag-handle {
+    color: #6b778c !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-drag-handle:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-drag-handle:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-drag-handle:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-drag-handle:hover {
+    color: #172b4d !important;
+    background: #ebecf0 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-header-input,
@@ -4832,25 +5425,29 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input,
 .theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input,
 .dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input,
-[data-color-mode="dark"] #s4t-export-dialog .s4t-export-select,
-[data-theme="dark"] #s4t-export-dialog .s4t-export-select,
-.theme-dark #s4t-export-dialog .s4t-export-select,
-.dark-theme #s4t-export-dialog .s4t-export-select,
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-select,
 .theme-dark #s4t-export-dialog .s4t-sheet-cell-select,
-.dark-theme #s4t-export-dialog .s4t-sheet-cell-select {
-    background: #282e33 !important;
-    color: #ffffff !important;
-    border-color: #38414a !important;
+.dark-theme #s4t-export-dialog .s4t-sheet-cell-select,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: rgba(52, 211, 153, 0.6) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-input,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-input,
 .theme-dark #s4t-export-dialog .s4t-sheet-cell-input,
 .dark-theme #s4t-export-dialog .s4t-sheet-cell-input {
-    background: transparent !important;
-    color: #c7d1db !important;
+    background: #f1f2f4 !important;
+    color: #172b4d !important;
     border-color: transparent !important;
 }
 
@@ -4858,19 +5455,19 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-input:hover,
 .theme-dark #s4t-export-dialog .s4t-sheet-cell-input:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-cell-input:hover {
-    background: #282e33 !important;
-    border-color: #454f59 !important;
-    color: #ffffff !important;
+    background: #ebecf0 !important;
+    border-color: #dfe1e6 !important;
+    color: #172b4d !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell-input:focus,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell-input:focus,
 .theme-dark #s4t-export-dialog .s4t-sheet-cell-input:focus,
 .dark-theme #s4t-export-dialog .s4t-sheet-cell-input:focus {
-    background: #22272b !important;
-    border-color: #14b8a6 !important;
-    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.25) !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    border-color: #059669 !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25) !important;
+    color: #172b4d !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-header-input:hover,
@@ -4889,22 +5486,58 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input:hover,
 .theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input:hover,
-[data-color-mode="dark"] #s4t-export-dialog .s4t-export-select:hover,
-[data-theme="dark"] #s4t-export-dialog .s4t-export-select:hover,
-.theme-dark #s4t-export-dialog .s4t-export-select:hover,
-.dark-theme #s4t-export-dialog .s4t-export-select:hover {
-    background: #323940 !important;
-    border-color: #14b8a6 !important;
-    color: #ffffff !important;
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:hover,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-header-input:focus,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-header-input:focus,
+.theme-dark #s4t-export-dialog .s4t-sheet-header-input:focus,
+.dark-theme #s4t-export-dialog .s4t-sheet-header-input:focus,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input:focus,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input:focus,
+.theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input:focus,
+.dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input:focus,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:focus,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:focus,
+.theme-dark #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:focus,
+.dark-theme #s4t-export-dialog .s4t-sheet-th-card .s4t-custom-dropdown-trigger:focus,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger {
+    background: #ffffff !important;
+    border-color: #059669 !important;
+    outline: 2px solid #059669 !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25) !important;
+    color: #047857 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error,
 .theme-dark #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error,
 .dark-theme #s4t-export-dialog .s4t-sheet-custom-options-input.s4t-input-required-error {
-    border-color: #f43f5e !important;
-    background: rgba(244, 63, 94, 0.16) !important;
-    box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.25) !important;
+    border-color: #e11d48 !important;
+    background: #fff1f2 !important;
+    box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.25) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell,
@@ -4915,9 +5548,9 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-table td,
 .theme-dark #s4t-export-dialog .s4t-sheet-grid-table td,
 .dark-theme #s4t-export-dialog .s4t-sheet-grid-table td {
-    background: #22272b !important;
-    border-color: #38414a !important;
-    color: #b6c2cf !important;
+    background: #f4f5f7 !important;
+    border-color: #dfe1e6 !important;
+    color: #172b4d !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-has-dropdown,
@@ -4956,13 +5589,48 @@ textarea[data-testid="card-name-input"],
     z-index: 500 !important;
 }
 
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell.s4t-sheet-cell-hidden,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell.s4t-sheet-cell-hidden,
+.theme-dark #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell.s4t-sheet-cell-hidden,
+.dark-theme #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell.s4t-sheet-cell-hidden,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell.s4t-sheet-cell-hidden,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell.s4t-sheet-cell-hidden,
+.theme-dark #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell.s4t-sheet-cell-hidden,
+.dark-theme #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell.s4t-sheet-cell-hidden,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden:hover {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden *,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden *,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden *,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell.s4t-sheet-cell-hidden * {
+    cursor: not-allowed !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-hidden-placeholder,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-hidden-placeholder,
+.theme-dark #s4t-export-dialog .s4t-sheet-hidden-placeholder,
+.dark-theme #s4t-export-dialog .s4t-sheet-hidden-placeholder {
+    color: #94a3b8 !important;
+}
+
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
 .theme-dark #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell,
 .dark-theme #s4t-export-dialog .s4t-sheet-row:nth-child(even) .s4t-sheet-cell {
-    background: #282e33 !important;
-    border-color: #38414a !important;
-    color: #b6c2cf !important;
+    background: #ebecf0 !important;
+    border-color: #dfe1e6 !important;
+    color: #172b4d !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-row:hover .s4t-sheet-cell,
@@ -4973,18 +5641,54 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-grid-table tr:hover td,
 .theme-dark #s4t-export-dialog .s4t-sheet-grid-table tr:hover td,
 .dark-theme #s4t-export-dialog .s4t-sheet-grid-table tr:hover td {
-    background: rgba(20, 184, 166, 0.18) !important;
-    border-color: #14b8a6 !important;
-    color: #ffffff !important;
+    background: #dfe1e6 !important;
+    border-color: #c1c7d0 !important;
+    color: #172b4d !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-cell:hover,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-cell:hover,
+.theme-dark #s4t-export-dialog .s4t-sheet-cell:hover,
+.dark-theme #s4t-export-dialog .s4t-sheet-cell:hover {
+    background: #d0d7de !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-empty-td,
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-empty-td,
 .theme-dark #s4t-export-dialog .s4t-sheet-empty-td,
 .dark-theme #s4t-export-dialog .s4t-sheet-empty-td {
-    background: #22272b !important;
-    border-color: #38414a !important;
-    color: #8c9bab !important;
+    background: #f4f5f7 !important;
+    border-color: #dfe1e6 !important;
+    color: #6b778c !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-source-header,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-source-header,
+.theme-dark #s4t-export-dialog .s4t-sheet-source-header,
+.dark-theme #s4t-export-dialog .s4t-sheet-source-header {
+    background: #172b4d !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-source-label,
+[data-theme="dark"] #s4t-export-dialog .s4t-sheet-source-label,
+.theme-dark #s4t-export-dialog .s4t-sheet-source-label,
+.dark-theme #s4t-export-dialog .s4t-sheet-source-label {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-icon,
+[data-theme="dark"] #s4t-export-dialog .s4t-field-info-icon,
+.theme-dark #s4t-export-dialog .s4t-field-info-icon,
+.dark-theme #s4t-export-dialog .s4t-field-info-icon {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-field-info-svg,
+[data-theme="dark"] #s4t-export-dialog .s4t-field-info-svg,
+.theme-dark #s4t-export-dialog .s4t-field-info-svg,
+.dark-theme #s4t-export-dialog .s4t-field-info-svg {
+    stroke: #ffffff !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-split-menu,
@@ -5017,7 +5721,7 @@ textarea[data-testid="card-name-input"],
 .theme-dark #s4t-export-dialog .s4t-split-menu-item:hover,
 .dark-theme #s4t-export-dialog .s4t-split-menu-item:hover {
     background: #323940 !important;
-    color: #14b8a6 !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary,
@@ -5073,9 +5777,9 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-dirty-banner,
 .theme-dark #s4t-export-dialog .s4t-sheet-dirty-banner,
 .dark-theme #s4t-export-dialog .s4t-sheet-dirty-banner {
-    background: #282e33 !important;
-    border-color: #14b8a6 !important;
-    color: #2dd4bf !important;
+    background: #22272b !important;
+    border-color: #2c333a !important;
+    color: #b6c2cf !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
 }
 
@@ -5083,7 +5787,7 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-dirty-text,
 .theme-dark #s4t-export-dialog .s4t-dirty-text,
 .dark-theme #s4t-export-dialog .s4t-dirty-text {
-    color: #2dd4bf !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-header,
@@ -5112,8 +5816,8 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-col,
 .theme-dark #s4t-export-dialog .s4t-export-att-col,
 .dark-theme #s4t-export-dialog .s4t-export-att-col {
-    background: #282e33 !important;
-    border-color: #38414a !important;
+    background: #22272b !important;
+    border-color: #2c333a !important;
     color: #b6c2cf !important;
 }
 
@@ -5121,7 +5825,7 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-column-heading,
 .theme-dark #s4t-export-dialog .s4t-export-att-column-heading,
 .dark-theme #s4t-export-dialog .s4t-export-att-column-heading {
-    border-bottom-color: #38414a !important;
+    border-bottom-color: #2c333a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-column-heading h4,
@@ -5139,10 +5843,19 @@ textarea[data-testid="card-name-input"],
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-att-info-icon,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-att-info-icon svg,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-att-info-svg,
 [data-theme="dark"] #s4t-export-dialog .s4t-att-info-icon,
+[data-theme="dark"] #s4t-export-dialog .s4t-att-info-icon svg,
+[data-theme="dark"] #s4t-export-dialog .s4t-att-info-svg,
 .theme-dark #s4t-export-dialog .s4t-att-info-icon,
-.dark-theme #s4t-export-dialog .s4t-att-info-icon {
+.theme-dark #s4t-export-dialog .s4t-att-info-icon svg,
+.theme-dark #s4t-export-dialog .s4t-att-info-svg,
+.dark-theme #s4t-export-dialog .s4t-att-info-icon,
+.dark-theme #s4t-export-dialog .s4t-att-info-icon svg,
+.dark-theme #s4t-export-dialog .s4t-att-info-svg {
     color: #ffffff !important;
+    stroke: currentColor !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-att-info-icon:hover,
@@ -5178,8 +5891,8 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-option,
 .theme-dark #s4t-export-dialog .s4t-export-att-option,
 .dark-theme #s4t-export-dialog .s4t-export-att-option {
-    background: #22272b !important;
-    border-color: #38414a !important;
+    background: #1d2125 !important;
+    border-color: #2c333a !important;
     color: #b6c2cf !important;
 }
 
@@ -5187,7 +5900,7 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-option:hover,
 .theme-dark #s4t-export-dialog .s4t-export-att-option:hover,
 .dark-theme #s4t-export-dialog .s4t-export-att-option:hover {
-    background: #323940 !important;
+    background: #2c333a !important;
     color: #ffffff !important;
 }
 
@@ -5195,9 +5908,9 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-export-att-option:has(input:checked),
 .theme-dark #s4t-export-dialog .s4t-export-att-option:has(input:checked),
 .dark-theme #s4t-export-dialog .s4t-export-att-option:has(input:checked) {
-    background: rgba(20, 184, 166, 0.16) !important;
-    border-color: #14b8a6 !important;
-    color: #2dd4bf !important;
+    background: #2c333a !important;
+    border-color: #38414a !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-export-att-group-toggle,
@@ -5213,7 +5926,7 @@ textarea[data-testid="card-name-input"],
 .theme-dark #s4t-export-dialog .s4t-export-att-group-toggle:hover,
 .dark-theme #s4t-export-dialog .s4t-export-att-group-toggle:hover {
     background: #323940 !important;
-    border-color: #14b8a6 !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-virtual-cell,
@@ -5246,16 +5959,16 @@ textarea[data-testid="card-name-input"],
 .theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle:hover,
 .dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle:hover {
     background: #323940 !important;
-    border-color: #14b8a6 !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
 [data-theme="dark"] #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
 .theme-dark #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked),
 .dark-theme #s4t-export-dialog .s4t-sheet-topbar-toggle:has(input:checked) {
-    background: rgba(20, 184, 166, 0.16) !important;
-    border-color: #14b8a6 !important;
-    color: #2dd4bf !important;
+    background: #2c333a !important;
+    border-color: #38414a !important;
+    color: #ffffff !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-sheet-guide-badge,
@@ -5306,9 +6019,9 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger,
 .theme-dark #s4t-export-dialog .s4t-custom-dropdown-trigger,
 .dark-theme #s4t-export-dialog .s4t-custom-dropdown-trigger {
-    background: #282e33 !important;
-    color: #ffffff !important;
-    border-color: #38414a !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: rgba(52, 211, 153, 0.6) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown:hover .s4t-custom-dropdown-trigger,
@@ -5319,48 +6032,145 @@ textarea[data-testid="card-name-input"],
 [data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:hover,
 .theme-dark #s4t-export-dialog .s4t-custom-dropdown-trigger:hover,
 .dark-theme #s4t-export-dialog .s4t-custom-dropdown-trigger:hover {
-    background: #323940 !important;
-    border-color: #14b8a6 !important;
-    color: #ffffff !important;
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.22) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:focus,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:focus-visible,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:active,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:focus,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:focus-visible,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-trigger:active,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-trigger:focus,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-trigger:focus-visible,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-trigger:active,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-trigger:focus,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-trigger:focus-visible,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-trigger:active {
+    background: #ffffff !important;
+    border-color: #059669 !important;
+    outline: 2px solid #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger {
+    background: #ffffff !important;
+    border-color: rgba(52, 211, 153, 0.6) !important;
+    color: #172b4d !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus-visible,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:active,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus-visible,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:active,
+.theme-dark #s4t-export-dialog .s4t-custom-sort-dropdown:hover .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-sort-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus,
+.theme-dark #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus-visible,
+.theme-dark #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:active,
+.dark-theme #s4t-export-dialog .s4t-custom-sort-dropdown:hover .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-sort-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus,
+.dark-theme #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:focus-visible,
+.dark-theme #s4t-export-dialog .s4t-custom-sort-dropdown .s4t-custom-dropdown-trigger:active {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2) !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger {
+    background: #ffffff !important;
+    border-color: rgba(52, 211, 153, 0.6) !important;
+    color: #172b4d !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger:active,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger:active,
+.theme-dark #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.theme-dark #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger:active,
+.dark-theme #s4t-export-dialog .s4t-custom-cell-dropdown:hover .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-cell-dropdown.s4t-dropdown-open .s4t-custom-dropdown-trigger,
+.dark-theme #s4t-export-dialog .s4t-custom-cell-dropdown .s4t-custom-dropdown-trigger:active {
+    background: #ecfdf5 !important;
+    border-color: #059669 !important;
+    color: #047857 !important;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.2) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-arrow,
 [data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-arrow,
 .theme-dark #s4t-export-dialog .s4t-custom-dropdown-arrow,
 .dark-theme #s4t-export-dialog .s4t-custom-dropdown-arrow {
-    color: #9fadbc !important;
+    color: #059669 !important;
+    font-weight: bold !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-menu,
 [data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-menu,
 .theme-dark #s4t-export-dialog .s4t-custom-dropdown-menu,
 .dark-theme #s4t-export-dialog .s4t-custom-dropdown-menu {
-    background: #282e33 !important;
-    border-color: #38414a !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+    background: #ffffff !important;
+    border-color: #059669 !important;
+    box-shadow: 0 8px 24px rgba(5, 150, 105, 0.18) !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-item,
 [data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-item,
 .theme-dark #s4t-export-dialog .s4t-custom-dropdown-item,
 .dark-theme #s4t-export-dialog .s4t-custom-dropdown-item {
-    color: #b6c2cf !important;
+    color: #172b4d !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-item:hover,
 [data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-item:hover,
 .theme-dark #s4t-export-dialog .s4t-custom-dropdown-item:hover,
 .dark-theme #s4t-export-dialog .s4t-custom-dropdown-item:hover {
-    background: #323940 !important;
-    color: #14b8a6 !important;
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+    font-weight: 600 !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-item:active,
+[data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-item:active,
+.theme-dark #s4t-export-dialog .s4t-custom-dropdown-item:active,
+.dark-theme #s4t-export-dialog .s4t-custom-dropdown-item:active {
+    background: #d1fae5 !important;
+    color: #065f46 !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected,
 [data-theme="dark"] #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected,
 .theme-dark #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected,
 .dark-theme #s4t-export-dialog .s4t-custom-dropdown-item.s4t-selected {
-    background: rgba(20, 184, 166, 0.16) !important;
-    color: #2dd4bf !important;
+    background: #d1fae5 !important;
+    color: #065f46 !important;
+    font-weight: bold !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-btn.s4t-btn-disabled,
