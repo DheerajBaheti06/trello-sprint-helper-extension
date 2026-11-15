@@ -685,7 +685,13 @@
         });
 
         overlay.on('click', function (e) {
-            if (e.target === overlay[0]) close();
+            if (e.target === overlay[0]) {
+                if (isGuideActive) {
+                    showGuideToast('Not allowed, click on Guide button again to exit guide mode', 'warning');
+                    return;
+                }
+                close();
+            }
         });
 
         dialog.html([
@@ -733,6 +739,40 @@
         }
 
         var isGuideActive = false;
+        var guideToastTimer = null;
+
+        function showGuideToast(msg, type) {
+            if (guideToastTimer) {
+                clearTimeout(guideToastTimer);
+                guideToastTimer = null;
+            }
+            dialog.find('.s4t-guide-toast').remove();
+
+            var icon = (type === 'warning') ? '⚠️' : '🧭';
+            var $toast = $('<div class="s4t-guide-toast' + (type === 'warning' ? ' s4t-toast-warning' : '') + '">')
+                .html('<span>' + icon + '</span><span>' + s4tEscapeHtml(msg) + '</span>');
+
+            dialog.append($toast);
+
+            guideToastTimer = setTimeout(function () {
+                $toast.addClass('s4t-toast-fade-out');
+                setTimeout(function () {
+                    $toast.remove();
+                }, 240);
+            }, 2600);
+        }
+
+        function spawnGuideBubble(x, y) {
+            var $bubble = $('<div class="s4t-guide-click-bubble"></div>');
+            $bubble.css({
+                left: Math.round(x) + 'px',
+                top: Math.round(y) + 'px'
+            });
+            dialog.append($bubble);
+            setTimeout(function () {
+                $bubble.remove();
+            }, 750);
+        }
 
         dialog.find('#s4t-export-guide-btn').on('click', function (e) {
             e.stopPropagation();
@@ -748,9 +788,15 @@
                 guideBtn.removeClass('s4t-guide-active').attr('aria-pressed', 'false');
                 dialog.find('#s4t-guide-freeze-overlay').remove();
                 dialog.find('.s4t-cloud-tooltip').remove();
+                dialog.find('.s4t-guide-spotlight-active').removeClass('s4t-guide-spotlight-active');
                 $(window).off('resize.s4tGuide');
+                dialog.off('wheel.s4tGuideFreeze touchmove.s4tGuideFreeze scroll.s4tGuideFreeze');
+                dialog.find('.s4t-sheet-grid-wrapper').off('scroll.s4tGuide scroll.s4tGuideFreeze');
+                showGuideToast('Exited Guide Mode');
                 return;
             }
+
+            showGuideToast('Entered Guide Mode');
 
             if (state.currentTab !== 'sheet') {
                 var sw = dialog.data('switchView');
@@ -761,18 +807,23 @@
                 }
             }
 
-            dialog.addClass('s4t-guide-active-mode');
-            guideBtn.addClass('s4t-guide-active').attr('aria-pressed', 'true');
+            // Preview area must scroll to the leftmost (scrollLeft = 0) and top (scrollTop = 0) before showing tooltips
+            var gridWrapper = dialog.find('.s4t-sheet-grid-wrapper');
+            if (gridWrapper.length && gridWrapper[0]) {
+                gridWrapper[0].scrollLeft = 0;
+                gridWrapper[0].scrollTop = 0;
+            }
 
-            dialog.find('#s4t-guide-freeze-overlay').remove();
-            dialog.find('.s4t-cloud-tooltip').remove();
-
-            var freezeOverlay = $('<div id="s4t-guide-freeze-overlay" class="s4t-guide-freeze-overlay">');
-            freezeOverlay.on('click mousedown mouseup', function (e) {
+            // Prevent any wheel, touchmove, or scroll gestures so rows cannot move during guide mode
+            dialog.off('wheel.s4tGuideFreeze touchmove.s4tGuideFreeze scroll.s4tGuideFreeze');
+            dialog.on('wheel.s4tGuideFreeze touchmove.s4tGuideFreeze scroll.s4tGuideFreeze', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
+                return false;
             });
-            dialog.append(freezeOverlay);
+
+            dialog.addClass('s4t-guide-active-mode');
+            guideBtn.addClass('s4t-guide-active').attr('aria-pressed', 'true');
 
             renderCloudyTooltips();
 
@@ -781,69 +832,238 @@
                     renderCloudyTooltips();
                 }
             });
+
+            if (gridWrapper.length) {
+                gridWrapper.off('scroll.s4tGuideFreeze').on('scroll.s4tGuideFreeze', function () {
+                    if (isGuideActive) {
+                        if (this.scrollLeft !== 0) this.scrollLeft = 0;
+                        if (this.scrollTop !== 0) this.scrollTop = 0;
+                    }
+                });
+            }
         }
 
         function renderCloudyTooltips() {
+            dialog.find('#s4t-guide-freeze-overlay').remove();
             dialog.find('.s4t-cloud-tooltip').remove();
+            dialog.find('.s4t-guide-spotlight-active').removeClass('s4t-guide-spotlight-active');
 
-            var dialogOffset = dialog.offset() || { top: 0, left: 0 };
-            var dialogWidth = dialog.outerWidth();
-            var dialogHeight = dialog.outerHeight();
+            var dRect = dialog[0].getBoundingClientRect();
+            var originX = dRect.left + (dialog[0].clientLeft || 0);
+            var originY = dRect.top + (dialog[0].clientTop || 0);
+            var dialogWidth = dialog[0].clientWidth || dialog.outerWidth();
+            var dialogHeight = dialog[0].clientHeight || dialog.outerHeight();
 
+            var isDirtyBanner = dialog.find('.s4t-dirty-dark-card').length > 0;
+            var isPreviewGenerated = !isDirtyBanner && state.previewVisible && dialog.find('#s4t-sheet-table tbody tr.s4t-sheet-row').length > 0;
+
+            var previewTarget = '.s4t-sheet-preview-cta-card';
+            var previewFallback = '.s4t-btn-generate-preview';
+            var previewSecond = null;
+            var previewTitle = '📊 Live 20-Card Preview';
+            var previewDesc = 'Click \'Generate 20-Card Preview\' to inspect formatted rows before exporting.';
+
+            if (isDirtyBanner) {
+                previewTarget = '.s4t-dirty-dark-card';
+                previewFallback = '.s4t-dirty-refresh-btn';
+                previewTitle = '⚡ Refresh Preview';
+                previewDesc = 'Click to regenerate the 20-card preview with your updated columns.';
+            } else if (isPreviewGenerated) {
+                previewTarget = '#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(3)';
+                previewFallback = '#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(1)';
+                previewSecond = '#s4t-sheet-table tbody tr:first td:first';
+                previewTitle = '📊 Live 20-Card Preview';
+                previewDesc = 'Review live card rows with custom columns, exclusions, and dropdowns.';
+            }
+
+            // Guide items covering each distinct feature across the modal without crowding
             var guideItems = [
                 {
+                    id: 'match-count',
+                    target: '#s4t-export-count-badge',
+                    fallbackTarget: '.s4t-export-match-count',
+                    title: '🎯 Matching Cards Count',
+                    desc: 'Displays the total count of cards matching active exclusions. Double-click to copy.',
+                    placement: 'right'
+                },
+                {
+                    id: 'exclusions',
                     target: '#s4t-tab-btn-exclusions',
-                    title: '⚙️ Exclusions & Ordering Settings',
-                    desc: 'Click Settings to exclude specific lists, members, or labels before exporting.',
+                    fallbackTarget: '.s4t-sheet-settings-btn',
+                    title: '⚙️ Exclusions & Ordering',
+                    desc: 'Exclude specific lists, members, or labels, and configure custom row sort orders.',
                     placement: 'bottom'
                 },
                 {
-                    target: '.s4t-sheet-topbar-left',
-                    title: '📂 Group Separators & Sort',
-                    desc: 'Auto-insert line breaks between groups, and sort cards by developer, list, or title.',
-                    placement: 'bottom'
+                    id: 'col-number',
+                    target: '.s4t-sheet-th:eq(0) .s4t-sheet-col-badge',
+                    fallbackTarget: '.s4t-sheet-col-badge:first',
+                    title: '🔢 Column Number',
+                    desc: 'Shows sequential column index (Col 1, Col 2...) indicating left-to-right export sequence.',
+                    colIdx: 0,
+                    tier: 1
                 },
                 {
-                    target: '.s4t-sheet-th-card:first .s4t-sheet-drag-handle',
-                    fallbackTarget: '.s4t-sheet-th-card:first',
+                    id: 'col-hide',
+                    target: '.s4t-sheet-th:eq(1) .s4t-sheet-col-hide',
+                    fallbackTarget: '.s4t-sheet-col-hide:first',
+                    title: '👁️ Eye Icon (Hide Column)',
+                    desc: 'Click 👁 to hide or restore a column from your export without losing custom configuration.',
+                    colIdx: 1,
+                    tier: 2
+                },
+                {
+                    id: 'col-drag',
+                    target: '.s4t-sheet-th:eq(2) .s4t-sheet-drag-handle',
+                    fallbackTarget: '.s4t-sheet-drag-handle:first',
+                    secondFallback: '.s4t-sheet-th:eq(2)',
                     title: '↔ Drag & Drop Sequence',
-                    desc: 'Grab the 6-dot grip handle to rearrange column sequence in your export.',
+                    desc: 'Grab the 6-dot grip handle to reorder columns in your export spreadsheet.',
+                    colIdx: 2,
+                    tier: 1
+                },
+                {
+                    id: 'col-rename',
+                    target: '.s4t-sheet-th:eq(3) .s4t-sheet-header-input',
+                    fallbackTarget: '.s4t-sheet-header-input:first',
+                    secondFallback: '.s4t-sheet-th:eq(1) .s4t-sheet-header-input',
+                    title: '✏️ Column Rename',
+                    desc: 'Click inside the header input to customize the column title exported to your sheet.',
+                    colIdx: 3,
+                    tier: 2
+                },
+                {
+                    id: 'col-mapping',
+                    target: '.s4t-sheet-th:eq(4) .s4t-sheet-source-row',
+                    fallbackTarget: '.s4t-sheet-source-row:first',
+                    secondFallback: '.s4t-sheet-source-select:first',
+                    title: 'ℹ️ Shows: Field Info & Dropdown',
+                    desc: 'Maps to 14 Trello fields (points, devs, dates). Hover ℹ️ to read field description.',
+                    colIdx: 4,
+                    tier: 1
+                },
+                {
+                    id: 'col-dtype',
+                    target: '.s4t-sheet-th:eq(5) .s4t-sheet-type-row',
+                    fallbackTarget: '.s4t-sheet-type-select:first',
+                    secondFallback: '.s4t-sheet-type-row:first',
+                    title: '⚙️ dtype: Data Type Format',
+                    desc: 'Format cell output as plain String text, Devs member select, or Custom dropdown.',
+                    colIdx: 5,
+                    tier: 2
+                },
+                {
+                    id: 'col-custom',
+                    target: '.s4t-sheet-custom-options-input:visible:first',
+                    fallbackTarget: '.s4t-sheet-th:eq(6) .s4t-sheet-custom-options-input',
+                    secondFallback: '.s4t-sheet-th:eq(3)',
+                    title: '🏷️ Custom Dropdowns',
+                    desc: 'Enter comma-separated options to generate custom dropdowns for each card.',
+                    colIdx: 6,
+                    tier: 1
+                },
+                {
+                    id: 'preview-card',
+                    target: previewTarget,
+                    fallbackTarget: previewFallback,
+                    secondFallback: previewSecond,
+                    title: previewTitle,
+                    desc: previewDesc,
                     placement: 'bottom'
                 },
                 {
-                    target: '.s4t-sheet-th-card:first .s4t-sheet-header-input',
-                    fallbackTarget: '.s4t-sheet-th-card:first',
-                    title: '✏️ Rename & 👁️ Hide',
-                    desc: 'Edit header text directly, or click 👁 to hide this column without deleting it.',
-                    placement: 'bottom'
+                    id: 'col-count',
+                    target: '#s4t-sheet-col-count',
+                    fallbackTarget: '.s4t-export-footer-left',
+                    title: '📊 Column Counter',
+                    desc: 'Shows the total count of active, visible columns included in your export.',
+                    placement: 'top'
                 },
                 {
-                    target: '.s4t-sheet-th-card:first .s4t-sheet-source-header',
-                    fallbackTarget: '.s4t-sheet-th-card:first',
-                    title: '🎯 Field Mapping & Dtypes',
-                    desc: 'Map to 14 card fields (points, devs, dates) and select String, Devs, or Custom format.',
-                    placement: 'bottom'
+                    id: 'copy-tsv',
+                    target: '#s4t-btn-copy-tsv',
+                    fallbackTarget: '.s4t-export-footer-buttons',
+                    title: '📋 Copy for Google Sheets',
+                    desc: 'One-click copy formatted TSV to clipboard, ready to paste directly into Google Sheets.',
+                    placement: 'top'
                 },
                 {
-                    target: '#s4t-btn-copy',
-                    fallbackTarget: '.s4t-export-footer-actions',
-                    title: '⚡ Instant Export',
-                    desc: 'One-click copy formatted TSV directly to clipboard for Google Sheets, or download Excel & CSV.',
+                    id: 'download-file',
+                    target: '.s4t-split-download-group',
+                    fallbackTarget: '#s4t-btn-main-download',
+                    title: '📥 Download Spreadsheet',
+                    desc: 'Download as Excel (.xls) directly, or click ▾ to select CSV format.',
                     placement: 'top'
                 }
             ];
+
+            var maskCutouts = [];
+            var spotlightRings = [];
+            var svgStemLines = [];
+            var validElements = [];
+
+            // Find physical bottom of column card headers to ensure NO tooltips ever cover column cards
+            var maxCardBottom = 185;
+            var thElements = dialog.find('.s4t-sheet-th');
+            if (thElements.length) {
+                thElements.each(function () {
+                    if (this.getBoundingClientRect) {
+                        var b = this.getBoundingClientRect().bottom - originY;
+                        if (b > maxCardBottom) maxCardBottom = b;
+                    }
+                });
+            }
 
             guideItems.forEach(function (item) {
                 var $el = dialog.find(item.target);
                 if ((!$el.length || !$el.is(':visible')) && item.fallbackTarget) {
                     $el = dialog.find(item.fallbackTarget);
                 }
+                if ((!$el.length || !$el.is(':visible')) && item.secondFallback) {
+                    $el = dialog.find(item.secondFallback);
+                }
                 if (!$el.length || !$el.is(':visible')) return;
 
-                var elOffset = $el.offset();
-                var elW = $el.outerWidth();
-                var elH = $el.outerHeight();
+                $el.addClass('s4t-guide-spotlight-active');
 
+                var elRect = $el[0].getBoundingClientRect();
+                var targetLeft = elRect.left - originX;
+                var targetTop = elRect.top - originY;
+                var elW = elRect.width;
+                var elH = elRect.height;
+
+                // Precision bounding cutout with 4px padding hugging target
+                // For small icon buttons (eye icon, drag handle), ensure minimum 26px box so spotlight is clearly visible
+                var pad = 4;
+                var minW = (item.id === 'col-hide' || item.id === 'col-drag') ? 26 : Math.round(elW + (pad * 2));
+                var minH = (item.id === 'col-hide' || item.id === 'col-drag') ? 26 : Math.round(elH + (pad * 2));
+                var w = Math.max(minW, Math.round(elW + (pad * 2)));
+                var h = Math.max(minH, Math.round(elH + (pad * 2)));
+                var x = Math.round(targetLeft + (elW / 2) - (w / 2));
+                var y = Math.round(targetTop + (elH / 2) - (h / 2));
+                var rx = 6;
+
+                maskCutouts.push('<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + rx + '" ry="' + rx + '" fill="#000000" />');
+                spotlightRings.push('<rect class="s4t-spotlight-ring" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + rx + '" ry="' + rx + '" fill="none" stroke="#10b981" stroke-width="2" />');
+
+                validElements.push({
+                    item: item,
+                    $el: $el,
+                    targetLeft: targetLeft,
+                    targetTop: targetTop,
+                    elW: elW,
+                    elH: elH,
+                    ringX: x,
+                    ringY: y,
+                    ringW: w,
+                    ringH: h
+                });
+            });
+
+            var placedTooltips = [];
+
+            validElements.forEach(function (v) {
+                var item = v.item;
                 var $tooltip = $('<div class="s4t-cloud-tooltip">');
                 $tooltip.html([
                     '<div class="s4t-cloud-arrow"></div>',
@@ -856,36 +1076,159 @@
 
                 dialog.append($tooltip);
 
-                var tipW = $tooltip.outerWidth() || 240;
-                var tipH = $tooltip.outerHeight() || 85;
+                var tipW = $tooltip.outerWidth() || 205;
+                var tipH = $tooltip.outerHeight() || 76;
 
-                var targetCenterX = (elOffset.left - dialogOffset.left) + (elW / 2);
-                var targetTopY = (elOffset.top - dialogOffset.top);
-                var targetBottomY = targetTopY + elH;
+                var targetCenterX = v.targetLeft + (v.elW / 2);
+                var targetTopY = v.targetTop;
+                var targetBottomY = targetTopY + v.elH;
 
                 var top, left;
                 var arrowClass = 'arrow-top';
+                var hasSvgStem = false;
 
-                if (item.placement === 'top' || (targetBottomY + tipH + 16 > dialogHeight && targetTopY - tipH - 16 > 0)) {
-                    top = targetTopY - tipH - 12;
+                if (item.id === 'match-count') {
+                    // Position in the empty header space to the right of the badge with an arrow-left pointing to it
+                    left = Math.round(v.targetLeft + v.elW + 16);
+                    top = Math.max(8, Math.round(targetTopY + (v.elH / 2) - 34));
+                    arrowClass = 'arrow-left';
+                } else if (item.id === 'exclusions') {
+                    // Position directly centered below the Settings button with an SVG stem arrow
+                    left = Math.round(targetCenterX - (tipW / 2));
+                    left = Math.min(dialogWidth - tipW - 14, Math.max(14, left));
+                    top = Math.round(targetBottomY + 16);
+                    arrowClass = 'arrow-top';
+                    hasSvgStem = true;
+                } else if (item.tier === 1) {
+                    // Tier 1 column features (Cols 0, 2, 4, 6): positioned just below column cards with glowing SVG stem
+                    var colTh1 = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
+                    var cCenterX1 = colTh1.length ? (colTh1[0].getBoundingClientRect().left - originX + (colTh1[0].getBoundingClientRect().width / 2)) : targetCenterX;
+                    left = Math.round(cCenterX1 - (tipW / 2));
+                    top = Math.round(maxCardBottom + 16);
+                    arrowClass = 'arrow-top';
+                    hasSvgStem = true;
+                } else if (item.tier === 2) {
+                    // Tier 2 column features (Cols 1, 3, 5): positioned in the lower middle row with extended SVG stems
+                    var colTh2 = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
+                    var cCenterX2 = colTh2.length ? (colTh2[0].getBoundingClientRect().left - originX + (colTh2[0].getBoundingClientRect().width / 2)) : targetCenterX;
+                    left = Math.round(cCenterX2 - (tipW / 2));
+                    top = Math.round(maxCardBottom + 115);
+                    arrowClass = 'arrow-top';
+                    hasSvgStem = true;
+                } else if (item.id === 'preview-card') {
+                    left = Math.round(targetCenterX - (tipW / 2));
+                    top = Math.round(targetBottomY + 14);
+                    arrowClass = 'arrow-top';
+                } else if (item.id === 'col-count') {
+                    left = 14;
+                    top = Math.round(targetTopY - tipH - 18);
+                    arrowClass = 'arrow-bottom';
+                    hasSvgStem = true;
+                } else if (item.id === 'copy-tsv') {
+                    left = dialogWidth - (tipW * 2) - 28;
+                    top = Math.round(targetTopY - tipH - 12);
+                    arrowClass = 'arrow-bottom';
+                } else if (item.id === 'download-file') {
+                    left = dialogWidth - tipW - 14;
+                    top = Math.round(targetTopY - tipH - 12);
                     arrowClass = 'arrow-bottom';
                 } else {
-                    top = targetBottomY + 12;
+                    left = Math.round(targetCenterX - (tipW / 2));
+                    top = Math.round(targetBottomY + 14);
                     arrowClass = 'arrow-top';
                 }
 
-                left = targetCenterX - (tipW / 2);
+                var pad = 14;
+                left = Math.max(pad, Math.min(left, dialogWidth - tipW - pad));
+                top = Math.max(pad, Math.min(top, dialogHeight - tipH - pad));
 
-                var padding = 12;
-                var clampedLeft = Math.max(padding, Math.min(left, dialogWidth - tipW - padding));
-                var clampedTop = Math.max(padding, Math.min(top, dialogHeight - tipH - padding));
-                var arrowOffset = Math.max(16, Math.min(targetCenterX - clampedLeft, tipW - 16));
+                if (hasSvgStem) {
+                    var stemX = Math.round(targetCenterX);
+                    if (arrowClass === 'arrow-bottom') {
+                        var stemY1 = Math.round(top + tipH + 2);
+                        var stemY2 = Math.round(v.ringY - 2);
+                        var lineStartX = Math.max(left + 16, Math.min(stemX, left + tipW - 16));
+                        if (stemY2 <= stemY1) stemY2 = stemY1 + 10;
+                        svgStemLines.push(
+                            '<line class="s4t-guide-stem-line" x1="' + lineStartX + '" y1="' + stemY1 + '" x2="' + stemX + '" y2="' + stemY2 + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
+                            '<polygon class="s4t-guide-stem-arrow" points="' + (stemX - 5) + ',' + (stemY2 - 6) + ' ' + (stemX + 5) + ',' + (stemY2 - 6) + ' ' + stemX + ',' + stemY2 + '" fill="#10b981" />'
+                        );
+                    } else {
+                        var stemY1 = Math.round(v.ringY + v.ringH + 2);
+                        var stemY2 = Math.round(top - 2);
+                        var lineEndX = Math.max(left + 16, Math.min(stemX, left + tipW - 16));
+                        if (stemY2 <= stemY1) stemY2 = stemY1 + 10;
+                        svgStemLines.push(
+                            '<line class="s4t-guide-stem-line" x1="' + stemX + '" y1="' + stemY1 + '" x2="' + lineEndX + '" y2="' + stemY2 + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
+                            '<polygon class="s4t-guide-stem-arrow" points="' + (stemX - 5) + ',' + (stemY1 + 6) + ' ' + (stemX + 5) + ',' + (stemY1 + 6) + ' ' + stemX + ',' + stemY1 + '" fill="#10b981" />'
+                        );
+                    }
+                }
 
-                $tooltip.addClass(arrowClass);
-                $tooltip.find('.s4t-cloud-arrow').css('left', arrowOffset + 'px');
-                $tooltip.css({
-                    top: clampedTop + 'px',
-                    left: clampedLeft + 'px'
+                placedTooltips.push({
+                    $tooltip: $tooltip,
+                    item: item,
+                    targetCenterX: targetCenterX,
+                    arrowClass: arrowClass,
+                    hasSvgStem: hasSvgStem,
+                    left: left,
+                    top: top,
+                    width: tipW,
+                    height: tipH
+                });
+            });
+
+            // Build SVG freeze overlay including mask cutouts, spotlight rings, and glowing stem lines
+            var isDark = $('html').attr('data-color-mode') === 'dark' || $('body').hasClass('dark-theme') || $('body').hasClass('theme-dark') || $('html').attr('data-theme') === 'dark';
+            var scrimColor = isDark ? 'rgba(3, 7, 18, 0.65)' : 'rgba(9, 30, 66, 0.45)';
+
+            var svgHtml = [
+                '<svg id="s4t-guide-freeze-overlay" class="s4t-guide-freeze-overlay" width="' + dialogWidth + '" height="' + dialogHeight + '" viewBox="0 0 ' + dialogWidth + ' ' + dialogHeight + '" xmlns="http://www.w3.org/2000/svg">',
+                '  <defs>',
+                '    <mask id="s4t-guide-cutout-mask">',
+                '      <rect x="0" y="0" width="100%" height="100%" fill="#ffffff" />',
+                '      ' + maskCutouts.join(''),
+                '    </mask>',
+                '  </defs>',
+                '  <rect x="0" y="0" width="100%" height="100%" fill="' + scrimColor + '" mask="url(#s4t-guide-cutout-mask)" />',
+                '  <rect class="s4t-guide-click-catcher" x="0" y="0" width="100%" height="100%" fill="transparent" pointer-events="all" />',
+                '  ' + spotlightRings.join(''),
+                '  ' + svgStemLines.join(''),
+                '</svg>'
+            ].join('');
+
+            var $freezeOverlay = $(svgHtml);
+            $freezeOverlay.on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var dRect = (dialog.length && dialog[0].getBoundingClientRect) ? dialog[0].getBoundingClientRect() : { left: 0, top: 0, width: dialogWidth, height: dialogHeight };
+                var originX = dRect.left + ((dialog.length && dialog[0].clientLeft) || 0);
+                var originY = dRect.top + ((dialog.length && dialog[0].clientTop) || 0);
+                var clickX = (typeof e.clientX === 'number' && e.clientX > 0) ? (e.clientX - originX) : (dialogWidth / 2);
+                var clickY = (typeof e.clientY === 'number' && e.clientY > 0) ? (e.clientY - originY) : (dialogHeight / 2);
+                spawnGuideBubble(clickX, clickY);
+                showGuideToast('Not allowed, click on Guide button again to exit guide mode', 'warning');
+            });
+            dialog.append($freezeOverlay);
+
+            // Finalize coordinates and arrow positions
+            placedTooltips.forEach(function (t) {
+                var $t = t.$tooltip;
+                $t.addClass(t.arrowClass);
+                if (t.hasSvgStem) {
+                    $t.addClass('has-svg-stem');
+                }
+
+                if (t.arrowClass === 'arrow-left') {
+                    $t.find('.s4t-cloud-arrow').css('top', '50%');
+                } else {
+                    var arrowOffset = Math.max(16, Math.min(t.targetCenterX - t.left, t.width - 16));
+                    $t.find('.s4t-cloud-arrow').css('left', arrowOffset + 'px');
+                }
+
+                $t.css({
+                    top: Math.round(t.top) + 'px',
+                    left: Math.round(t.left) + 'px'
                 });
             });
         }

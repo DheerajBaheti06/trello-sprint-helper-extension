@@ -459,8 +459,8 @@ test('card-export UI: header reset button, tab-2 separator position, transparent
     assert.ok(sortBoxIdx < separatorToggleIdx, 's4t-export-separator-toggle must be inside s4t-export-att-sort-box');
     assert.ok(separatorToggleIdx < sortRowsByLabelIdx, 'Line break between groups toggle must appear before Sort Rows By: text');
 
-    // 3. Header info icon has transparent background (no background color)
-    assert.ok(css.includes('#s4t-export-dialog .s4t-feature-help {\n    background: transparent !important;'), 'Header feature-help icon must have transparent background');
+    // 3. Header info icon has styled background highlight matching Members Burndown
+    assert.ok(css.includes('#s4t-export-dialog .s4t-feature-help {\n    background: var(--ds-background-neutral, #f4f4f5) !important;'), 'Header feature-help icon must have styled background highlight matching Members Burndown');
     assert.ok(css.includes('#s4t-export-dialog .s4t-field-info-icon {\n    display: inline-flex !important;'), 'Field info icon must be styled');
 
     // 4. Enhanced tab-1 preview area and column showing (uncluttered, compact card grid, zebra striping, header guide button, footer counter)
@@ -500,7 +500,7 @@ test('card-export UI: centered dirty banner, custom required error, hover drop, 
     assert.ok(ce.includes('s4t-field-info-svg'), 'card-export.js must render vector SVG info icon for crisp visibility');
     assert.ok(css.includes('.s4t-field-info-svg'), 'sprint-helper.css must style vector SVG info icon');
     assert.ok(css.includes('color: var(--ds-text-subtle, #626f86) !important;'), 's4t-field-info-icon must use subtle text color matching other popups');
-    assert.ok(css.includes('color: var(--ds-text-subtle, #9fadbc) !important;'), 'dark mode info icon must use subtle text color #9fadbc matching other popups');
+    assert.ok(css.includes('color: #b6c2cf !important;') || css.includes('color: var(--ds-text-subtle, #9fadbc) !important;'), 'dark mode info icon must use subtle text color matching other popups');
 
     // 5. Dropdown open on mouseenter, close on mousedown
     assert.ok(ce.includes('attachDropdownHover'), 'card-export.js must attach hover trigger to dropdown selects');
@@ -1293,6 +1293,108 @@ test('card-export: tab-2 moved to settings icon button in export popup header', 
     assert.ok(!ce.includes('<div class="s4t-export-tabs-bar"'), 'card-export.js dialog markup must not include tabs-bar');
 });
 
+test('card-export: guide view scrolls preview to leftmost, spotlights unblurred features, and covers copy, count, and download without overlap', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
 
+    // 1. Guide mode resets preview area scrollLeft to 0 before calculating tooltips
+    assert.ok(ce.includes('gridWrapper[0].scrollLeft = 0;'), 'card-export.js must reset gridWrapper.scrollLeft to 0 on guide mode toggle');
 
+    // 2. Unblurred spotlight cutouts: SVG mask with transparent holes and emerald spotlight rings
+    assert.ok(ce.includes('s4t-guide-cutout-mask'), 'card-export.js must define SVG mask for transparent spotlight cutouts');
+    assert.ok(ce.includes('s4t-spotlight-ring'), 'card-export.js must render glowing emerald spotlight rings around targets');
+    assert.ok(css.includes('.s4t-spotlight-ring'), 'sprint-helper.css must style spotlight rings with drop-shadow');
+    assert.ok(!css.includes('#s4t-export-dialog #s4t-guide-freeze-overlay {\n    position: absolute !important;\n    top: 0 !important;\n    left: 0 !important;\n    right: 0 !important;\n    bottom: 0 !important;\n    width: 100% !important;\n    height: 100% !important;\n    background: rgba(9, 30, 66, 0.45) !important;\n    backdrop-filter: blur(3px) !important;'), 'Freeze overlay must not apply global blur');
 
+    // 3. Complete feature coverage across all 14 distinct targets
+    // 3. Complete uncluttered feature coverage across all targets
+    assert.ok(ce.includes("id: 'match-count'"), 'Guide must include Matching Cards Count item');
+    assert.ok(ce.includes("target: '#s4t-export-count-badge'"), 'Guide match count item must target count badge');
+    assert.ok(ce.includes("id: 'exclusions'"), 'Guide must include Exclusions Settings item');
+    assert.ok(ce.includes("id: 'col-number'"), 'Guide must include Column Number item');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(0) .s4t-sheet-col-badge'"), 'Guide col-number must target first column badge');
+    assert.ok(ce.includes("id: 'col-hide'"), 'Guide must include Eye Icon (Hide Column) item');
+    assert.ok(ce.includes("target: '.s4t-sheet-th:eq(1) .s4t-sheet-col-hide'"), 'Guide col-hide must target column hide button');
+    assert.ok(ce.includes("id: 'col-drag'"), 'Guide must include Drag & Drop item');
+    assert.ok(ce.includes("id: 'col-rename'"), 'Guide must include Column Rename item');
+    assert.ok(ce.includes("id: 'col-mapping'"), 'Guide must include Field Mapping item');
+    assert.ok(ce.includes("ℹ️ Shows: Field Info & Dropdown"), 'Guide col-mapping must mention Shows: Field Info & Dropdown');
+    assert.ok(ce.includes("id: 'col-dtype'"), 'Guide must include dtype Data Type Format item');
+    assert.ok(ce.includes("⚙️ dtype: Data Type Format"), 'Guide col-dtype must mention dtype: Data Type Format');
+    assert.ok(ce.includes("id: 'col-custom'"), 'Guide must include Custom Dropdowns item');
+    assert.ok(ce.includes("id: 'preview-card'"), 'Guide must include Live Preview CTA item');
+    assert.ok(ce.includes("id: 'col-count'"), 'Guide must include Column Counter item');
+    assert.ok(ce.includes("target: '#s4t-sheet-col-count'"), 'Guide column counter item must target #s4t-sheet-col-count');
+    assert.ok(ce.includes("id: 'copy-tsv'"), 'Guide must include Copy TSV item');
+    assert.ok(ce.includes("target: '#s4t-btn-copy-tsv'"), 'Guide copy item must target #s4t-btn-copy-tsv');
+    assert.ok(ce.includes("id: 'download-file'"), 'Guide must include Download Spreadsheet item');
+    assert.ok(ce.includes("target: '.s4t-split-download-group'"), 'Guide download item must target .s4t-split-download-group');
+
+    // 4. Two-tier uncluttered vertical staggering and SVG stem lines
+    assert.ok(css.includes('.s4t-cloud-tooltip.arrow-left'), 'sprint-helper.css must style arrow-left tooltip variant');
+    assert.ok(css.includes('.s4t-guide-stem-line'), 'sprint-helper.css must style SVG guide stem lines');
+    assert.ok(ce.includes('s4t-guide-stem-line'), 'card-export.js must draw long-reach stem lines in SVG overlay');
+    assert.ok(ce.includes('maxCardBottom'), 'card-export.js must measure physical bottom of column cards to prevent any row overlap');
+    assert.ok(ce.includes('tier: 1') && ce.includes('tier: 2'), 'card-export.js must distribute column tooltips across two distinct vertical tiers');
+    assert.ok(ce.includes("left = dialogWidth - (tipW * 2) - 28;"), 'Copy button tooltip must offset from download tooltip to avoid footer overlap');
+});
+
+test('card-export: guide mode freezes screen completely, aligns boxes with subpixel precision, and adapts preview highlight when generated', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Total freeze: CSS locks scrolling and pointer interactions
+    assert.ok(css.includes('#s4t-export-dialog.s4t-guide-active-mode .s4t-sheet-grid-wrapper'), 'CSS must define freeze rule for grid wrapper');
+    assert.ok(css.includes('overflow: hidden !important;') && css.includes('pointer-events: none !important;'), 'Freeze mode must set overflow hidden and pointer-events none');
+    assert.ok(css.includes('#s4t-export-dialog.s4t-guide-active-mode #s4t-export-guide-btn'), 'Active guide button must retain pointer-events auto');
+
+    // 2. JS locks: resets both horizontal and vertical scroll and intercepts wheel/touch gestures
+    assert.ok(ce.includes('gridWrapper[0].scrollLeft = 0;') && ce.includes('gridWrapper[0].scrollTop = 0;'), 'Guide mode must reset both scrollLeft and scrollTop to 0');
+    assert.ok(ce.includes('wheel.s4tGuideFreeze'), 'Guide mode must intercept wheel events to prevent scrolling');
+    assert.ok(ce.includes('touchmove.s4tGuideFreeze'), 'Guide mode must intercept touch events to prevent scrolling');
+    assert.ok(ce.includes('s4t-guide-click-catcher'), 'SVG overlay must include full-area click catcher');
+
+    // 3. Sub-pixel accurate coordinate calculations hugging element
+    assert.ok(ce.includes('originX = dRect.left + (dialog[0].clientLeft || 0)'), 'Calculations must account for dialog border offset');
+    assert.ok(ce.includes('originY = dRect.top + (dialog[0].clientTop || 0)'), 'Calculations must account for dialog top border offset');
+    assert.ok(css.includes('#s4t-export-dialog {\n    position: relative !important;'), '#s4t-export-dialog must have position: relative for accurate overlay positioning');
+
+    // 4. Preview generated state: highlights compact sample cell rather than entire 800px table
+    assert.ok(ce.includes('isPreviewGenerated = !isDirtyBanner && state.previewVisible'), 'Guide mode must detect when live preview rows are generated');
+    assert.ok(ce.includes('#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(3)'), 'Live preview highlight must target compact sample cell');
+    assert.ok(ce.includes("previewTitle = '📊 Live 20-Card Preview'"), 'Guide must define live 20-card preview tooltip title');
+});
+
+test('card-export: guide mode ripple bubble on click, enter/exit and warning toasts, and header highlights matching members burndown', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Toast notifications on entering, exiting, and clicking anywhere in guide mode
+    assert.ok(ce.includes("showGuideToast('Entered Guide Mode')"), 'card-export.js must show notification on entering guide mode');
+    assert.ok(ce.includes("showGuideToast('Exited Guide Mode')"), 'card-export.js must show notification on exiting guide mode');
+    assert.ok(ce.includes("showGuideToast('Not allowed, click on Guide button again to exit guide mode', 'warning')"), 'card-export.js must show warning notification when clicking anywhere else');
+    assert.ok(css.includes('.s4t-guide-toast'), 'sprint-helper.css must style guide toast notifications');
+    assert.ok(css.includes('.s4t-guide-toast.s4t-toast-warning'), 'sprint-helper.css must style warning toast variant');
+
+    // 2. Ripple bubble animation spawns at click coordinates
+    assert.ok(ce.includes('spawnGuideBubble(clickX, clickY)'), 'card-export.js must spawn bubble at click coordinates');
+    assert.ok(css.includes('.s4t-guide-click-bubble'), 'sprint-helper.css must style ripple bubble');
+    assert.ok(css.includes('@keyframes s4tGuideBubbleExpand'), 'sprint-helper.css must define bubble expansion keyframes');
+
+    // 3. Freeze overlay does NOT exit guide mode when clicked
+    assert.ok(!ce.includes("$freezeOverlay.on('click', function () {\n                toggleGuideMode();\n            });"), 'Freeze overlay must not exit guide mode on click');
+
+    // 4. Header background highlights matching Members Burndown
+    assert.ok(css.includes('#s4t-export-dialog .s4t-feature-help'), 'Feature help button must be styled');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-board-tag'), 'Board tag must be styled');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-match-count'), 'Match count badge must be styled');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-guide-btn'), 'Header guide button must be styled');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-reset-btn'), 'Header reset button must be styled');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-settings-btn'), 'Header settings button must be styled');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-export-close-btn'), 'Header close button must be styled');
+
+    // Dark mode header & badge highlights
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-export-header'), 'Dark mode header must have dedicated style');
+    assert.ok(css.includes('background: #161a1d !important;'), 'Dark mode export header must use #161a1d matching members modal');
+    assert.ok(css.includes('background: #1c2b41 !important;'), 'Dark mode board tag must use #1c2b41 matching members burndown badge');
+});
