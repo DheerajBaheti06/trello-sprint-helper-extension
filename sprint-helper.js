@@ -2063,12 +2063,14 @@ function checkExport() {
     if ($('.pop-over-list').find('.js-export-excel').length) return;
     if ($('.js-export-excel:visible').length) return;
 
+    var excelIconSvg = '<svg class="s4t-menu-excel-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>';
+
     // 1. Legacy Trello selector (.pop-over-list .js-export-json)
     var $js_btn = $('.pop-over-list, .pop-over').find('.js-export-json');
     var $ul = $js_btn.closest('ul:visible');
     if ($js_btn.length && $ul.length) {
         $js_btn.parent().after($('<li>').append(
-            $excel_btn = $('<a href="#" target="_blank" class="js-export-excel" title="Open downloaded file with Excel">Excel</a>')
+            $excel_btn = $('<a href="#" target="_blank" class="js-export-excel s4t-menu-excel-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></a>')
                 .click(showExcelExport)
         ));
         return;
@@ -2112,7 +2114,7 @@ function checkExport() {
 
         var $liContainer = $modernJson.closest('li');
         if ($liContainer.length) {
-            $excel_btn = $('<a href="#" target="_blank" class="js-export-excel" id="s4t-excel-export-menu-item" title="Open downloaded file with Excel">Excel</a>')
+            $excel_btn = $('<a href="#" target="_blank" class="js-export-excel s4t-menu-excel-item" id="s4t-excel-export-menu-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></a>')
                 .click(showExcelExport);
             var existingClasses = $modernJson.attr('class');
             if (existingClasses) {
@@ -2123,11 +2125,11 @@ function checkExport() {
             return;
         }
 
-        $excel_btn = $('<button type="button" class="js-export-excel" id="s4t-excel-export-menu-item" title="Open downloaded file with Excel"><span>Excel</span></button>')
+        $excel_btn = $('<button type="button" class="js-export-excel s4t-menu-excel-item" id="s4t-excel-export-menu-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></button>')
             .click(showExcelExport);
         var btnClasses = $modernJson.attr('class');
         if (btnClasses) {
-            $excel_btn.attr('class', btnClasses + ' js-export-excel');
+            $excel_btn.attr('class', btnClasses + ' js-export-excel s4t-menu-excel-item');
         }
         $modernJson.after($excel_btn);
         return;
@@ -2138,7 +2140,7 @@ function checkExport() {
     if ($printExportBtn.length) {
         var $peLi = $printExportBtn.closest('li');
         if ($peLi.length && !$peLi.parent().find('.s4t-menu-excel-export').length) {
-            var $menuExcel = $('<a href="#" target="_blank" class="s4t-menu-excel-export js-export-excel" title="Open downloaded file with Excel">Excel</a>')
+            var $menuExcel = $('<a href="#" target="_blank" class="s4t-menu-excel-export js-export-excel s4t-menu-excel-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></a>')
                 .click(showExcelExport);
             var peClasses = $printExportBtn.attr('class');
             if (peClasses) $menuExcel.addClass(peClasses);

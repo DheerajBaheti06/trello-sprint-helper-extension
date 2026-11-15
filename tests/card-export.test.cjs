@@ -1220,5 +1220,50 @@ test('card-export: modern Trello export menu insertion, PO dot labels validation
     assert.ok(ce.includes("latestDotLabels = s4tGetDotLabels(data);"), 'setupLookup must dynamically refresh PO options from fresh data');
 });
 
+test('card-export: CS Owner default values unfilled, Excel menu enhancement, and input drag isolation', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+    const sh = fs.readFileSync('sprint-helper.js', 'utf8');
+
+    // 1. CS Owner defaults to unfilled (empty customOptions) just like Product Owner
+    assert.ok(ce.includes("{ id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: '' }"), 'DEFAULT_COLUMNS must have c_cs_owner customOptions unfilled');
+    assert.ok(ce.includes("{ id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: '' }"), 'DEFAULT_COLUMNS must have c_po_owner customOptions unfilled');
+
+    // Placeholder must NOT be modified
+    assert.ok(ce.includes("var customPlaceholder = isPoCol ? 'e.g. Prapti, Kashvi' : 'e.g. In Progress, Blocked, Ready for QA';"), 'customPlaceholder must stay unchanged');
+
+    // CS Owner validation errors and toast messages
+    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in CS Owner options before copying table.');"), 'Copy button must show CS Owner specific error toast');
+    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in CS Owner options before downloading file.');"), 'Download button must show CS Owner specific error toast');
+    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in CS Owner options before choosing export format.');"), 'Format item must show CS Owner specific error toast');
+
+    // 2. Excel menu item in three dots is enhanced with icon and 'Export as Excel'
+    assert.ok(sh.includes("class=\"s4t-menu-excel-svg\""), 'sprint-helper.js must inject s4t-menu-excel-svg icon');
+    assert.ok(sh.includes("<span class=\"s4t-menu-excel-text\">Export as Excel</span>"), 'sprint-helper.js must label menu item Export as Excel');
+    assert.ok(css.includes(".js-export-excel.s4t-menu-excel-item"), 'sprint-helper.css must style .js-export-excel.s4t-menu-excel-item');
+    assert.ok(css.includes(".s4t-menu-excel-svg") && css.includes("color: #107c41 !important;"), 'sprint-helper.css must style excel icon in brand green');
+
+    // 3. Column drag is allowed from anywhere on header card except inputs, and drop repositions columns
+    assert.ok(ce.includes("headerInput.attr('draggable', 'false');"), 'headerInput must have draggable false attribute');
+    assert.ok(ce.includes("customInput.on('dragstart', function (e) {\n                    e.stopPropagation();\n                    return false;\n                });"), 'customInput must stop dragstart propagation');
+    assert.ok(ce.includes("if (target && target.closest && target.closest('input, textarea, select, button, .s4t-custom-dropdown'))"), 'dragstart must cancel when interacting with inputs/controls');
+    assert.ok(ce.includes("state.columns.splice(fromIdx, 1)[0]") && ce.includes("state.columns.splice(toIdx, 0, movedCol)"), 'drop must reposition column in state.columns');
+    assert.ok(ce.includes("s4tCleanLegacyCsOwner"), 'CS Owner must use s4tCleanLegacyCsOwner to clean legacy presets');
+
+    // CSS ensures text selection and text cursor inside inputs, and dragover child pointer-events isolation
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-header-input') && css.includes('user-select: text !important;') && css.includes('cursor: text !important;'), 'header input must allow text selection');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-custom-options-input') && css.includes('user-select: text !important;') && css.includes('cursor: text !important;'), 'custom options input must allow text selection');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-drag-handle') && css.includes('user-select: none !important;') && css.includes('cursor: grab !important;'), 'drag handle must have grab cursor and user-select none');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-col-dragover *') && css.includes('pointer-events: none !important;'), 'dragover must disable child pointer events to prevent drop cancellations');
+
+    // 4. Input selection isolation and directional drop indicator bar enhancements
+    assert.ok(ce.includes("headerInput.on('mousedown focus', function () {\n                    th.attr('draggable', 'false');\n                });"), 'headerInput must reset th draggable to false on mousedown/focus');
+    assert.ok(ce.includes("customInput.on('mousedown focus', function () {\n                    th.attr('draggable', 'false');\n                });"), 'customInput must reset th draggable to false on mousedown/focus');
+    assert.ok(ce.includes("var isAfter = relX > (rect.width / 2);"), 'dragover must compute whether cursor is on left or right half of column');
+    assert.ok(ce.includes("addTh.on('dragenter dragover', function (e) {") && ce.includes("addTh.on('drop', function (e) {"), 'addTh must support drop to place column at the end');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-before::before') && css.includes('#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-after::after'), 'CSS must include vertical drop indicator lines');
+    assert.ok(css.includes('#s4t-export-dialog.s4t-is-dragging-col,') && css.includes('cursor: grabbing !important;'), 'active drag state must set grabbing cursor');
+});
+
 
 

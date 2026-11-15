@@ -47,7 +47,7 @@
         { id: 'c_mgr_conf', header: 'Mgr Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
         { id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: '' },
         { id: 'c_po_conf', header: 'Product Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
-        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: 'Harshali, Tanisha' },
+        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: '' },
         { id: 'c_cs_conf', header: 'CS Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
         { id: 'c_risk', header: 'Risk (Comments)', source: 'blank', cellType: 'text' },
         { id: 'c_resolution', header: 'Resolution (Comments)', source: 'blank', cellType: 'text' }
@@ -69,6 +69,18 @@
             }
         });
         return deduplicated;
+    }
+
+    function s4tIsCsOwnerCol(col) {
+        if (!col) return false;
+        return col.id === 'c_cs_owner' || (col.header && col.header.trim().toLowerCase() === 'cs owner');
+    }
+
+    function s4tCleanLegacyCsOwner(col) {
+        if (!col || !s4tIsCsOwnerCol(col)) return;
+        if (!col.userFilled || !col.customOptions || /harshali|tanisha|cs member|qa|tech lead/i.test(col.customOptions)) {
+            col.customOptions = '';
+        }
     }
 
     function s4tGetDotLabels(boardData) {
@@ -637,6 +649,10 @@
                     c.customOptions = dotLabelsStr;
                 }
             }
+            // CS Owner column starts unfilled just like Product Owner until filled once by user
+            if (s4tIsCsOwnerCol(c)) {
+                s4tCleanLegacyCsOwner(c);
+            }
         });
 
         var overlay = $('<div id="s4t-export-overlay" class="s4t-modal-backdrop" role="presentation">');
@@ -925,8 +941,12 @@
                 var c = state.columns[i];
                 if (!c.hidden && isCustomDtypeMissing(c)) {
                     var isPo = c.source === 'product_owner' || (c.header && c.header.trim().toLowerCase() === 'product owner') || c.id === 'c_po_owner';
+                    var isCs = (c.header && c.header.trim().toLowerCase() === 'cs owner') || c.id === 'c_cs_owner';
                     if (isPo) {
                         return { type: 'missing_po', col: c, msg: '⚠️ Required: Please fill in Product Owner options before exporting.' };
+                    }
+                    if (isCs) {
+                        return { type: 'missing_cs', col: c, msg: '⚠️ Required: Please fill in CS Owner options before exporting.' };
                     }
                     return { type: 'missing_custom', col: c, msg: '⚠️ Required: Please fill in custom options before exporting.' };
                 }
@@ -1196,6 +1216,9 @@
                         c.customOptions = '';
                     }
                 }
+                if (s4tIsCsOwnerCol(c)) {
+                    s4tCleanLegacyCsOwner(c);
+                }
             });
 
             updateFilteredCards();
@@ -1347,6 +1370,14 @@
                 var headerInput = $('<input type="text" class="s4t-sheet-header-input" placeholder="Column Header" aria-label="Header Name">')
                     .val(col.header || '')
                     .prop('readonly', isHidden);
+                headerInput.attr('draggable', 'false');
+                headerInput.on('dragstart', function (e) {
+                    e.stopPropagation();
+                    return false;
+                });
+                headerInput.on('mousedown focus', function () {
+                    th.attr('draggable', 'false');
+                });
                 if (isHidden) {
                     headerInput.attr('tabindex', '-1').attr('title', 'Column is hidden from export (read-only)');
                 }
@@ -1423,12 +1454,22 @@
                     typeSelect.append(opt);
                 });
 
+                if (s4tIsCsOwnerCol(col)) {
+                    s4tCleanLegacyCsOwner(col);
+                }
                 var isPoCol = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
                 var customPlaceholder = isPoCol ? 'e.g. Prapti, Kashvi' : 'e.g. In Progress, Blocked, Ready for QA';
-                var customInput = $('<input type="text" class="s4t-sheet-custom-options-input" placeholder="' + customPlaceholder + '" data-tooltip="Comma-separated custom dropdown options" aria-label="Custom dropdown values">')
+                var customInput = $('<input type="text" class="s4t-sheet-custom-options-input" placeholder="' + customPlaceholder + '" data-tooltip="Comma-separated custom dropdown options" aria-label="Custom dropdown values" draggable="false">')
                     .val(col.customOptions || '')
                     .prop('hidden', currentType !== 'custom_select')
                     .prop('readonly', isHidden);
+                customInput.on('dragstart', function (e) {
+                    e.stopPropagation();
+                    return false;
+                });
+                customInput.on('mousedown focus', function () {
+                    th.attr('draggable', 'false');
+                });
                 if (isHidden) {
                     customInput.attr('tabindex', '-1');
                 }
@@ -1438,7 +1479,9 @@
                     if (col.cellType === 'custom_select' && isMissing) {
                         customInput.addClass('s4t-input-required-error');
                         var isPo = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
-                        customInput.attr('data-tooltip', isPo ? 'Required: Enter Product Owner options (board has no dot labels)' : 'Required: Enter comma-separated dropdown options');
+                        var isCs = (col.header && col.header.trim().toLowerCase() === 'cs owner') || col.id === 'c_cs_owner';
+                        var tip = isPo ? 'Required: Enter Product Owner options (board has no dot labels)' : (isCs ? 'Required: Enter CS Owner options' : 'Required: Enter comma-separated dropdown options');
+                        customInput.attr('data-tooltip', tip);
                     } else {
                         customInput.removeClass('s4t-input-required-error');
                         customInput.attr('data-tooltip', 'Comma-separated custom dropdown options');
@@ -1450,6 +1493,9 @@
                 customInput.on('input', function () {
                     if (isHidden) return;
                     col.customOptions = $(this).val();
+                    if (s4tIsCsOwnerCol(col)) {
+                        col.userFilled = !!(col.customOptions && col.customOptions.trim());
+                    }
                     validateCustomOptions();
                     updateActionButtonsState();
                     state.previewDirty = true;
@@ -1528,6 +1574,55 @@
                 }, 10);
             });
             addTh.append(addBtn);
+
+            addTh.on('dragenter dragover', function (e) {
+                e.preventDefault();
+                if (draggedIdx === null) return false;
+                if (e.originalEvent && e.originalEvent.dataTransfer) {
+                    e.originalEvent.dataTransfer.dropEffect = 'move';
+                }
+                dialog.find('.s4t-sheet-th').removeClass('s4t-col-dragover s4t-col-drop-before s4t-col-drop-after');
+                $(this).addClass('s4t-col-dragover s4t-col-drop-before');
+                return false;
+            });
+
+            addTh.on('dragleave', function (e) {
+                var rect = this.getBoundingClientRect();
+                var oe = e.originalEvent;
+                if (oe && (oe.clientX < rect.left || oe.clientX >= rect.right || oe.clientY < rect.top || oe.clientY >= rect.bottom)) {
+                    $(this).removeClass('s4t-col-dragover s4t-col-drop-before');
+                }
+            });
+
+            addTh.on('drop', function (e) {
+                e.preventDefault();
+                if (e.originalEvent && e.originalEvent.stopPropagation) {
+                    e.originalEvent.stopPropagation();
+                }
+                dialog.removeClass('s4t-is-dragging-col');
+                dialog.find('.s4t-sheet-th, .s4t-sheet-th-add').removeClass('s4t-col-dragover s4t-col-dragging s4t-col-drop-before s4t-col-drop-after');
+
+                var fromIdx = draggedIdx;
+                if ((fromIdx === null || isNaN(fromIdx)) && e.originalEvent && e.originalEvent.dataTransfer) {
+                    var dt = e.originalEvent.dataTransfer.getData('text/col-idx') || e.originalEvent.dataTransfer.getData('text/plain');
+                    if (dt !== '') fromIdx = parseInt(dt, 10);
+                }
+                if (fromIdx !== null && !isNaN(fromIdx) && fromIdx >= 0 && fromIdx < state.columns.length) {
+                    var toIdx = state.columns.length - 1;
+                    if (fromIdx !== toIdx) {
+                        var movedCol = state.columns.splice(fromIdx, 1)[0];
+                        state.columns.splice(toIdx, 0, movedCol);
+                        state.previewDirty = true;
+                        saveConfig();
+                        renderSheetTableContent();
+                        updateColumnsCountBadge();
+                        updateActionButtonsState();
+                    }
+                }
+                draggedIdx = null;
+                return false;
+            });
+
             trHead.append(addTh);
 
             thead.append(trHead);
@@ -1757,8 +1852,12 @@
                         td.append(custSel);
                         attachDropdownHover(custSel);
                     } else if (col.source === 'blank') {
-                        var cellInp = $('<input type="text" class="s4t-sheet-cell-input" placeholder="—" aria-label="' + s4tEscapeHtml(col.header || 'Comment') + '">')
+                        var cellInp = $('<input type="text" class="s4t-sheet-cell-input" placeholder="—" aria-label="' + s4tEscapeHtml(col.header || 'Comment') + '" draggable="false">')
                             .val(val || '');
+                        cellInp.on('dragstart', function (e) {
+                            e.stopPropagation();
+                            return false;
+                        });
                         cellInp.on('input change', function () {
                             state.editedCells = state.editedCells || {};
                             state.editedCells[cellKey] = $(this).val();
@@ -1794,45 +1893,147 @@
                 th.attr('draggable', 'false');
                 return;
             }
+
+            // Keep draggable false by default so that clicking or selecting text in inputs
+            // never initiates an HTML5 drag on the parent column.
+            th.attr('draggable', 'false');
+
+            var isDragging = false;
+
+            // Only enable draggable on TH when mouse is pressed on a non-input area of the card
+            th.on('mousedown', function (e) {
+                if (col && col.hidden) return;
+                var target = e.target;
+                if (target && target.closest && target.closest('input, textarea, select, button, .s4t-custom-dropdown, .s4t-custom-dropdown-trigger, .s4t-custom-dropdown-menu, .s4t-sheet-col-hide, .s4t-sheet-col-del')) {
+                    th.attr('draggable', 'false');
+                    return;
+                }
+                th.attr('draggable', 'true');
+            });
+
+            // Revert draggable to false if mouse is released or leaves without dragging
+            th.on('mouseup mouseleave', function () {
+                if (!isDragging && draggedIdx === null) {
+                    th.attr('draggable', 'false');
+                }
+            });
+
+            // Ensure draggable remains strictly false whenever hovering or focusing input elements
+            th.find('input, textarea, select, button, .s4t-custom-dropdown').on('mouseenter focus mousedown', function () {
+                th.attr('draggable', 'false');
+            });
+
             th.on('dragstart', function (e) {
+                var target = e.target;
+                if (target && target.closest && target.closest('input, textarea, select, button, .s4t-custom-dropdown')) {
+                    e.preventDefault();
+                    if (e.originalEvent && e.originalEvent.stopPropagation) {
+                        e.originalEvent.stopPropagation();
+                    }
+                    th.attr('draggable', 'false');
+                    return false;
+                }
+                if (th.attr('draggable') !== 'true') {
+                    e.preventDefault();
+                    return false;
+                }
+                isDragging = true;
                 draggedIdx = idx;
-                $(this).addClass('s4t-col-dragging');
+                dialog.addClass('s4t-is-dragging-col');
+                if (window.requestAnimationFrame) {
+                    window.requestAnimationFrame(function () {
+                        th.addClass('s4t-col-dragging');
+                    });
+                } else {
+                    setTimeout(function () {
+                        th.addClass('s4t-col-dragging');
+                    }, 0);
+                }
                 if (e.originalEvent && e.originalEvent.dataTransfer) {
                     e.originalEvent.dataTransfer.setData('text/plain', String(idx));
+                    e.originalEvent.dataTransfer.setData('text/col-idx', String(idx));
                     e.originalEvent.dataTransfer.effectAllowed = 'move';
                 }
             });
 
             th.on('dragend', function () {
-                $(this).removeClass('s4t-col-dragging');
-                dialog.find('.s4t-sheet-th').removeClass('s4t-col-dragover');
+                draggedIdx = null;
+                isDragging = false;
+                dialog.removeClass('s4t-is-dragging-col');
+                th.attr('draggable', 'false');
+                dialog.find('.s4t-sheet-th, .s4t-sheet-th-add').removeClass('s4t-col-dragging s4t-col-dragover s4t-col-drop-before s4t-col-drop-after');
             });
 
-            th.on('dragover', function (e) {
+            th.on('dragenter dragover', function (e) {
                 e.preventDefault();
+                if (draggedIdx === null) return false;
                 if (e.originalEvent && e.originalEvent.dataTransfer) {
                     e.originalEvent.dataTransfer.dropEffect = 'move';
                 }
+
+                var rect = this.getBoundingClientRect();
+                var clientX = (e.clientX !== undefined && e.clientX !== 0) ? e.clientX : (e.originalEvent && e.originalEvent.clientX ? e.originalEvent.clientX : 0);
+                var relX = clientX - rect.left;
+                var isAfter = relX > (rect.width / 2);
+
+                dialog.find('.s4t-sheet-th, .s4t-sheet-th-add').removeClass('s4t-col-drop-before s4t-col-drop-after');
+
                 $(this).addClass('s4t-col-dragover');
+                if (isAfter) {
+                    $(this).addClass('s4t-col-drop-after');
+                } else {
+                    $(this).addClass('s4t-col-drop-before');
+                }
+                return false;
             });
 
-            th.on('dragleave', function () {
-                $(this).removeClass('s4t-col-dragover');
+            th.on('dragleave', function (e) {
+                var rect = this.getBoundingClientRect();
+                var oe = e.originalEvent;
+                if (oe && (oe.clientX < rect.left || oe.clientX >= rect.right || oe.clientY < rect.top || oe.clientY >= rect.bottom)) {
+                    $(this).removeClass('s4t-col-dragover s4t-col-drop-before s4t-col-drop-after');
+                }
             });
 
             th.on('drop', function (e) {
                 e.preventDefault();
-                $(this).removeClass('s4t-col-dragover');
+                if (e.originalEvent && e.originalEvent.stopPropagation) {
+                    e.originalEvent.stopPropagation();
+                }
+                var isAfter = $(this).hasClass('s4t-col-drop-after');
+                dialog.removeClass('s4t-is-dragging-col');
+                dialog.find('.s4t-sheet-th, .s4t-sheet-th-add').removeClass('s4t-col-dragover s4t-col-dragging s4t-col-drop-before s4t-col-drop-after');
+                th.attr('draggable', 'false');
+
                 var fromIdx = draggedIdx;
-                var toIdx = idx;
-                if (fromIdx !== null && fromIdx !== toIdx && fromIdx >= 0 && toIdx >= 0) {
-                    var movedCol = state.columns.splice(fromIdx, 1)[0];
-                    state.columns.splice(toIdx, 0, movedCol);
-                    state.previewDirty = true;
-                    saveConfig();
-                    renderSheetTableContent();
+                if ((fromIdx === null || isNaN(fromIdx)) && e.originalEvent && e.originalEvent.dataTransfer) {
+                    var dt = e.originalEvent.dataTransfer.getData('text/col-idx') || e.originalEvent.dataTransfer.getData('text/plain');
+                    if (dt !== '') fromIdx = parseInt(dt, 10);
+                }
+                var targetTh = $(this).closest('.s4t-sheet-th');
+                var targetIdx = (targetTh.length && targetTh.attr('data-col-idx') !== undefined) ? parseInt(targetTh.attr('data-col-idx'), 10) : idx;
+
+                if (fromIdx !== null && !isNaN(fromIdx) && targetIdx !== null && !isNaN(targetIdx) && fromIdx >= 0 && targetIdx >= 0 && fromIdx < state.columns.length && targetIdx < state.columns.length) {
+                    var toIdx = targetIdx;
+                    if (fromIdx < targetIdx) {
+                        toIdx = isAfter ? targetIdx : (targetIdx - 1);
+                    } else if (fromIdx > targetIdx) {
+                        toIdx = isAfter ? (targetIdx + 1) : targetIdx;
+                    }
+
+                    if (fromIdx !== toIdx && toIdx >= 0 && toIdx < state.columns.length) {
+                        var movedCol = state.columns.splice(fromIdx, 1)[0];
+                        state.columns.splice(toIdx, 0, movedCol);
+                        state.previewDirty = true;
+                        saveConfig();
+                        renderSheetTableContent();
+                        updateColumnsCountBadge();
+                        updateActionButtonsState();
+                    }
                 }
                 draggedIdx = null;
+                isDragging = false;
+                return false;
             });
         }
 
@@ -2249,6 +2450,8 @@
                     dialog.find('.s4t-input-required-error:first').focus();
                     if (valErr.type === 'missing_po') {
                         showToast('⚠️ Required: Please fill in Product Owner options before copying table.');
+                    } else if (valErr.type === 'missing_cs') {
+                        showToast('⚠️ Required: Please fill in CS Owner options before copying table.');
                     } else {
                         showToast('⚠️ Required: Please fill in custom options before copying table.');
                     }
@@ -2324,6 +2527,8 @@
                     dialog.find('.s4t-input-required-error:first').focus();
                     if (valErr.type === 'missing_po') {
                         showToast('⚠️ Required: Please fill in Product Owner options before choosing export format.');
+                    } else if (valErr.type === 'missing_cs') {
+                        showToast('⚠️ Required: Please fill in CS Owner options before choosing export format.');
                     } else {
                         showToast('⚠️ Required: Please fill in custom options before choosing export format.');
                     }
@@ -2347,6 +2552,8 @@
                     dialog.find('.s4t-input-required-error:first').focus();
                     if (valErr.type === 'missing_po') {
                         showToast('⚠️ Required: Please fill in Product Owner options before downloading file.');
+                    } else if (valErr.type === 'missing_cs') {
+                        showToast('⚠️ Required: Please fill in CS Owner options before downloading file.');
                     } else {
                         showToast('⚠️ Required: Please fill in custom options before downloading file.');
                     }

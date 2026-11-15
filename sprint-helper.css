@@ -3187,16 +3187,87 @@ textarea[data-testid="card-name-input"],
     border-color: #10b981 !important;
 }
 
+#s4t-export-dialog.s4t-is-dragging-col,
+#s4t-export-dialog.s4t-is-dragging-col * {
+    cursor: grabbing !important;
+}
+
+#s4t-export-dialog.s4t-is-dragging-col .s4t-sheet-th-card:hover {
+    transform: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th,
+#s4t-export-dialog .s4t-sheet-th-add {
+    position: sticky !important;
+    top: 0 !important;
+}
+
+/* Precision Vertical Drop Insertion Line */
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-before::before,
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-after::after,
+#s4t-export-dialog .s4t-sheet-th-add.s4t-col-drop-before::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: #059669 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.8), 0 0 0 1px #ffffff !important;
+    z-index: 9999 !important;
+    pointer-events: none !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-before::before,
+#s4t-export-dialog .s4t-sheet-th-add.s4t-col-drop-before::before {
+    left: -2px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-after::after {
+    right: -2px !important;
+}
+
+/* Top Marker Dot for Drop Insertion Line */
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-before::after,
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-after::before,
+#s4t-export-dialog .s4t-sheet-th-add.s4t-col-drop-before::after {
+    content: '' !important;
+    position: absolute !important;
+    width: 8px !important;
+    height: 8px !important;
+    background: #059669 !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 50% !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+    z-index: 10000 !important;
+    pointer-events: none !important;
+    top: -4px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-before::after,
+#s4t-export-dialog .s4t-sheet-th-add.s4t-col-drop-before::after {
+    left: -4px !important;
+}
+
+#s4t-export-dialog .s4t-sheet-th.s4t-col-drop-after::before {
+    right: -4px !important;
+}
+
 #s4t-export-dialog .s4t-col-dragging .s4t-sheet-th-card {
     opacity: 0.45 !important;
     border: 2px dashed #059669 !important;
-    transform: scale(0.98) !important;
+    background: rgba(240, 253, 244, 0.7) !important;
+    transform: scale(0.97) !important;
 }
 
 #s4t-export-dialog .s4t-col-dragover .s4t-sheet-th-card {
     background: #d1fae5 !important;
     border-color: #059669 !important;
-    box-shadow: 0 0 0 2px #059669 !important;
+    box-shadow: 0 0 0 2px #059669, 0 8px 20px rgba(16, 185, 129, 0.15) !important;
+}
+
+#s4t-export-dialog .s4t-col-dragover * {
+    pointer-events: none !important;
 }
 
 #s4t-export-dialog .s4t-sheet-th.s4t-sheet-th-hidden,
@@ -3269,6 +3340,8 @@ textarea[data-testid="card-name-input"],
     padding: 2px 4px !important;
     border-radius: 4px !important;
     transition: background 0.15s ease, color 0.15s ease !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 #s4t-export-dialog .s4t-sheet-drag-handle:hover {
@@ -3378,6 +3451,9 @@ textarea[data-testid="card-name-input"],
     font-family: 'Times New Roman', Times, serif !important;
     text-align: center !important;
     box-shadow: inset 0 1px 2px rgba(16, 185, 129, 0.04) !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    cursor: text !important;
 }
 
 #s4t-export-dialog .s4t-sheet-header-input:hover {
@@ -3874,6 +3950,9 @@ textarea[data-testid="card-name-input"],
     outline: none !important;
     transition: all 0.15s ease !important;
     font-family: 'Times New Roman', Times, serif !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    cursor: text !important;
 }
 
 #s4t-export-dialog .s4t-sheet-custom-options-input:hover {
@@ -4149,6 +4228,9 @@ textarea[data-testid="card-name-input"],
     box-sizing: border-box !important;
     text-align: center !important;
     transition: border-color 0.15s ease, background-color 0.15s ease !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    cursor: text !important;
 }
 
 #s4t-export-dialog .s4t-sheet-cell-input::placeholder {
@@ -6278,4 +6360,26 @@ textarea[data-testid="card-name-input"],
 .dark-theme #s4t-export-dialog .s4t-btn-subtle:hover {
     background: #323940 !important;
     color: #ffffff !important;
+}
+
+/* Trello Menu 'Export as Excel' Item Enhancement */
+.js-export-excel.s4t-menu-excel-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+}
+
+.s4t-menu-excel-svg {
+    flex-shrink: 0 !important;
+    width: 16px !important;
+    height: 16px !important;
+    color: #107c41 !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+.s4t-menu-excel-text {
+    font-weight: 500 !important;
 }
