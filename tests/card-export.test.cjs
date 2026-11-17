@@ -540,15 +540,14 @@ test('card-export: guide banner popover prevents upward UI shift, validation dis
     assert.ok(css.includes('#s4t-export-dialog .s4t-cloud-tooltip'), 'sprint-helper.css must style cloudy tooltip with blur and shadow');
     assert.ok(css.includes('#s4t-export-dialog .s4t-dirty-dark-card'), 'sprint-helper.css must style dark theme dirty card');
 
-    // 2. Action buttons validation state and error blocking for copy / download
+    // 2. Action buttons validation state and error blocking for download
     assert.ok(ce.includes('function hasValidationErrors()'), 'card-export.js must define hasValidationErrors helper');
     assert.ok(ce.includes('function updateActionButtonsState()'), 'card-export.js must define updateActionButtonsState helper');
-    assert.ok(ce.includes("copyBtn.addClass('s4t-btn-disabled')"), 'Copy button must receive s4t-btn-disabled on error');
+    assert.ok(!ce.includes("id=\"s4t-btn-copy-tsv\""), 'Copy for Google Sheets button must be removed');
     assert.ok(ce.includes("downloadBtn.addClass('s4t-btn-disabled')"), 'Download button must receive s4t-btn-disabled on error');
     assert.ok(css.includes('#s4t-export-dialog .s4t-btn.s4t-btn-disabled'), 'sprint-helper.css must style s4t-btn-disabled with reduced opacity and not-allowed cursor');
-    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in custom options before copying table.')"), 'Copy button must block and show warning toast when required fields are unfilled');
     assert.ok(ce.includes("showToast('⚠️ Required: Please fill in custom options before downloading file.')"), 'Download button must block and show warning toast when required fields are unfilled');
-    assert.ok(ce.includes("dialog.find('.s4t-input-required-error:first').focus()"), 'Invalid input must be focused when attempting to download/copy with errors');
+    assert.ok(ce.includes("dialog.find('.s4t-input-required-error:first').focus()"), 'Invalid input must be focused when attempting to download with errors');
 
     // 3. Dropdowns open on single click and hover without double click
     assert.ok(ce.includes("attachDropdownHover(sourceSelect)"), 'Source select must have attachDropdownHover');
@@ -1203,7 +1202,6 @@ test('card-export: modern Trello export menu insertion, PO dot labels validation
 
     // 3. Product owner default column has empty customOptions and validates as required
     assert.ok(ce.includes("{ id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: '' }"), 'c_po_owner must default to blank customOptions');
-    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in Product Owner options before copying table.');"), 'Copy button must show PO specific error toast');
     assert.ok(ce.includes("showToast('⚠️ Required: Please fill in Product Owner options before downloading file.');"), 'Download button must show PO specific error toast');
 
     // 4. Hidden column cursor not-allowed and suppression of row striping/hover
@@ -1233,7 +1231,7 @@ test('card-export: CS Owner default values unfilled, Excel menu enhancement, and
     assert.ok(ce.includes("var customPlaceholder = isPoCol ? 'e.g. Prapti, Kashvi' : 'e.g. In Progress, Blocked, Ready for QA';"), 'customPlaceholder must stay unchanged');
 
     // CS Owner validation errors and toast messages
-    assert.ok(ce.includes("showToast('⚠️ Required: Please fill in CS Owner options before copying table.');"), 'Copy button must show CS Owner specific error toast');
+    assert.ok(!ce.includes("id=\"s4t-btn-copy-tsv\""), 'Copy for Google Sheets button must be removed');
     assert.ok(ce.includes("showToast('⚠️ Required: Please fill in CS Owner options before downloading file.');"), 'Download button must show CS Owner specific error toast');
     assert.ok(ce.includes("showToast('⚠️ Required: Please fill in CS Owner options before choosing export format.');"), 'Format item must show CS Owner specific error toast');
 
@@ -1326,8 +1324,8 @@ test('card-export: guide view scrolls preview to leftmost, spotlights unblurred 
     assert.ok(ce.includes("id: 'preview-card'"), 'Guide must include Live Preview CTA item');
     assert.ok(ce.includes("id: 'col-count'"), 'Guide must include Column Counter item');
     assert.ok(ce.includes("target: '#s4t-sheet-col-count'"), 'Guide column counter item must target #s4t-sheet-col-count');
-    assert.ok(ce.includes("id: 'copy-tsv'"), 'Guide must include Copy TSV item');
-    assert.ok(ce.includes("target: '#s4t-btn-copy-tsv'"), 'Guide copy item must target #s4t-btn-copy-tsv');
+    assert.ok(!ce.includes("id: 'copy-tsv'"), 'Guide copy item id copy-tsv must be removed');
+    assert.ok(!ce.includes("target: '#s4t-btn-copy-tsv'"), 'Guide copy item target must be removed');
     assert.ok(ce.includes("id: 'download-file'"), 'Guide must include Download Spreadsheet item');
     assert.ok(ce.includes("target: '.s4t-split-download-group'"), 'Guide download item must target .s4t-split-download-group');
 
@@ -1337,7 +1335,7 @@ test('card-export: guide view scrolls preview to leftmost, spotlights unblurred 
     assert.ok(ce.includes('s4t-guide-stem-line'), 'card-export.js must draw long-reach stem lines in SVG overlay');
     assert.ok(ce.includes('maxCardBottom'), 'card-export.js must measure physical bottom of column cards to prevent any row overlap');
     assert.ok(ce.includes('tier: 1') && ce.includes('tier: 2'), 'card-export.js must distribute column tooltips across two distinct vertical tiers');
-    assert.ok(ce.includes("left = dialogWidth - (tipW * 2) - 28;"), 'Copy button tooltip must offset from download tooltip to avoid footer overlap');
+    assert.ok(!ce.includes("left = dialogWidth - (tipW * 2) - 28;"), 'Copy button tooltip offset must be removed');
     assert.ok(ce.includes('gutterRoute: true'), 'COL 4 title must route stem line through side gutter to avoid passing through lower inputs');
     assert.ok(!ce.includes('s4t-cloud-icon">☁️'), 'Cloud icon ☁️ must be removed from all tooltip headers');
     assert.ok(!ce.includes('id="s4t-export-guide-btn" data-tooltip="Interactive Guide Tour"'), 'Floating guide button tooltip badge must be removed to prevent collision');
@@ -1422,7 +1420,6 @@ test('card-export: 3-step tour organization, clean tooltip copy, and single high
         { title: 'Custom Dropdown Options', desc: 'Enter comma-separated options to create cell dropdowns.' },
         { title: 'Live 20-Card Preview', desc: 'Preview formatted rows with your rules before exporting.' },
         { title: 'Active Column Count', desc: 'Total visible columns included in the export.' },
-        { title: 'Copy for Google Sheets', desc: 'Copy formatted TSV to paste directly into Google Sheets.' },
         { title: 'Download Spreadsheet', desc: 'Export as Excel (.xls), or click ▼ for CSV format.' }
     ];
 
@@ -1516,6 +1513,29 @@ test('card-export: exportCards feature preference completely hides three-dots me
     assert.ok(sh.includes('s4tCloseCardExport'), 'sprint-helper.js must call s4tCloseCardExport when exportCards is disabled');
     assert.ok(ce.includes('s4tCloseCardExport'), 'card-export.js must export s4tCloseCardExport');
 });
+
+test('card-export: smooth custom input typing, persistent CS owner, removed copy button and workflow rules guide', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const rules = fs.readFileSync('WORKFLOW-RULES.md', 'utf8');
+
+    // 1. Keystroke typing does not trigger renderSheetTableBody or mark preview dirty
+    assert.ok(!ce.includes("customInput.on('input', function () {\n                    if (isHidden) return;\n                    col.customOptions = $(this).val();\n                    if (s4tIsCsOwnerCol(col)) {\n                        col.userFilled = !!(col.customOptions && col.customOptions.trim());\n                    }\n                    validateCustomOptions();\n                    updateActionButtonsState();\n                    state.previewDirty = true;"), 'customInput input handler must not mark preview dirty on keystroke');
+    assert.ok(ce.includes("updatePreviewColumnDropdowns(idx, col.customOptions);"), 'customInput change handler must update preview dropdowns in place');
+
+    // 2. CS Owner customOptions are preserved and never wiped out by name regexes
+    assert.ok(!ce.includes('/harshali|tanisha/i'), 's4tCleanLegacyCsOwner must not use harshali/tanisha regex');
+    assert.ok(!ce.includes("if (s4tIsCsOwnerCol(col)) {\n                    s4tCleanLegacyCsOwner(col);\n                }"), 'renderSheetTableContent must not call s4tCleanLegacyCsOwner');
+
+    // 3. Copy for Google Sheets button and guide tooltip are completely removed
+    assert.ok(!ce.includes("id=\"s4t-btn-copy-tsv\""), '#s4t-btn-copy-tsv must be removed from dialog HTML');
+    assert.ok(!ce.includes("id: 'copy-tsv'"), 'copy-tsv must be removed from guideItems');
+    assert.ok(ce.includes("All Features (12 Tooltips)"), 'Guide tour must reflect 12 tooltips');
+
+    // 4. WORKFLOW-RULES.md includes the Export Cards guide
+    assert.ok(rules.includes("## Export Cards (Spreadsheet Designer)"), 'WORKFLOW-RULES.md must include Export Cards section');
+    assert.ok(rules.includes("Download Spreadsheet"), 'WORKFLOW-RULES.md must describe download options');
+});
+
 
 
 

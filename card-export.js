@@ -79,7 +79,7 @@
 
     function s4tCleanLegacyCsOwner(col) {
         if (!col || !s4tIsCsOwnerCol(col)) return;
-        if (!col.userFilled || !col.customOptions || /harshali|tanisha|cs member|qa|tech lead/i.test(col.customOptions)) {
+        if (col.customOptions && col.customOptions.includes('Product Owner, CS Member, QA, Tech Lead')) {
             col.customOptions = '';
         }
     }
@@ -1041,15 +1041,6 @@
                     step: 1
                 },
                 {
-                    id: 'copy-tsv',
-                    target: '#s4t-btn-copy-tsv',
-                    fallbackTarget: '.s4t-export-footer-buttons',
-                    title: 'Copy for Google Sheets',
-                    desc: 'Copy formatted TSV to paste directly into Google Sheets.',
-                    placement: 'top',
-                    step: 1
-                },
-                {
                     id: 'download-file',
                     target: '.s4t-split-download-group',
                     fallbackTarget: '#s4t-btn-main-download',
@@ -1186,10 +1177,6 @@
                     left = 14;
                     top = Math.round(targetTopY - tipH - 18);
                     arrowClass = 'arrow-bottom';
-                } else if (item.id === 'copy-tsv') {
-                    left = dialogWidth - (tipW * 2) - 28;
-                    top = Math.round(targetTopY - tipH - 12);
-                    arrowClass = 'arrow-bottom';
                 } else if (item.id === 'download-file') {
                     left = dialogWidth - tipW - 14;
                     top = Math.round(targetTopY - tipH - 12);
@@ -1301,7 +1288,7 @@
                 1: 'Step 1 of 3: Top Controls & Export',
                 2: 'Step 2 of 3: Column Configuration',
                 3: 'Step 3 of 3: Live Preview',
-                'all': 'All Features (13 Tooltips)'
+                'all': 'All Features (12 Tooltips)'
             };
             var currentTitle = stepTitles[currentGuideStep] || stepTitles[1];
             var isAll = (currentGuideStep === 'all');
@@ -1560,22 +1547,18 @@
         function updateActionButtonsState() {
             var valErr = getFirstValidationError();
             var hasErr = (valErr !== null);
-            var copyBtn = dialog.find('#s4t-btn-copy-tsv');
             var downloadBtn = dialog.find('#s4t-btn-main-download');
             var formatToggle = dialog.find('#s4t-btn-format-toggle');
             var splitGroup = dialog.find('.s4t-split-download-group');
             var formatMenu = dialog.find('#s4t-format-menu');
 
             if (hasErr) {
-                var copyTip = valErr.msg.replace('exporting.', 'copying table.').replace('export.', 'copying table.');
                 var downTip = valErr.msg.replace('exporting.', 'downloading file.').replace('export.', 'downloading file.');
-                copyBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', copyTip);
                 downloadBtn.addClass('s4t-btn-disabled').attr('aria-disabled', 'true').attr('data-tooltip', downTip);
                 formatToggle.addClass('s4t-btn-disabled').attr('aria-disabled', 'true');
                 splitGroup.addClass('s4t-group-disabled');
                 formatMenu.prop('hidden', true);
             } else {
-                copyBtn.removeClass('s4t-btn-disabled').removeAttr('aria-disabled').attr('data-tooltip', 'Copy tab-separated table to clipboard for instant Google Sheets paste');
                 downloadBtn.removeClass('s4t-btn-disabled').removeAttr('aria-disabled').removeAttr('data-tooltip');
                 formatToggle.removeClass('s4t-btn-disabled').removeAttr('aria-disabled');
                 splitGroup.removeClass('s4t-group-disabled');
@@ -1812,9 +1795,6 @@
                         c.customOptions = '';
                     }
                 }
-                if (s4tIsCsOwnerCol(c)) {
-                    s4tCleanLegacyCsOwner(c);
-                }
             });
 
             updateFilteredCards();
@@ -2007,6 +1987,10 @@
                             infoIcon.attr('data-tooltip', updatedBlank.desc);
                         }
                     }
+                    saveConfig();
+                });
+                headerInput.on('change', function () {
+                    if (isHidden) return;
                     state.previewDirty = true;
                     saveConfig();
                     renderDirtyIndicator();
@@ -2068,9 +2052,6 @@
                     typeSelect.append(opt);
                 });
 
-                if (s4tIsCsOwnerCol(col)) {
-                    s4tCleanLegacyCsOwner(col);
-                }
                 var isPoCol = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
                 var customPlaceholder = isPoCol ? 'e.g. Prapti, Kashvi' : 'e.g. In Progress, Blocked, Ready for QA';
                 var customInput = $('<input type="text" class="s4t-sheet-custom-options-input" placeholder="' + customPlaceholder + '" data-tooltip="Comma-separated custom dropdown options" aria-label="Custom dropdown values" draggable="false">')
@@ -2112,9 +2093,21 @@
                     }
                     validateCustomOptions();
                     updateActionButtonsState();
-                    state.previewDirty = true;
                     saveConfig();
-                    if (state.previewVisible) renderSheetTableBody();
+                });
+
+                customInput.on('change', function () {
+                    if (isHidden) return;
+                    col.customOptions = $(this).val();
+                    if (s4tIsCsOwnerCol(col)) {
+                        col.userFilled = !!(col.customOptions && col.customOptions.trim());
+                    }
+                    validateCustomOptions();
+                    updateActionButtonsState();
+                    saveConfig();
+                    if (state.previewVisible) {
+                        updatePreviewColumnDropdowns(idx, col.customOptions);
+                    }
                 });
 
                 if (isPoCol) {
@@ -2128,9 +2121,10 @@
                                 $(this).val(latestStr);
                                 validateCustomOptions();
                                 updateActionButtonsState();
-                                state.previewDirty = true;
                                 saveConfig();
-                                if (state.previewVisible) renderSheetTableBody();
+                                if (state.previewVisible) {
+                                    updatePreviewColumnDropdowns(idx, latestStr);
+                                }
                             }
                         }
                     });
@@ -2247,6 +2241,38 @@
             table.append(tbody);
             renderSheetTableBody();
             updateActionButtonsState();
+        }
+
+        function updatePreviewColumnDropdowns(colIdx, customOptions) {
+            var optList = s4tParseCustomOptions(customOptions);
+            var col = state.columns[colIdx];
+            if (!col) return;
+            var isPoCol = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
+            var placeholder = isPoCol ? '-- Select PO --' : '-- Select --';
+
+            dialog.find('#s4t-sheet-table tbody tr.s4t-sheet-row').each(function () {
+                var cell = $(this).children('td.s4t-sheet-cell').eq(colIdx);
+                var sel = cell.find('select.s4t-sheet-cell-select');
+                if (!sel.length) return;
+
+                var curVal = sel.val() || '';
+                sel.empty();
+                sel.append($('<option value="">').text(placeholder));
+
+                var hasMatched = false;
+                optList.forEach(function (optVal) {
+                    var opt = $('<option>').val(optVal).text(optVal);
+                    if (curVal && curVal.toLowerCase() === optVal.toLowerCase()) {
+                        opt.prop('selected', true);
+                        hasMatched = true;
+                    }
+                    sel.append(opt);
+                });
+
+                if (curVal && !hasMatched) {
+                    sel.val('');
+                }
+            });
         }
 
         function renderDirtyIndicator() {
@@ -3025,7 +3051,6 @@
                 '</div>',
                 '<div class="s4t-export-footer-status" id="s4t-export-toast" hidden></div>',
                 '<div class="s4t-export-footer-buttons">',
-                '  <button type="button" class="s4t-btn s4t-btn-secondary" id="s4t-btn-copy-tsv" data-tooltip="Copy tab-separated table to clipboard for instant Google Sheets paste">📋 Copy for Google Sheets</button>',
                 '  <div class="s4t-split-download-group">',
                 '    <button type="button" class="s4t-btn s4t-btn-primary" id="s4t-btn-main-download">📊 Download Excel (.xls)</button>',
                 '    <button type="button" class="s4t-btn s4t-btn-primary s4t-split-arrow" id="s4t-btn-format-toggle" data-tooltip="Select format (Excel / CSV)" aria-label="Select format" aria-haspopup="true" aria-expanded="false">▾</button>',
@@ -3058,39 +3083,6 @@
                     editedCells: state.editedCells || {}
                 };
             };
-
-            // Copy for Google Sheets (instant TSV copy of all cards)
-            dialog.find('#s4t-btn-copy-tsv').on('click', function () {
-                var valErr = getFirstValidationError();
-                if (valErr) {
-                    dialog.find('.s4t-input-required-error:first').focus();
-                    if (valErr.type === 'missing_po') {
-                        showToast('⚠️ Required: Please fill in Product Owner options before copying table.');
-                    } else if (valErr.type === 'missing_cs') {
-                        showToast('⚠️ Required: Please fill in CS Owner options before copying table.');
-                    } else {
-                        showToast('⚠️ Required: Please fill in custom options before copying table.');
-                    }
-                    return;
-                }
-                updateFilteredCards();
-                if (!state.filteredCards.length) {
-                    showToast('No cards to export with current exclusions.');
-                    return;
-                }
-                var $btn = $(this);
-                pulseButton($btn);
-                var tsv = s4tBuildExportTsv(state.columns, state.filteredCards, state.lookup, exportOpts());
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(tsv).then(function () {
-                        showToast('✓ Copied ' + state.filteredCards.length + ' cards to clipboard for Google Sheets! Press Ctrl+V in your sheet.');
-                    }).catch(function () {
-                        fallbackCopy(tsv);
-                    });
-                } else {
-                    fallbackCopy(tsv);
-                }
-            });
 
             // Toggle format menu (click, hover, and mousedown)
             var splitGroup = dialog.find('.s4t-split-download-group');
