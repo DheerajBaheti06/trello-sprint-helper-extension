@@ -59,7 +59,7 @@ Only the rules that can change your results. Match these conventions when settin
 | **Launch points** | Open from the Members Burndown modal (**Export Cards** button) or the board three-dots (`...`) menu under **Export as Excel**. | Interactive sheet designer opens with live matching cards count. |
 | **Column customization** | Drag column cards horizontally to reorder. Rename headers, choose Trello field sources (List, Title, Story Points, Due Date, Labels, Members, etc.), and select data format (`String`, `Devs`, `Custom`). | Set column to `Custom` and enter options like `High, Medium, Low`. |
 | **Product Owner & CS Owner** | Product Owner dropdown options automatically extract from labels ending in a dot (`.`). Custom dropdown options can be configured directly in the column card. | Label `Prapti.` extracts `Prapti` as a PO option. |
-| **Live Preview & Formats** | Generates a 20-card live preview table reflecting customized order and dropdown selections. Export as Excel (`.xls`) or CSV (`.csv`) via the download split button. | Click **Download Spreadsheet** or use dropdown for CSV. |
+| **Live Preview & Formats** | Generates a 20-card live preview table reflecting customized order and dropdown selections. Export as modern Excel (`.xlsx`), legacy Excel (`.xls`), or CSV (`.csv`) with native Data Validation dropdown selectors supported in LibreOffice Calc and Excel. | Click **Download Spreadsheet** or use dropdown for format choice. |
 | **Exclusions & Filters** | Use the Settings (⚙️) tab in the header to filter out specific lists, members, labels, or Not Sure lists from the exported cards. | Uncheck lists or members to omit them from the generated sheet. |
 
 

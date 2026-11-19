@@ -9,8 +9,10 @@
         root.s4tCloseCardExport = api.s4tCloseCardExport;
         root.s4tExportCardFields = api.s4tExportCardFields;
         root.s4tExtractFieldValue = api.s4tExtractFieldValue;
+        root.s4tGetEffectiveCellValue = api.s4tGetEffectiveCellValue;
         root.s4tBuildExportCsv = api.s4tBuildExportCsv;
         root.s4tBuildExportExcel = api.s4tBuildExportExcel;
+        root.s4tBuildExportXlsx = api.s4tBuildExportXlsx;
         root.s4tBuildExportTsv = api.s4tBuildExportTsv;
         root.s4tFilterAndSortCards = api.s4tFilterAndSortCards;
         root.s4tParseCustomOptions = api.s4tParseCustomOptions;
@@ -234,6 +236,12 @@
                 return '';
             }
             case 'members': {
+                if (Array.isArray(card.members) && card.members.length) {
+                    var mList = card.members.map(function (m) {
+                        return m ? (m.fullName || m.username || m.name || '') : '';
+                    }).filter(Boolean);
+                    if (mList.length) return mList.join(', ');
+                }
                 var memberIds = card.idMembers || [];
                 return memberIds.map(function (id) {
                     var m = membersById.get(id);
@@ -247,8 +255,8 @@
                 }
                 for (var pi = 0; pi < poLabels.length; pi++) {
                     var lName = (poLabels[pi].name || '').trim();
-                    if (lName.endsWith('.')) {
-                        return lName.replace(/\.+$/, '').trim();
+                    if (/[.．…]$/.test(lName)) {
+                        return lName.replace(/[.．…]+$/, '').trim();
                     }
                 }
                 return '';
@@ -441,6 +449,84 @@
         }
     }
 
+    function s4tGetEffectiveCellValue(card, col, lookup, options) {
+        if (!card || !col) return '';
+        var opts = options || {};
+        var cellKey = card.id + '_' + col.id;
+
+        // 1. Manual edit in preview table takes precedence
+        if (opts.editedCells && opts.editedCells[cellKey] !== undefined) {
+            return opts.editedCells[cellKey];
+        }
+
+        // 2. Direct extraction if column has an active data source (not blank)
+        var extracted = '';
+        if (col.source && col.source !== 'blank') {
+            extracted = s4tExtractFieldValue(card, col.source, lookup);
+            if (extracted !== '') {
+                return extracted;
+            }
+        }
+
+        var headerNorm = String(col.header || '').trim().toLowerCase();
+        var colId = String(col.id || '').trim().toLowerCase();
+        var listsById = (lookup && lookup.listsById) || new Map();
+        var targetList = listsById.get(card.idList);
+        var listName = targetList ? String(targetList.name || '').toLowerCase() : '';
+
+        // 3. Status column ('Going Live' / 'Not Going Live')
+        if (colId === 'c_status' || headerNorm === 'status') {
+            if (/\b(backlog|icebox|hold|dropped|deferred|not[\s_-]*sure|parked|cancelled|canceled)\b/i.test(listName)) {
+                return 'Not Going Live';
+            }
+            return 'Going Live';
+        }
+
+        // 4. Confidence columns ('High', 'Medium', 'Low', 'NA') -> default to 'High'
+        if (colId.includes('conf') || headerNorm.includes('confidence')) {
+            var confOpts = s4tParseCustomOptions(col.customOptions, 'High, Medium, Low, NA');
+            return confOpts[0] || 'High';
+        }
+
+        // 5. Product Owner column
+        if (colId === 'c_po_owner' || headerNorm === 'product owner' || col.source === 'product_owner') {
+            var poExtracted = s4tExtractFieldValue(card, 'product_owner', lookup);
+            if (poExtracted) return poExtracted;
+
+            var poOpts = s4tParseCustomOptions(col.customOptions);
+            if (poOpts.length > 0) return poOpts[0];
+
+            var boardData = (lookup && lookup.boardData) || (opts && opts.boardData);
+            var dotLabels = (opts && opts.dotLabels) || (boardData ? s4tGetDotLabels(boardData) : []);
+            if (dotLabels && dotLabels.length > 0) return dotLabels[0];
+
+            return '';
+        }
+
+        // 6. Dev Owner column
+        if (colId === 'c_dev_owner' || headerNorm === 'dev owner' || col.cellType === 'dev_select') {
+            var devExtracted = s4tExtractFieldValue(card, 'members', lookup);
+            if (devExtracted) return devExtracted;
+            if (opts.defaultDev) return opts.defaultDev;
+            return '';
+        }
+
+        // 7. CS Owner column
+        if (s4tIsCsOwnerCol(col)) {
+            var csOpts = s4tParseCustomOptions(col.customOptions);
+            if (csOpts.length > 0) return csOpts[0];
+            return '';
+        }
+
+        // 8. Any other custom_select column with configured options
+        if (col.cellType === 'custom_select' && col.customOptions) {
+            var generalOpts = s4tParseCustomOptions(col.customOptions);
+            if (generalOpts.length > 0) return generalOpts[0];
+        }
+
+        return '';
+    }
+
     function s4tBuildExportCsv(columns, cards, lookup, options) {
         var opts = options || {};
         var insertSeparator = !!opts.insertSeparatorRow;
@@ -463,10 +549,7 @@
                 prevGroup = grp;
             }
             var row = activeCols.map(function (c) {
-                var cellKey = card.id + '_' + c.id;
-                var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
-                    ? opts.editedCells[cellKey]
-                    : s4tExtractFieldValue(card, c.source, lookup);
+                var val = s4tGetEffectiveCellValue(card, c, lookup, opts);
                 var safeVal = s4tNeutralizeFormula(val);
                 return '"' + String(safeVal).replace(/"/g, '""') + '"';
             });
@@ -528,10 +611,7 @@
 
             s.push('<tr' + trClass + '>');
             activeCols.forEach(function (c) {
-                var cellKey = card.id + '_' + c.id;
-                var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
-                    ? opts.editedCells[cellKey]
-                    : s4tExtractFieldValue(card, c.source, lookup);
+                var val = s4tGetEffectiveCellValue(card, c, lookup, opts);
                 var extraStyle = '';
                 var valNorm = String(val || '').trim().toLowerCase();
                 if (valNorm === 'going live' || valNorm === 'high') {
@@ -570,16 +650,358 @@
                 prevGroup = grp;
             }
             var row = activeCols.map(function (c) {
-                var cellKey = card.id + '_' + c.id;
-                var val = (opts.editedCells && opts.editedCells[cellKey] !== undefined)
-                    ? opts.editedCells[cellKey]
-                    : s4tExtractFieldValue(card, c.source, lookup);
+                var val = s4tGetEffectiveCellValue(card, c, lookup, opts);
                 return s4tNeutralizeFormula(val).replace(/[\t\r\n]+/g, ' ');
             });
             lines.push(row.join('\t'));
         });
 
         return lines.join('\n');
+    }
+
+    function s4tEscapeXml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;')
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+    }
+
+    function s4tColToLetter(colIndex) {
+        var temp = colIndex + 1;
+        var letter = '';
+        while (temp > 0) {
+            var mod = (temp - 1) % 26;
+            letter = String.fromCharCode(65 + mod) + letter;
+            temp = Math.floor((temp - mod) / 26);
+        }
+        return letter;
+    }
+
+    function s4tStringToUtf8(str) {
+        if (typeof TextEncoder !== 'undefined') {
+            return new TextEncoder().encode(str);
+        }
+        if (typeof Buffer !== 'undefined') {
+            return new Uint8Array(Buffer.from(str, 'utf8'));
+        }
+        var utf8 = [];
+        for (var i = 0; i < str.length; i++) {
+            var charcode = str.charCodeAt(i);
+            if (charcode < 0x80) utf8.push(charcode);
+            else if (charcode < 0x800) {
+                utf8.push(0xc0 | (charcode >> 6), 0x80 | (charcode & 0x3f));
+            } else if (charcode < 0xd800 || charcode >= 0xe000) {
+                utf8.push(0xe0 | (charcode >> 12), 0x80 | ((charcode >> 6) & 0x3f), 0x80 | (charcode & 0x3f));
+            } else {
+                i++;
+                charcode = 0x10000 + (((charcode & 0x3ff) << 10) | (str.charCodeAt(i) & 0x3ff));
+                utf8.push(0xf0 | (charcode >> 18), 0x80 | ((charcode >> 12) & 0x3f), 0x80 | ((charcode >> 6) & 0x3f), 0x80 | (charcode & 0x3f));
+            }
+        }
+        return new Uint8Array(utf8);
+    }
+
+    function s4tCrc32(bytes) {
+        var table = s4tCrc32.table;
+        if (!table) {
+            table = new Uint32Array(256);
+            for (var i = 0; i < 256; i++) {
+                var c = i;
+                for (var k = 0; k < 8; k++) {
+                    c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+                }
+                table[i] = c;
+            }
+            s4tCrc32.table = table;
+        }
+        var crc = 0 ^ (-1);
+        for (var j = 0; j < bytes.length; j++) {
+            crc = (crc >>> 8) ^ table[(crc ^ bytes[j]) & 0xff];
+        }
+        return (crc ^ (-1)) >>> 0;
+    }
+
+    function s4tCreateZip(files) {
+        var prepared = files.map(function (f) {
+            var nameBytes = s4tStringToUtf8(f.name);
+            var dataBytes = (typeof f.data === 'string')
+                ? s4tStringToUtf8(f.data)
+                : (f.data instanceof Uint8Array ? f.data : new Uint8Array(f.data));
+            return {
+                nameBytes: nameBytes,
+                dataBytes: dataBytes,
+                crc: s4tCrc32(dataBytes),
+                size: dataBytes.length
+            };
+        });
+
+        var totalLocalSize = 0;
+        var totalCdSize = 0;
+        prepared.forEach(function (p) {
+            totalLocalSize += 30 + p.nameBytes.length + p.size;
+            totalCdSize += 46 + p.nameBytes.length;
+        });
+        var totalSize = totalLocalSize + totalCdSize + 22;
+
+        var out = new Uint8Array(totalSize);
+        var view = new DataView(out.buffer);
+        var localOffset = 0;
+        var cdOffset = totalLocalSize;
+
+        prepared.forEach(function (p) {
+            var startLocal = localOffset;
+
+            // Local file header (30 bytes)
+            view.setUint32(localOffset, 0x04034b50, true);
+            view.setUint16(localOffset + 4, 20, true);
+            view.setUint16(localOffset + 6, 0x0800, true);
+            view.setUint16(localOffset + 8, 0, true);
+            view.setUint16(localOffset + 10, 0, true);
+            view.setUint16(localOffset + 12, 0, true);
+            view.setUint32(localOffset + 14, p.crc, true);
+            view.setUint32(localOffset + 18, p.size, true);
+            view.setUint32(localOffset + 22, p.size, true);
+            view.setUint16(localOffset + 26, p.nameBytes.length, true);
+            view.setUint16(localOffset + 28, 0, true);
+            out.set(p.nameBytes, localOffset + 30);
+            localOffset += 30 + p.nameBytes.length;
+
+            out.set(p.dataBytes, localOffset);
+            localOffset += p.size;
+
+            // Central directory file header (46 bytes)
+            view.setUint32(cdOffset, 0x02014b50, true);
+            view.setUint16(cdOffset + 4, 20, true);
+            view.setUint16(cdOffset + 6, 20, true);
+            view.setUint16(cdOffset + 8, 0x0800, true);
+            view.setUint16(cdOffset + 10, 0, true);
+            view.setUint16(cdOffset + 12, 0, true);
+            view.setUint16(cdOffset + 14, 0, true);
+            view.setUint32(cdOffset + 16, p.crc, true);
+            view.setUint32(cdOffset + 20, p.size, true);
+            view.setUint32(cdOffset + 24, p.size, true);
+            view.setUint16(cdOffset + 28, p.nameBytes.length, true);
+            view.setUint16(cdOffset + 30, 0, true);
+            view.setUint16(cdOffset + 32, 0, true);
+            view.setUint16(cdOffset + 34, 0, true);
+            view.setUint16(cdOffset + 36, 0, true);
+            view.setUint32(cdOffset + 38, 0, true);
+            view.setUint32(cdOffset + 42, startLocal, true);
+            out.set(p.nameBytes, cdOffset + 46);
+            cdOffset += 46 + p.nameBytes.length;
+        });
+
+        // End of central directory record (22 bytes)
+        view.setUint32(cdOffset, 0x06054b50, true);
+        view.setUint16(cdOffset + 4, 0, true);
+        view.setUint16(cdOffset + 6, 0, true);
+        view.setUint16(cdOffset + 8, prepared.length, true);
+        view.setUint16(cdOffset + 10, prepared.length, true);
+        view.setUint32(cdOffset + 12, totalCdSize, true);
+        view.setUint32(cdOffset + 16, totalLocalSize, true);
+        view.setUint16(cdOffset + 20, 0, true);
+
+        return out;
+    }
+
+    function s4tBuildExportXlsx(columns, cards, lookup, title, options) {
+        var opts = options;
+        if (typeof title === 'object' && title !== null && !options) {
+            opts = title;
+            title = 'Sprint Cards';
+        }
+        opts = opts || {};
+        title = title || 'Sprint Cards';
+        var insertSeparator = !!opts.insertSeparatorRow;
+        var sortBy = opts.sortBy || 'list';
+        var activeCols = (columns || []).filter(function (c) { return !c.hidden; });
+        var sheetTitle = s4tEscapeXml(String(title).substring(0, 31).replace(/[\[\]*?:/\\]/g, ' '));
+
+        var colsXml = '<cols>' + activeCols.map(function (c, idx) {
+            var w = 16;
+            var h = String(c.header || '').toLowerCase();
+            if (h.includes('title')) w = 45;
+            else if (h.includes('list')) w = 22;
+            else if (h.includes('label')) w = 24;
+            else if (h.includes('owner') || h.includes('dev')) w = 20;
+            else if (h.includes('conf')) w = 16;
+            else if (h.includes('status')) w = 16;
+            else if (h.includes('risk') || h.includes('resolution')) w = 28;
+            return '<col min="' + (idx + 1) + '" max="' + (idx + 1) + '" width="' + w + '" customWidth="1"/>';
+        }).join('') + '</cols>';
+
+        var rowsXml = '';
+        rowsXml += '<row r="1" ht="26" customHeight="1">';
+        activeCols.forEach(function (c, idx) {
+            var colLet = s4tColToLetter(idx);
+            rowsXml += '<c r="' + colLet + '1" s="1" t="inlineStr"><is><t>' + s4tEscapeXml(c.header || '') + '</t></is></c>';
+        });
+        rowsXml += '</row>';
+
+        var prevGroup = null;
+        var currentRowNum = 2;
+
+        (cards || []).forEach(function (card) {
+            if (insertSeparator) {
+                var grp = getCardGroupKey(card, sortBy, lookup);
+                if (prevGroup !== null && grp !== prevGroup) {
+                    rowsXml += '<row r="' + currentRowNum + '" ht="10" customHeight="1">';
+                    activeCols.forEach(function (c, idx) {
+                        var colLet = s4tColToLetter(idx);
+                        rowsXml += '<c r="' + colLet + currentRowNum + '" s="3"/>';
+                    });
+                    rowsXml += '</row>';
+                    currentRowNum++;
+                }
+                prevGroup = grp;
+            }
+
+            var sIdx = (currentRowNum % 2 === 1) ? 2 : 0;
+            rowsXml += '<row r="' + currentRowNum + '" ht="20" customHeight="1">';
+            activeCols.forEach(function (c, idx) {
+                var colLet = s4tColToLetter(idx);
+                var val = s4tGetEffectiveCellValue(card, c, lookup, opts);
+                rowsXml += '<c r="' + colLet + currentRowNum + '" s="' + sIdx + '" t="inlineStr"><is><t>' + s4tEscapeXml(val) + '</t></is></c>';
+            });
+            rowsXml += '</row>';
+            currentRowNum++;
+        });
+
+        var valEntries = [];
+        var maxRow = Math.max(1000, currentRowNum + 100);
+
+        activeCols.forEach(function (c, idx) {
+            var colLet = s4tColToLetter(idx);
+            var colId = String(c.id || '').toLowerCase();
+            var hNorm = String(c.header || '').toLowerCase();
+            var optionsList = [];
+
+            if (c.cellType === 'dev_select' || colId === 'c_dev_owner' || hNorm === 'dev owner') {
+                var devMembers = [];
+                if (lookup && lookup.boardData && Array.isArray(lookup.boardData.members)) {
+                    devMembers = lookup.boardData.members;
+                } else if (lookup && lookup.membersById) {
+                    devMembers = Array.from(lookup.membersById.values());
+                }
+                var devSeen = new Set();
+                devMembers.forEach(function (m) {
+                    var mName = m ? (m.fullName || m.username || m.name || '') : '';
+                    if (mName && !devSeen.has(mName.toLowerCase())) {
+                        devSeen.add(mName.toLowerCase());
+                        optionsList.push(mName);
+                    }
+                });
+            } else if (colId === 'c_po_owner' || hNorm === 'product owner' || c.source === 'product_owner') {
+                optionsList = s4tParseCustomOptions(c.customOptions);
+                if (!optionsList.length) {
+                    var boardData = (lookup && lookup.boardData) || (opts && opts.boardData);
+                    optionsList = (opts && opts.dotLabels) || (boardData ? s4tGetDotLabels(boardData) : []);
+                }
+            } else if (c.cellType === 'custom_select') {
+                optionsList = s4tParseCustomOptions(c.customOptions);
+            }
+
+            if (optionsList && optionsList.length > 0) {
+                var cleanOptions = optionsList.map(function (o) {
+                    return String(o).replace(/[,"]/g, ' ').trim();
+                }).filter(Boolean);
+                if (cleanOptions.length > 0) {
+                    valEntries.push({
+                        sqref: colLet + '2:' + colLet + maxRow,
+                        formula: '&quot;' + cleanOptions.join(',') + '&quot;'
+                    });
+                }
+            }
+        });
+
+        var validationsXml = '';
+        if (valEntries.length > 0) {
+            validationsXml = '<dataValidations count="' + valEntries.length + '">' +
+                valEntries.map(function (v) {
+                    return '<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="' + v.sqref + '"><formula1>' + v.formula + '</formula1></dataValidation>';
+                }).join('') +
+                '</dataValidations>';
+        }
+
+        var contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n' +
+            '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n' +
+            '  <Default Extension="xml" ContentType="application/xml"/>\n' +
+            '  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>\n' +
+            '  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>\n' +
+            '  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>\n' +
+            '</Types>';
+
+        var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n' +
+            '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>\n' +
+            '</Relationships>';
+
+        var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\n' +
+            '  <sheets>\n' +
+            '    <sheet name="' + sheetTitle + '" sheetId="1" r:id="rId1"/>\n' +
+            '  </sheets>\n' +
+            '</workbook>';
+
+        var wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n' +
+            '  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>\n' +
+            '  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>\n' +
+            '</Relationships>';
+
+        var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">\n' +
+            '  <fonts count="2">\n' +
+            '    <font><sz val="11"/><name val="Times New Roman"/></font>\n' +
+            '    <font><b/><sz val="11"/><name val="Times New Roman"/></font>\n' +
+            '  </fonts>\n' +
+            '  <fills count="5">\n' +
+            '    <fill><patternFill patternType="none"/></fill>\n' +
+            '    <fill><patternFill patternType="gray125"/></fill>\n' +
+            '    <fill><patternFill patternType="solid"><fgColor rgb="FFB7E1CD"/></patternFill></fill>\n' +
+            '    <fill><patternFill patternType="solid"><fgColor rgb="FFF4F5F7"/></patternFill></fill>\n' +
+            '    <fill><patternFill patternType="solid"><fgColor rgb="FFEBECF0"/></patternFill></fill>\n' +
+            '  </fills>\n' +
+            '  <borders count="2">\n' +
+            '    <border><left/><right/><top/><bottom/></border>\n' +
+            '    <border>\n' +
+            '      <left style="thin"><color rgb="FFDFE1E6"/></left>\n' +
+            '      <right style="thin"><color rgb="FFDFE1E6"/></right>\n' +
+            '      <top style="thin"><color rgb="FFDFE1E6"/></top>\n' +
+            '      <bottom style="thin"><color rgb="FFDFE1E6"/></bottom>\n' +
+            '    </border>\n' +
+            '  </borders>\n' +
+            '  <cellStyleXfs count="1">\n' +
+            '    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>\n' +
+            '  </cellStyleXfs>\n' +
+            '  <cellXfs count="4">\n' +
+            '    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0"><alignment vertical="center"/></xf>\n' +
+            '    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf>\n' +
+            '    <xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf>\n' +
+            '    <xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf>\n' +
+            '  </cellXfs>\n' +
+            '</styleSheet>';
+
+        var sheet1 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">\n' +
+            '  ' + colsXml + '\n' +
+            '  <sheetData>' + rowsXml + '</sheetData>\n' +
+            '  ' + validationsXml + '\n' +
+            '</worksheet>';
+
+        return s4tCreateZip([
+            { name: '[Content_Types].xml', data: contentTypes },
+            { name: '_rels/.rels', data: rels },
+            { name: 'xl/workbook.xml', data: wb },
+            { name: 'xl/_rels/workbook.xml.rels', data: wbRels },
+            { name: 'xl/styles.xml', data: styles },
+            { name: 'xl/worksheets/sheet1.xml', data: sheet1 }
+        ]);
     }
 
     var activeOverlay = null;
@@ -2396,7 +2818,11 @@
                 state.columns.forEach(function (col) {
                     var td = $('<td class="s4t-sheet-cell">');
                     var cellKey = card.id + '_' + col.id;
-                    var baseVal = s4tExtractFieldValue(card, col.source, state.lookup);
+                    var baseVal = s4tGetEffectiveCellValue(card, col, state.lookup, {
+                        editedCells: state.editedCells,
+                        dotLabels: state.dotLabels,
+                        boardData: state.boardData
+                    });
                     var val = (state.editedCells && state.editedCells[cellKey] !== undefined)
                         ? state.editedCells[cellKey]
                         : baseVal;
@@ -2461,6 +2887,11 @@
                         td.addClass('s4t-sheet-cell-has-dropdown');
                         var custSel = $('<select class="s4t-sheet-cell-select" aria-label="Role / Value">');
                         var optList = s4tParseCustomOptions(col.customOptions);
+                        if ((col.id === 'c_po_owner' || col.source === 'product_owner') && (!optList || !optList.length)) {
+                            if (state.dotLabels && state.dotLabels.length) {
+                                optList = state.dotLabels.slice();
+                            }
+                        }
                         var isCellEdited = !!(state.editedCells && state.editedCells[cellKey] !== undefined);
                         var isTitleLeak = (col.source === 'title' || col.source === 'title_raw' || col.id === 'c_status' || (col.header && col.header.trim().toLowerCase() === 'status')) && !isCellEdited;
                         var isPoCol = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
@@ -2485,6 +2916,15 @@
                             }
                             custSel.append(opt);
                         });
+                        if (val) {
+                            var matchingOpt = custSel.find('option').filter(function () {
+                                return $(this).val().toLowerCase() === val.toLowerCase();
+                            });
+                            if (matchingOpt.length) {
+                                custSel.find('option').prop('selected', false);
+                                matchingOpt.prop('selected', true);
+                            }
+                        }
                         custSel.on('change', function () {
                             state.editedCells = state.editedCells || {};
                             state.editedCells[cellKey] = $(this).val();
@@ -3052,10 +3492,11 @@
                 '<div class="s4t-export-footer-status" id="s4t-export-toast" hidden></div>',
                 '<div class="s4t-export-footer-buttons">',
                 '  <div class="s4t-split-download-group">',
-                '    <button type="button" class="s4t-btn s4t-btn-primary" id="s4t-btn-main-download">📊 Download Excel (.xls)</button>',
+                '    <button type="button" class="s4t-btn s4t-btn-primary" id="s4t-btn-main-download">📊 Download Excel (.xlsx)</button>',
                 '    <button type="button" class="s4t-btn s4t-btn-primary s4t-split-arrow" id="s4t-btn-format-toggle" data-tooltip="Select format (Excel / CSV)" aria-label="Select format" aria-haspopup="true" aria-expanded="false">▾</button>',
                 '    <div class="s4t-split-menu" id="s4t-format-menu" role="menu" hidden>',
-                '      <button type="button" class="s4t-split-item" data-fmt="excel" role="menuitem">📊 Excel Spreadsheet (.xls)</button>',
+                '      <button type="button" class="s4t-split-item" data-fmt="excel" role="menuitem">📊 Excel Spreadsheet (.xlsx)</button>',
+                '      <button type="button" class="s4t-split-item" data-fmt="legacy_xls" role="menuitem">📊 Excel Legacy (.xls)</button>',
                 '      <button type="button" class="s4t-split-item" data-fmt="csv" role="menuitem">📄 CSV File (.csv)</button>',
                 '    </div>',
                 '  </div>',
@@ -3146,8 +3587,10 @@
                 state.selectedFormat = fmt;
                 if (fmt === 'csv') {
                     dialog.find('#s4t-btn-main-download').text('📄 Download CSV (.csv)');
-                } else {
+                } else if (fmt === 'legacy_xls') {
                     dialog.find('#s4t-btn-main-download').text('📊 Download Excel (.xls)');
+                } else {
+                    dialog.find('#s4t-btn-main-download').text('📊 Download Excel (.xlsx)');
                 }
                 dialog.find('#s4t-format-menu').prop('hidden', true);
                 dialog.find('#s4t-btn-format-toggle').attr('aria-expanded', 'false');
@@ -3179,10 +3622,14 @@
                     var csv = s4tBuildExportCsv(state.columns, state.filteredCards, state.lookup, exportOpts());
                     triggerDownload(csv, safeBase + '.csv', 'text/csv;charset=utf-8;');
                     showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as CSV (.csv)!');
-                } else {
+                } else if (state.selectedFormat === 'legacy_xls') {
                     var excel = s4tBuildExportExcel(state.columns, state.filteredCards, state.lookup, boardName, exportOpts());
                     triggerDownload(excel, safeBase + '.xls', 'application/ms-excel');
                     showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as Excel (.xls)!');
+                } else {
+                    var xlsx = s4tBuildExportXlsx(state.columns, state.filteredCards, state.lookup, boardName, exportOpts());
+                    triggerDownload(xlsx, safeBase + '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                    showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as Excel (.xlsx)!');
                 }
             });
         }
@@ -3289,8 +3736,10 @@
         s4tCloseCardExport: s4tCloseCardExport,
         s4tExportCardFields: FIELD_DEFINITIONS,
         s4tExtractFieldValue: s4tExtractFieldValue,
+        s4tGetEffectiveCellValue: s4tGetEffectiveCellValue,
         s4tBuildExportCsv: s4tBuildExportCsv,
         s4tBuildExportExcel: s4tBuildExportExcel,
+        s4tBuildExportXlsx: s4tBuildExportXlsx,
         s4tBuildExportTsv: s4tBuildExportTsv,
         s4tFilterAndSortCards: s4tFilterAndSortCards,
         s4tParseCustomOptions: s4tParseCustomOptions,

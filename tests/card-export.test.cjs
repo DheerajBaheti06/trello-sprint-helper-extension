@@ -1536,6 +1536,127 @@ test('card-export: smooth custom input typing, persistent CS owner, removed copy
     assert.ok(rules.includes("Download Spreadsheet"), 'WORKFLOW-RULES.md must describe download options');
 });
 
+test('card-export: s4tGetEffectiveCellValue populates all columns and default values for status, owners, and confidence', () => {
+    const lists = [
+        { id: 'l_active', name: 'In Progress (Sprint 24)' },
+        { id: 'l_backlog', name: 'Sprint Backlog' }
+    ];
+    const members = [
+        { id: 'm1', fullName: 'Arman Khan', username: 'arman' },
+        { id: 'm2', fullName: 'Sarah Chen', username: 'sarah' }
+    ];
+    const lookup = {
+        listsById: new Map(lists.map(l => [l.id, l])),
+        membersById: new Map(members.map(m => [m.id, m])),
+        labelsById: new Map(),
+        boardData: {
+            members: members,
+            labels: [{ name: 'Kashvi.' }]
+        }
+    };
+
+    const cardActive = {
+        id: 'c1',
+        name: 'Build auth flow',
+        idList: 'l_active',
+        idMembers: ['m1'],
+        labels: [{ name: 'Feature' }, { name: 'Prapti.' }]
+    };
+
+    const cardBacklog = {
+        id: 'c2',
+        name: 'Database migration',
+        idList: 'l_backlog',
+        members: [{ id: 'm2', fullName: 'Sarah Chen' }],
+        labels: [{ name: 'Chore' }]
+    };
+
+    const cols = [
+        { id: 'c_list', header: 'List Name', source: 'list', cellType: 'text' },
+        { id: 'c_title', header: 'Title', source: 'title', cellType: 'text' },
+        { id: 'c_labels', header: 'Labels', source: 'labels', cellType: 'text' },
+        { id: 'c_status', header: 'Status', source: 'blank', cellType: 'custom_select', customOptions: 'Going Live, Not Going Live' },
+        { id: 'c_dev_owner', header: 'Dev Owner', source: 'members', cellType: 'dev_select' },
+        { id: 'c_dev_conf', header: 'Dev Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_mgr_conf', header: 'Mgr Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: 'Prapti, Kashvi' },
+        { id: 'c_po_conf', header: 'Product Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: 'Tanisha, Harshali' },
+        { id: 'c_cs_conf', header: 'CS Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_risk', header: 'Risk (Comments)', source: 'blank', cellType: 'text' },
+        { id: 'c_resolution', header: 'Resolution (Comments)', source: 'blank', cellType: 'text' }
+    ];
+
+    // Card 1 in Active List:
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[0], lookup), 'In Progress (Sprint 24)');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[1], lookup), 'Build auth flow');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[2], lookup), 'Feature');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[3], lookup), 'Going Live');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[4], lookup), 'Arman Khan');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[5], lookup), 'High');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[6], lookup), 'High');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[7], lookup), 'Prapti');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[8], lookup), 'High');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[9], lookup), 'Tanisha');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[10], lookup), 'High');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[11], lookup), '');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[12], lookup), '');
+
+    // Card 2 in Backlog List:
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[3], lookup), 'Not Going Live');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[4], lookup), 'Sarah Chen');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[7], lookup), 'Prapti');
+
+    // Manual edit override:
+    const edited = { editedCells: { 'c1_c_status': 'Not Going Live', 'c1_c_dev_conf': 'Medium' } };
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[3], lookup, edited), 'Not Going Live');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[5], lookup, edited), 'Medium');
+});
+
+test('card-export: s4tBuildExportXlsx generates valid OpenXML XLSX with native data validation dropdowns', () => {
+    const { execSync } = require('child_process');
+    const lists = [{ id: 'l1', name: 'In Progress' }];
+    const members = [{ id: 'm1', fullName: 'Alice' }, { id: 'm2', fullName: 'Bob' }];
+    const lookup = {
+        listsById: new Map(lists.map(l => [l.id, l])),
+        membersById: new Map(members.map(m => [m.id, m])),
+        labelsById: new Map(),
+        boardData: { members: members }
+    };
+
+    const cards = [
+        { id: 'c1', name: 'Implement task', idList: 'l1', idMembers: ['m1'], labels: [{ name: 'Prapti.' }] }
+    ];
+
+    const cols = [
+        { id: 'c_list', header: 'List Name', source: 'list' },
+        { id: 'c_title', header: 'Title', source: 'title' },
+        { id: 'c_status', header: 'Status', source: 'blank', cellType: 'custom_select', customOptions: 'Going Live, Not Going Live' },
+        { id: 'c_dev_owner', header: 'Dev Owner', source: 'members', cellType: 'dev_select' },
+        { id: 'c_dev_conf', header: 'Dev Confidence', source: 'blank', cellType: 'custom_select', customOptions: 'High, Medium, Low, NA' },
+        { id: 'c_po_owner', header: 'Product Owner', source: 'product_owner', cellType: 'custom_select', customOptions: 'Prapti, Kashvi' },
+        { id: 'c_cs_owner', header: 'CS Owner', source: 'blank', cellType: 'custom_select', customOptions: 'Tanisha, Harshali' }
+    ];
+
+    const xlsxBytes = cardExport.s4tBuildExportXlsx(cols, cards, lookup, 'Test Board');
+    assert.ok(xlsxBytes instanceof Uint8Array, 's4tBuildExportXlsx must return a Uint8Array');
+    assert.ok(xlsxBytes.length > 1000, 'XLSX byte array must have non-trivial size');
+
+    // Test in LibreOffice headless
+    const tmpXlsx = '/tmp/unit_test_export.xlsx';
+    fs.writeFileSync(tmpXlsx, xlsxBytes);
+    execSync('libreoffice -env:UserInstallation=file:///tmp/libreoffice_test --headless --convert-to ods ' + tmpXlsx + ' --outdir /tmp', { encoding: 'utf8' });
+    const odfXml = execSync('unzip -p /tmp/unit_test_export.ods content.xml', { encoding: 'utf8' });
+
+    assert.ok(odfXml.includes('table:content-validation'), 'ODS output from LibreOffice must have content-validation elements');
+    assert.ok(odfXml.includes('Going Live'), 'ODS output must contain Going Live');
+    assert.ok(odfXml.includes('Alice'), 'ODS output must contain Alice');
+    assert.ok(odfXml.includes('Prapti'), 'ODS output must contain Prapti');
+    assert.ok(odfXml.includes('High'), 'ODS output must contain High');
+    assert.ok(odfXml.includes('Tanisha'), 'ODS output must contain Tanisha');
+});
+
+
 
 
 
