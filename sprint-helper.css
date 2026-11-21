@@ -3172,7 +3172,7 @@ textarea[data-testid="card-name-input"],
 
 #s4t-export-dialog .s4t-guide-stepper-pill {
     position: absolute !important;
-    top: 54px;
+    top: 8px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 9600 !important;
@@ -3283,6 +3283,16 @@ body.s4t-stepper-dragging * {
     font-size: 13px !important;
     font-weight: bold !important;
     margin-left: 2px !important;
+}
+
+#s4t-export-dialog .s4t-guide-stepper-pill.s4t-guide-step-only .s4t-guide-pill-toggle-all {
+    display: none !important;
+}
+
+@media (max-width: 1180px), (max-height: 760px), (-webkit-min-device-pixel-ratio: 1.2), (min-resolution: 115dpi) {
+    #s4t-export-dialog .s4t-guide-stepper-pill .s4t-guide-pill-toggle-all {
+        display: none !important;
+    }
 }
 
 #s4t-export-dialog .s4t-guide-spotlight-active {
@@ -5418,6 +5428,94 @@ body.s4t-stepper-dragging * {
     color: var(--ds-text, #172b4d) !important;
 }
 
+/* CSV Format Warning Modal */
+#s4t-export-dialog .s4t-csv-warning-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(9, 30, 66, 0.54) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    backdrop-filter: blur(2px) !important;
+    animation: s4tFadeIn 0.15s ease-out !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-card {
+    background: var(--ds-surface-overlay, #ffffff) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 12px 32px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31) !important;
+    padding: 24px !important;
+    max-width: 440px !important;
+    width: 90% !important;
+    text-align: left !important;
+    box-sizing: border-box !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-icon {
+    font-size: 22px !important;
+    line-height: 1 !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--ds-text, #172b4d) !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-body {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    color: var(--ds-text-subtle, #44546f) !important;
+    margin-bottom: 20px !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-btn-cancel {
+    padding: 7px 14px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--ds-border, #dfe1e6) !important;
+    background: var(--ds-background-neutral, #f1f2f4) !important;
+    color: var(--ds-text, #172b4d) !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-btn-cancel:hover {
+    background: var(--ds-background-neutral-hovered, #ebecf0) !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-btn-confirm {
+    padding: 7px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    border: none !important;
+    background: #059669 !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease !important;
+}
+
+#s4t-export-dialog .s4t-csv-warning-btn-confirm:hover {
+    background: #047857 !important;
+}
+
 /* Status / Toast & Metric Copied Feedback */
 #s4t-export-dialog .s4t-btn.s4t-metric-copied {
     background: #0f766e !important;
@@ -6383,6 +6481,38 @@ body.s4t-stepper-dragging * {
 .dark-theme #s4t-export-dialog .s4t-split-menu-item:hover {
     background: #323940 !important;
     color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-csv-warning-card,
+[data-theme="dark"] #s4t-export-dialog .s4t-csv-warning-card,
+.theme-dark #s4t-export-dialog .s4t-csv-warning-card,
+.dark-theme #s4t-export-dialog .s4t-csv-warning-card {
+    background: #22272b !important;
+    border-color: #38414a !important;
+    color: #b6c2cf !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-csv-warning-title,
+[data-theme="dark"] #s4t-export-dialog .s4t-csv-warning-title,
+.theme-dark #s4t-export-dialog .s4t-csv-warning-title,
+.dark-theme #s4t-export-dialog .s4t-csv-warning-title {
+    color: #ffffff !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-csv-warning-body,
+[data-theme="dark"] #s4t-export-dialog .s4t-csv-warning-body,
+.theme-dark #s4t-export-dialog .s4t-csv-warning-body,
+.dark-theme #s4t-export-dialog .s4t-csv-warning-body {
+    color: #9fadbc !important;
+}
+
+[data-color-mode="dark"] #s4t-export-dialog .s4t-csv-warning-btn-cancel,
+[data-theme="dark"] #s4t-export-dialog .s4t-csv-warning-btn-cancel,
+.theme-dark #s4t-export-dialog .s4t-csv-warning-btn-cancel,
+.dark-theme #s4t-export-dialog .s4t-csv-warning-btn-cancel {
+    background: #282e33 !important;
+    color: #b6c2cf !important;
+    border-color: #38414a !important;
 }
 
 [data-color-mode="dark"] #s4t-export-dialog .s4t-btn-secondary,

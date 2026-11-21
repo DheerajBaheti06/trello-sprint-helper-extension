@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
+const { execSync } = require('node:child_process');
 const cardExport = require('../card-export.js');
 
 test('card-export.js defines all 15 specified field mappings with exact descriptions', () => {
@@ -1536,7 +1538,7 @@ test('card-export: smooth custom input typing, persistent CS owner, removed copy
     assert.ok(rules.includes("Download Spreadsheet"), 'WORKFLOW-RULES.md must describe download options');
 });
 
-test('card-export: s4tGetEffectiveCellValue populates all columns and default values for status, owners, and confidence', () => {
+test('card-export: s4tGetEffectiveCellValue populates sensible default values for status, confidence, PO, CS, and comments', () => {
     const lists = [
         { id: 'l_active', name: 'In Progress (Sprint 24)' },
         { id: 'l_backlog', name: 'Sprint Backlog' }
@@ -1595,17 +1597,17 @@ test('card-export: s4tGetEffectiveCellValue populates all columns and default va
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[4], lookup), 'Arman Khan');
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[5], lookup), 'High');
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[6], lookup), 'High');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[7], lookup), 'Prapti');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[7], lookup), 'Prapti'); // Extracted from card dot label
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[8], lookup), 'High');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[9], lookup), 'Tanisha');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[9], lookup), 'Tanisha'); // Configured CS Owner
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[10], lookup), 'High');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[11], lookup), '');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[12], lookup), '');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[11], lookup), 'None');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[12], lookup), 'Ready for QA');
 
     // Card 2 in Backlog List:
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[3], lookup), 'Not Going Live');
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[4], lookup), 'Sarah Chen');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[7], lookup), 'Prapti');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[7], lookup), 'Prapti'); // Default to first PO option
 
     // Manual edit override:
     const edited = { editedCells: { 'c1_c_status': 'Not Going Live', 'c1_c_dev_conf': 'Medium' } };
@@ -1655,6 +1657,236 @@ test('card-export: s4tBuildExportXlsx generates valid OpenXML XLSX with native d
     assert.ok(odfXml.includes('High'), 'ODS output must contain High');
     assert.ok(odfXml.includes('Tanisha'), 'ODS output must contain Tanisha');
 });
+
+test('card-export: guide view defaults to and enforces step view only on high zoom / screen resolution', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Detection helper tests
+    assert.ok(typeof cardExport.s4tIsHighZoomOrResolution === 'function', 's4tIsHighZoomOrResolution must be exported');
+
+    // Normal 100% 1080p unzoomed screen
+    const normalWin = { devicePixelRatio: 1.0, innerWidth: 1920, innerHeight: 1080 };
+    const normalDiag = [{ clientWidth: 1140, clientHeight: 740 }];
+    assert.strictEqual(cardExport.s4tIsHighZoomOrResolution(normalWin, normalDiag), false, 'Normal unzoomed screen must not be high zoom');
+
+    // Zoomed in (e.g. 125%, 150%, 200%)
+    const zoomedWin125 = { devicePixelRatio: 1.25, innerWidth: 1536, innerHeight: 864 };
+    assert.strictEqual(cardExport.s4tIsHighZoomOrResolution(zoomedWin125, normalDiag), true, '125% zoom (dpr 1.25) must be detected as high zoom');
+
+    const zoomedWin150 = { devicePixelRatio: 1.5, innerWidth: 1280, innerHeight: 720 };
+    assert.strictEqual(cardExport.s4tIsHighZoomOrResolution(zoomedWin150, normalDiag), true, '150% zoom must be detected as high zoom');
+
+    // Constrained viewport / compact screen
+    const compactWin = { devicePixelRatio: 1.0, innerWidth: 1100, innerHeight: 700 };
+    assert.strictEqual(cardExport.s4tIsHighZoomOrResolution(compactWin, normalDiag), true, 'Compact viewport must be detected as high zoom');
+
+    // Constrained dialog dimensions
+    const compactDiag = [{ clientWidth: 980, clientHeight: 640 }];
+    assert.strictEqual(cardExport.s4tIsHighZoomOrResolution(normalWin, compactDiag), true, 'Constrained dialog must be detected as high zoom');
+
+    // 2. Logic enforcement in card-export.js
+    assert.ok(ce.includes('s4tIsHighZoomOrResolution(null, dialog) || currentGuideStep === \'all\''), 'toggleGuideMode must enforce step 1 by default on high zoom');
+    assert.ok(ce.includes('isHighZoom && currentGuideStep === \'all\''), 'renderCloudyTooltips must revert currentGuideStep from all to 1 on high zoom');
+    assert.ok(ce.includes("$stepperPill.addClass('s4t-guide-step-only');"), 'Stepper pill must add s4t-guide-step-only class on high zoom');
+    assert.ok(ce.includes('$toggleAllBtn.hide();'), 'Stepper pill must hide toggle all button on high zoom');
+    assert.ok(ce.includes('var estW = isHighZoom ? 240 : 320;'), 'Stepper pill clamping width must adapt on high zoom');
+
+    // 3. CSS rules
+    assert.ok(css.includes('.s4t-guide-stepper-pill.s4t-guide-step-only .s4t-guide-pill-toggle-all'), 'sprint-helper.css must define .s4t-guide-step-only hiding rule');
+    assert.ok(css.includes('-webkit-min-device-pixel-ratio: 1.2'), 'sprint-helper.css must include high-DPI zoom media query');
+});
+
+test('card-export: warns user with confirmation popup when selecting or downloading CSV if custom Dtype columns exist', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+    const css = fs.readFileSync('sprint-helper.css', 'utf8');
+
+    // 1. Helper function detection
+    assert.ok(typeof cardExport.s4tHasCustomDtypeColumns === 'function', 's4tHasCustomDtypeColumns must be exported');
+
+    const defaultCols = cardExport.s4tGetDefaultColumns();
+    // Default columns include custom_select for Status, Confidence, PO, CS
+    assert.strictEqual(cardExport.s4tHasCustomDtypeColumns(defaultCols), true, 'Default columns have custom_select columns');
+
+    // Only text and dev columns
+    const textCols = [
+        { id: 'c_list', header: 'List', hidden: false, cellType: 'text' },
+        { id: 'c_title', header: 'Title', hidden: false, cellType: 'text' },
+        { id: 'c_dev', header: 'Dev Owner', hidden: false, cellType: 'dev_select' }
+    ];
+    assert.strictEqual(cardExport.s4tHasCustomDtypeColumns(textCols), false, 'Text/Dev only columns do not have custom Dtype');
+
+    // Hidden custom_select columns
+    const hiddenCustomCols = [
+        { id: 'c_title', header: 'Title', hidden: false, cellType: 'text' },
+        { id: 'c_status', header: 'Status', hidden: true, cellType: 'custom_select' }
+    ];
+    assert.strictEqual(cardExport.s4tHasCustomDtypeColumns(hiddenCustomCols), false, 'Hidden custom columns are ignored');
+
+    // 2. Warning modal implementation in card-export.js
+    assert.ok(ce.includes('function showCsvWarningModal(onConfirm, onCancel)'), 'card-export.js must define showCsvWarningModal');
+    assert.ok(ce.includes('id="s4t-csv-warning-popup"'), 'Warning modal must have id s4t-csv-warning-popup');
+    assert.ok(ce.includes('In case of CSV, interactive dropdown selectors and custom options are not supported'), 'Warning modal must describe CSV limitation');
+    assert.ok(ce.includes('Are you sure you want to proceed with CSV?'), 'Warning modal must ask user confirmation');
+    assert.ok(ce.includes('s4t-csv-warning-btn-cancel'), 'Warning modal must have Cancel button');
+    assert.ok(ce.includes('s4t-csv-warning-btn-confirm'), 'Warning modal must have Confirm button');
+
+    // Check trigger on CSV format selection
+    assert.ok(ce.includes('if (fmt === \'csv\' && hasCustomDtypeColumns())'), 'Selecting CSV must trigger warning check');
+
+    // Check trigger on download button
+    assert.ok(ce.includes('if (state.selectedFormat === \'csv\' && hasCustomDtypeColumns() && !state.csvWarningConfirmed)'), 'Downloading CSV without confirmation must trigger warning check');
+
+    // 3. Styling in sprint-helper.css
+    assert.ok(css.includes('#s4t-export-dialog .s4t-csv-warning-backdrop'), 'sprint-helper.css must style .s4t-csv-warning-backdrop');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-csv-warning-card'), 'sprint-helper.css must style .s4t-csv-warning-card');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-csv-warning-btn-cancel'), 'sprint-helper.css must style cancel button');
+    assert.ok(css.includes('#s4t-export-dialog .s4t-csv-warning-btn-confirm'), 'sprint-helper.css must style confirm button');
+    assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-csv-warning-card'), 'sprint-helper.css must include dark mode styles for warning card');
+});
+
+test('card-export: s4tGetEffectiveCellValue populates non-empty default values across all 13 columns', () => {
+    const card = {
+        id: 'c1',
+        idList: 'l1',
+        name: 'FE-102: Implement responsive layout',
+        desc: 'Risk: None\nResolution: Ready for QA',
+        labels: [{ name: 'frontend' }, { name: 'Alice M.' }],
+        members: [{ id: 'm1', fullName: 'Bob Dev', username: 'bob' }],
+        idMembers: ['m1']
+    };
+    const lookup = {
+        lists: { l1: 'Sprint Active' },
+        members: { m1: 'Bob Dev' },
+        developers: ['Bob Dev', 'Charlie Dev'],
+        productOwners: ['Alice M.'],
+        csOwners: ['Support Team']
+    };
+
+    const cols = cardExport.s4tGetDefaultColumns();
+    assert.strictEqual(cols.length, 13, 'Default columns must have 13 columns');
+
+    // Test each column's effective value
+    const effectiveValues = cols.map(c => cardExport.s4tGetEffectiveCellValue(card, c, lookup));
+
+    // Col 0: List Name -> 'Sprint Active'
+    assert.strictEqual(effectiveValues[0], 'Sprint Active');
+    // Col 1: Card Title -> 'FE-102: Implement responsive layout'
+    assert.strictEqual(effectiveValues[1], 'FE-102: Implement responsive layout');
+    // Col 2: Labels -> 'frontend' (dot label 'Alice M.' filtered out to Product Owner)
+    assert.strictEqual(effectiveValues[2], 'frontend');
+    // Col 3: Status -> 'Going Live'
+    assert.strictEqual(effectiveValues[3], 'Going Live');
+    // Col 4: Dev Owner -> 'Bob Dev'
+    assert.strictEqual(effectiveValues[4], 'Bob Dev');
+    // Col 5: Dev Confidence -> 'High'
+    assert.strictEqual(effectiveValues[5], 'High');
+    // Col 6: Mgr Confidence -> 'High'
+    assert.strictEqual(effectiveValues[6], 'High');
+    // Col 7: Product Owner -> 'Alice M' (from dot label with dot stripped)
+    assert.strictEqual(effectiveValues[7], 'Alice M');
+    // Col 8: Product Confidence -> 'High'
+    assert.strictEqual(effectiveValues[8], 'High');
+    // Col 9: CS Owner -> 'Support Team' (from configured csOwners)
+    assert.strictEqual(effectiveValues[9], 'Support Team');
+    // Col 10: CS Confidence -> 'High'
+    assert.strictEqual(effectiveValues[10], 'High');
+
+    // Backlog status defaults to Not Going Live
+    const backlogCard = { id: 'c2', idList: 'l2', name: 'Backlog Item', labels: [], idMembers: [] };
+    const backlogLookup = { lists: { l2: 'Backlog / Icebox' }, members: {}, developers: [], productOwners: [], csOwners: [] };
+    const backlogStatus = cardExport.s4tGetEffectiveCellValue(backlogCard, cols[3], backlogLookup);
+    assert.strictEqual(backlogStatus, 'Not Going Live');
+
+    // Edited cell override
+    const editedOptions = { editedCells: { 'c1:c_status': 'Not Going Live', 'c1:c_dev_conf': 'Low' } };
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, cols[3], lookup, editedOptions), 'Not Going Live');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, cols[5], lookup, editedOptions), 'Low');
+});
+
+test('card-export: s4tBuildExportXlsx generates valid XLSX with data validations that LibreOffice Calc parses into dropdown selectors', () => {
+    const cards = [
+        {
+            id: 'c1',
+            idList: 'l1',
+            name: 'API Refactoring',
+            desc: '',
+            labels: [{ name: 'backend' }, { name: 'Sarah PO.' }],
+            members: [{ id: 'm1', fullName: 'Dave Eng', username: 'dave' }],
+            idMembers: ['m1']
+        },
+        {
+            id: 'c2',
+            idList: 'l2',
+            name: 'Design System Update',
+            desc: '',
+            labels: [],
+            members: [],
+            idMembers: []
+        }
+    ];
+    const lookup = {
+        lists: { l1: 'Sprint In Progress', l2: 'Done' },
+        members: { m1: 'Dave Eng' },
+        developers: ['Dave Eng', 'Elena Eng'],
+        productOwners: ['Sarah PO.'],
+        csOwners: ['CS Specialist']
+    };
+    const cols = cardExport.s4tGetDefaultColumns();
+
+    const xlsxBytes = cardExport.s4tBuildExportXlsx(cards, cols, lookup);
+    assert.ok(xlsxBytes instanceof Uint8Array, 'Result must be a Uint8Array');
+    assert.ok(xlsxBytes.length > 500, 'XLSX file must have non-trivial size');
+
+    // Verify ZIP magic bytes (PK\x03\x04)
+    assert.strictEqual(xlsxBytes[0], 0x50, 'ZIP magic byte 0');
+    assert.strictEqual(xlsxBytes[1], 0x4B, 'ZIP magic byte 1');
+    assert.strictEqual(xlsxBytes[2], 0x03, 'ZIP magic byte 2');
+    assert.strictEqual(xlsxBytes[3], 0x04, 'ZIP magic byte 3');
+
+    // Verify XML contents contains dataValidations
+    const textDecoder = new TextDecoder('utf-8');
+    const contentStr = textDecoder.decode(xlsxBytes);
+    assert.ok(contentStr.includes('<dataValidations'), 'XLSX must contain <dataValidations>');
+    assert.ok(contentStr.includes('&quot;Going Live,Not Going Live&quot;'), 'XLSX must contain Status dropdown options');
+    assert.ok(contentStr.includes('&quot;High,Medium,Low,NA&quot;'), 'XLSX must contain Confidence dropdown options');
+    assert.ok(contentStr.includes('&quot;Dave Eng,Elena Eng&quot;'), 'XLSX must contain Dev Owner dropdown options');
+
+    // Verify LibreOffice Calc compatibility via headless convert to ODS
+    const tmpXlsx = path.join('/tmp', 'test_eval_sheet.xlsx');
+    const tmpOdsDir = '/tmp';
+    fs.writeFileSync(tmpXlsx, Buffer.from(xlsxBytes));
+
+    try {
+        execSync(`soffice --headless -env:UserInstallation=file:///tmp/libreoffice_test --convert-to ods --outdir ${tmpOdsDir} ${tmpXlsx}`, { stdio: 'pipe' });
+        const tmpOds = path.join(tmpOdsDir, 'test_eval_sheet.ods');
+        assert.ok(fs.existsSync(tmpOds), 'LibreOffice must convert XLSX to ODS successfully');
+
+        // Extract content.xml from ODS to check LibreOffice native content-validation
+        const odsContentXml = execSync(`unzip -p ${tmpOds} content.xml`, { encoding: 'utf-8' });
+        assert.ok(odsContentXml.includes('table:content-validation'), 'LibreOffice Calc must parse data validations into table:content-validation');
+        assert.ok(odsContentXml.includes('Going Live'), 'LibreOffice Calc must contain dropdown values');
+    } catch (e) {
+        // If soffice is not installed in some external runner, don't fail unit test on CLI binary absence
+        if (e.message && !e.message.includes('soffice: not found')) {
+            throw e;
+        }
+    }
+});
+
+test('card-export: guide collision avoidance engine guarantees zero overlapping tooltips and prevents stepper pill clipping', () => {
+    const ce = fs.readFileSync('card-export.js', 'utf8');
+
+    // 1. Collision avoidance algorithm structure
+    assert.ok(ce.includes('Automated AABB Collision Avoidance and Resolution:'), 'Guide must document collision avoidance engine');
+    assert.ok(ce.includes('pillBottom + minGapY'), 'Guide must prevent collision with top Stepper Pill');
+    assert.ok(ce.includes('overlapX && overlapY'), 'Guide must detect pairwise bounding box intersections');
+    assert.ok(ce.includes('t2.top = t1.top + t1.height + minGapY'), 'Guide must push colliding tooltips downward');
+    assert.ok(ce.includes('tier === 3'), 'Guide must support Tier 3 vertical tiering for custom options');
+    assert.ok(ce.includes('visibleCustomCol'), 'Guide must dynamically detect visible columns to avoid off-screen stems');
+});
+
+
 
 
 

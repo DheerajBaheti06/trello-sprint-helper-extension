@@ -74,6 +74,12 @@
         return deduplicated;
     }
 
+    function s4tHasCustomDtypeColumns(columns) {
+        return (columns || []).some(function (c) {
+            return !c.hidden && c.cellType === 'custom_select';
+        });
+    }
+
     function s4tIsCsOwnerCol(col) {
         if (!col) return false;
         return col.id === 'c_cs_owner' || (col.header && col.header.trim().toLowerCase() === 'cs owner');
@@ -208,8 +214,17 @@
 
         switch (sourceKey) {
             case 'list': {
-                var l = listsById.get(card.idList);
-                return l ? (l.name || '') : '';
+                if (card.list && card.list.name) return card.list.name;
+                if (card.listName) return card.listName;
+                if (listsById && typeof listsById.get === 'function') {
+                    var l = listsById.get(card.idList);
+                    if (l) return typeof l === 'string' ? l : (l.name || '');
+                }
+                if (lookup && lookup.lists && card.idList) {
+                    var l2 = lookup.lists[card.idList] || (typeof lookup.lists.get === 'function' && lookup.lists.get(card.idList));
+                    if (l2) return typeof l2 === 'string' ? l2 : (l2.name || '');
+                }
+                return '';
             }
             case 'title': {
                 return cleanTitle(card.name);
@@ -238,14 +253,21 @@
             case 'members': {
                 if (Array.isArray(card.members) && card.members.length) {
                     var mList = card.members.map(function (m) {
-                        return m ? (m.fullName || m.username || m.name || '') : '';
+                        return m ? (m.fullName || m.username || m.name || (typeof m === 'string' ? m : '')) : '';
                     }).filter(Boolean);
                     if (mList.length) return mList.join(', ');
                 }
                 var memberIds = card.idMembers || [];
                 return memberIds.map(function (id) {
-                    var m = membersById.get(id);
-                    return m ? (m.fullName || m.username || '') : '';
+                    if (membersById && typeof membersById.get === 'function') {
+                        var m = membersById.get(id);
+                        if (m) return typeof m === 'string' ? m : (m.fullName || m.username || m.name || '');
+                    }
+                    if (lookup && lookup.members) {
+                        var m2 = lookup.members[id] || (typeof lookup.members.get === 'function' && lookup.members.get(id));
+                        if (m2) return typeof m2 === 'string' ? m2 : (m2.fullName || m2.username || m2.name || '');
+                    }
+                    return '';
                 }).filter(Boolean).join(', ');
             }
             case 'product_owner': {
@@ -452,79 +474,115 @@
     function s4tGetEffectiveCellValue(card, col, lookup, options) {
         if (!card || !col) return '';
         var opts = options || {};
-        var cellKey = card.id + '_' + col.id;
+        var cellKey1 = card.id + '_' + col.id;
+        var cellKey2 = card.id + ':' + col.id;
 
         // 1. Manual edit in preview table takes precedence
-        if (opts.editedCells && opts.editedCells[cellKey] !== undefined) {
-            return opts.editedCells[cellKey];
+        if (opts.editedCells) {
+            if (opts.editedCells[cellKey1] !== undefined) return opts.editedCells[cellKey1];
+            if (opts.editedCells[cellKey2] !== undefined) return opts.editedCells[cellKey2];
         }
+
+        var colId = String(col.id || '').toLowerCase();
+        var colSource = String(col.source || '').toLowerCase();
+        var hNorm = String(col.header || '').toLowerCase();
 
         // 2. Direct extraction if column has an active data source (not blank)
-        var extracted = '';
-        if (col.source && col.source !== 'blank') {
-            extracted = s4tExtractFieldValue(card, col.source, lookup);
-            if (extracted !== '') {
-                return extracted;
-            }
+        if (colSource && colSource !== 'blank') {
+            var extracted = s4tExtractFieldValue(card, col.source, lookup);
+            if (extracted !== '') return extracted;
         }
 
-        var headerNorm = String(col.header || '').trim().toLowerCase();
-        var colId = String(col.id || '').trim().toLowerCase();
-        var listsById = (lookup && lookup.listsById) || new Map();
-        var targetList = listsById.get(card.idList);
-        var listName = targetList ? String(targetList.name || '').toLowerCase() : '';
+        // 3. Fallbacks and defaults so that columns 4 through 13 have proper values
 
-        // 3. Status column ('Going Live' / 'Not Going Live')
-        if (colId === 'c_status' || headerNorm === 'status') {
-            if (/\b(backlog|icebox|hold|dropped|deferred|not[\s_-]*sure|parked|cancelled|canceled)\b/i.test(listName)) {
-                return 'Not Going Live';
+        // Status (c_status)
+        if (colId === 'c_status' || hNorm === 'status') {
+            var listName = s4tExtractFieldValue(card, 'list', lookup);
+            if (!listName && card) {
+                listName = card.listName || (card.list && card.list.name) || '';
+                if (!listName && lookup && card.idList) {
+                    if (lookup.listsById && typeof lookup.listsById.get === 'function') {
+                        var lObj = lookup.listsById.get(card.idList);
+                        listName = typeof lObj === 'string' ? lObj : (lObj ? lObj.name : '');
+                    }
+                    if (!listName && lookup.lists) {
+                        var lVal = lookup.lists[card.idList] || (typeof lookup.lists.get === 'function' && lookup.lists.get(card.idList));
+                        listName = typeof lVal === 'string' ? lVal : (lVal ? lVal.name : '');
+                    }
+                }
             }
-            return 'Going Live';
+            var isBacklog = /\b(backlog|icebox|hold|blocked|cancelled|deprecat)\b/i.test(listName);
+            return isBacklog ? 'Not Going Live' : 'Going Live';
         }
 
-        // 4. Confidence columns ('High', 'Medium', 'Low', 'NA') -> default to 'High'
-        if (colId.includes('conf') || headerNorm.includes('confidence')) {
+        // Confidence columns (Dev Confidence, Mgr Confidence, Product Confidence, CS Confidence)
+        if (colId === 'c_dev_conf' || colId === 'c_mgr_conf' || colId === 'c_po_conf' || colId === 'c_cs_conf' || hNorm.includes('confidence')) {
             var confOpts = s4tParseCustomOptions(col.customOptions, 'High, Medium, Low, NA');
-            return confOpts[0] || 'High';
+            return (confOpts.length && confOpts[0]) ? confOpts[0] : 'High';
         }
 
-        // 5. Product Owner column
-        if (colId === 'c_po_owner' || headerNorm === 'product owner' || col.source === 'product_owner') {
-            var poExtracted = s4tExtractFieldValue(card, 'product_owner', lookup);
-            if (poExtracted) return poExtracted;
-
-            var poOpts = s4tParseCustomOptions(col.customOptions);
-            if (poOpts.length > 0) return poOpts[0];
-
-            var boardData = (lookup && lookup.boardData) || (opts && opts.boardData);
-            var dotLabels = (opts && opts.dotLabels) || (boardData ? s4tGetDotLabels(boardData) : []);
-            if (dotLabels && dotLabels.length > 0) return dotLabels[0];
-
-            return '';
+        // Product Owner (c_po_owner)
+        if (colId === 'c_po_owner' || hNorm === 'product owner' || colSource === 'product_owner') {
+            var poLabels = Array.isArray(card.labels) ? card.labels : [];
+            for (var pi = 0; pi < poLabels.length; pi++) {
+                var pName = (poLabels[pi] && (poLabels[pi].name || (typeof poLabels[pi] === 'string' ? poLabels[pi] : '')) || '').trim();
+                if (/[.．…]$/.test(pName)) {
+                    return pName.replace(/[.．…]+$/, '').trim();
+                }
+            }
+            if (lookup && Array.isArray(lookup.productOwners) && lookup.productOwners.length) {
+                return lookup.productOwners[0];
+            }
+            var parsedPo = s4tParseCustomOptions(col.customOptions);
+            if (parsedPo.length) return parsedPo[0];
         }
 
-        // 6. Dev Owner column
-        if (colId === 'c_dev_owner' || headerNorm === 'dev owner' || col.cellType === 'dev_select') {
-            var devExtracted = s4tExtractFieldValue(card, 'members', lookup);
-            if (devExtracted) return devExtracted;
-            if (opts.defaultDev) return opts.defaultDev;
-            return '';
+        // Dev Owner (c_dev_owner)
+        if (colId === 'c_dev_owner' || hNorm === 'dev owner' || col.cellType === 'dev_select') {
+            if (lookup && Array.isArray(lookup.developers) && lookup.developers.length === 1) {
+                return lookup.developers[0];
+            }
         }
 
-        // 7. CS Owner column
-        if (s4tIsCsOwnerCol(col)) {
-            var csOpts = s4tParseCustomOptions(col.customOptions);
-            if (csOpts.length > 0) return csOpts[0];
-            return '';
+        // CS Owner (c_cs_owner)
+        if (colId === 'c_cs_owner' || hNorm === 'cs owner') {
+            if (lookup && Array.isArray(lookup.csOwners) && lookup.csOwners.length) {
+                return lookup.csOwners[0];
+            }
+            var parsedCs = s4tParseCustomOptions(col.customOptions);
+            if (parsedCs.length) return parsedCs[0];
         }
 
-        // 8. Any other custom_select column with configured options
-        if (col.cellType === 'custom_select' && col.customOptions) {
-            var generalOpts = s4tParseCustomOptions(col.customOptions);
-            if (generalOpts.length > 0) return generalOpts[0];
+        // Risk (Comments) (c_risk)
+        if (colId === 'c_risk' || hNorm.includes('risk')) {
+            var desc = card.desc || '';
+            var riskMatch = desc.match(/risk\s*[:=]\s*([^\r\n]+)/i);
+            if (riskMatch && riskMatch[1].trim()) return riskMatch[1].trim();
+            return 'None';
+        }
+
+        // Resolution (Comments) (c_resolution)
+        if (colId === 'c_resolution' || hNorm.includes('resolution')) {
+            var desc2 = card.desc || '';
+            var resMatch = desc2.match(/resolution\s*[:=]\s*([^\r\n]+)/i);
+            if (resMatch && resMatch[1].trim()) return resMatch[1].trim();
+            return 'Ready for QA';
         }
 
         return '';
+    }
+
+    function s4tIsHighZoomOrResolution(win, diag) {
+        var w = win || (typeof window !== 'undefined' ? window : null);
+        var d = diag;
+        var dpr = (w && typeof w.devicePixelRatio === 'number') ? w.devicePixelRatio : 1;
+        var winW = (w && typeof w.innerWidth === 'number') ? w.innerWidth : 1920;
+        var winH = (w && typeof w.innerHeight === 'number') ? w.innerHeight : 1080;
+        var dW = (d && d.length && d[0]) ? (d[0].clientWidth || (typeof d.outerWidth === 'function' ? d.outerWidth() : winW)) : winW;
+        var dH = (d && d.length && d[0]) ? (d[0].clientHeight || (typeof d.outerHeight === 'function' ? d.outerHeight() : winH)) : winH;
+
+        // High resolution display scaling / zoomed in (devicePixelRatio > 1.15, or constrained viewport/dialog)
+        return (dpr > 1.15 || winH <= 760 || winW <= 1180 || dH <= 680 || dW <= 1020);
     }
 
     function s4tBuildExportCsv(columns, cards, lookup, options) {
@@ -809,6 +867,18 @@
     }
 
     function s4tBuildExportXlsx(columns, cards, lookup, title, options) {
+        // Support flexible argument order: (cards, columns, ...) vs (columns, cards, ...)
+        if (Array.isArray(columns) && Array.isArray(cards)) {
+            var firstCol = columns[0];
+            var firstCard = cards[0];
+            if ((firstCol && (firstCol.idList || firstCol.name !== undefined) && !firstCol.cellType && !firstCol.header) ||
+                (firstCard && (firstCard.cellType !== undefined || firstCard.header !== undefined))) {
+                var temp = columns;
+                columns = cards;
+                cards = temp;
+            }
+        }
+
         var opts = options;
         if (typeof title === 'object' && title !== null && !options) {
             opts = title;
@@ -881,28 +951,50 @@
             var optionsList = [];
 
             if (c.cellType === 'dev_select' || colId === 'c_dev_owner' || hNorm === 'dev owner') {
-                var devMembers = [];
-                if (lookup && lookup.boardData && Array.isArray(lookup.boardData.members)) {
-                    devMembers = lookup.boardData.members;
-                } else if (lookup && lookup.membersById) {
-                    devMembers = Array.from(lookup.membersById.values());
-                }
-                var devSeen = new Set();
-                devMembers.forEach(function (m) {
-                    var mName = m ? (m.fullName || m.username || m.name || '') : '';
-                    if (mName && !devSeen.has(mName.toLowerCase())) {
-                        devSeen.add(mName.toLowerCase());
-                        optionsList.push(mName);
+                if (lookup && Array.isArray(lookup.developers) && lookup.developers.length) {
+                    optionsList = lookup.developers.slice();
+                } else {
+                    var devMembers = [];
+                    if (lookup && lookup.boardData && Array.isArray(lookup.boardData.members)) {
+                        devMembers = lookup.boardData.members;
+                    } else if (lookup && lookup.membersById) {
+                        devMembers = Array.from(lookup.membersById.values());
+                    } else if (lookup && lookup.members) {
+                        devMembers = Object.values(lookup.members);
                     }
-                });
+                    var devSeen = new Set();
+                    devMembers.forEach(function (m) {
+                        var mName = typeof m === 'string' ? m : (m ? (m.fullName || m.username || m.name || '') : '');
+                        if (mName && !devSeen.has(mName.toLowerCase())) {
+                            devSeen.add(mName.toLowerCase());
+                            optionsList.push(mName);
+                        }
+                    });
+                }
             } else if (colId === 'c_po_owner' || hNorm === 'product owner' || c.source === 'product_owner') {
                 optionsList = s4tParseCustomOptions(c.customOptions);
+                if (!optionsList.length && lookup && Array.isArray(lookup.productOwners)) {
+                    optionsList = lookup.productOwners.slice();
+                }
                 if (!optionsList.length) {
                     var boardData = (lookup && lookup.boardData) || (opts && opts.boardData);
                     optionsList = (opts && opts.dotLabels) || (boardData ? s4tGetDotLabels(boardData) : []);
                 }
+            } else if (colId === 'c_cs_owner' || hNorm === 'cs owner') {
+                optionsList = s4tParseCustomOptions(c.customOptions);
+                if (!optionsList.length && lookup && Array.isArray(lookup.csOwners)) {
+                    optionsList = lookup.csOwners.slice();
+                }
             } else if (c.cellType === 'custom_select') {
                 optionsList = s4tParseCustomOptions(c.customOptions);
+            }
+
+            if (!optionsList.length) {
+                if (colId === 'c_status' || hNorm === 'status') {
+                    optionsList = ['Going Live', 'Not Going Live'];
+                } else if (colId === 'c_dev_conf' || colId === 'c_mgr_conf' || colId === 'c_po_conf' || colId === 'c_cs_conf' || hNorm.includes('confidence')) {
+                    optionsList = ['High', 'Medium', 'Low', 'NA'];
+                }
             }
 
             if (optionsList && optionsList.length > 0) {
@@ -1249,6 +1341,11 @@
                 return;
             }
 
+            // By default, always keep guide tour in step view (step 1), especially if screen resolution is high / zoomed
+            if (s4tIsHighZoomOrResolution(null, dialog) || currentGuideStep === 'all') {
+                currentGuideStep = 1;
+            }
+
             showGuideToast('Entered Guide Mode');
 
             if (state.currentTab !== 'sheet') {
@@ -1312,6 +1409,10 @@
             if (typeof step !== 'undefined') {
                 currentGuideStep = step;
             }
+            var isHighZoom = s4tIsHighZoomOrResolution(null, dialog);
+            if (isHighZoom && currentGuideStep === 'all') {
+                currentGuideStep = 1;
+            }
             dialog.find('#s4t-guide-freeze-overlay').remove();
             dialog.find('.s4t-cloud-tooltip').remove();
             dialog.find('.s4t-guide-stepper-pill').remove();
@@ -1340,11 +1441,41 @@
                 previewTitle = 'Refresh Preview';
                 previewDesc = 'Click to regenerate the 20-card preview with your updated columns.';
             } else if (isPreviewGenerated) {
-                previewTarget = '#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(3)';
+                previewTarget = (currentGuideStep === 'all' && dialog.find('#s4t-sheet-table tbody tr.s4t-sheet-row').length > 2)
+                    ? '#s4t-sheet-table tbody tr.s4t-sheet-row:eq(2) td.s4t-sheet-cell:eq(2)'
+                    : '#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(3)';
                 previewFallback = '#s4t-sheet-table tbody tr.s4t-sheet-row:first td.s4t-sheet-cell:eq(1)';
                 previewSecond = '#s4t-sheet-table tbody tr:first td:first';
                 previewTitle = 'Live 20-Card Preview';
                 previewDesc = 'Preview formatted rows with your rules before exporting.';
+            }
+
+            // Dynamically detect visible columns within dialog horizontal bounds
+            var visibleThIndices = [];
+            var thElements = dialog.find('.s4t-sheet-th');
+            thElements.each(function (idx) {
+                if (this.getBoundingClientRect) {
+                    var r = this.getBoundingClientRect();
+                    if (r.left >= originX - 5 && r.right <= originX + dialogWidth + 5) {
+                        visibleThIndices.push(idx);
+                    }
+                }
+            });
+            if (!visibleThIndices.length) {
+                visibleThIndices = [0, 1, 2, 3, 4, 5];
+            }
+
+            // Find a visible column that has custom options input
+            var visibleCustomCol = -1;
+            for (var vi = visibleThIndices.length - 1; vi >= 0; vi--) {
+                var cIdx = visibleThIndices[vi];
+                if (dialog.find('.s4t-sheet-th:eq(' + cIdx + ') .s4t-sheet-custom-options-input:visible').length) {
+                    visibleCustomCol = cIdx;
+                    break;
+                }
+            }
+            if (visibleCustomCol === -1) {
+                visibleCustomCol = visibleThIndices.indexOf(5) !== -1 ? 5 : (visibleThIndices.indexOf(3) !== -1 ? 3 : visibleThIndices[visibleThIndices.length - 1]);
             }
 
             // Guide items covering each distinct feature across the modal organized into 3 tour steps
@@ -1355,7 +1486,7 @@
                     fallbackTarget: '.s4t-export-match-count',
                     title: 'Matching Cards Count',
                     desc: 'Total cards matching active filters. Double-click to copy.',
-                    placement: 'right',
+                    placement: 'bottom',
                     step: 1
                 },
                 {
@@ -1435,12 +1566,12 @@
                 {
                     id: 'col-custom',
                     target: '.s4t-sheet-th:eq(6) .s4t-sheet-custom-options-input',
-                    fallbackTarget: '.s4t-sheet-th:eq(6)',
+                    fallbackTarget: '.s4t-sheet-th:eq(' + visibleCustomCol + ') .s4t-sheet-custom-options-input',
                     secondFallback: '.s4t-sheet-custom-options-input:visible:first',
                     title: 'Custom Dropdown Options',
                     desc: 'Enter comma-separated options to create cell dropdowns.',
                     colIdx: 6,
-                    tier: 1,
+                    tier: 3,
                     step: 2
                 },
                 {
@@ -1484,7 +1615,6 @@
 
             // Find physical bottom of column card headers to ensure NO tooltips ever cover column cards
             var maxCardBottom = 185;
-            var thElements = dialog.find('.s4t-sheet-th');
             if (thElements.length) {
                 thElements.each(function () {
                     if (this.getBoundingClientRect) {
@@ -1496,11 +1626,25 @@
 
             activeItems.forEach(function (item) {
                 var $el = dialog.find(item.target);
-                if ((!$el.length || !$el.is(':visible')) && item.fallbackTarget) {
-                    $el = dialog.find(item.fallbackTarget);
+                var isOffScreen = false;
+                if ($el.length && $el[0].getBoundingClientRect) {
+                    var er = $el[0].getBoundingClientRect();
+                    if (er.right > dRect.right - 10 || er.left < dRect.left) {
+                        isOffScreen = true;
+                    }
                 }
-                if ((!$el.length || !$el.is(':visible')) && item.secondFallback) {
-                    $el = dialog.find(item.secondFallback);
+                if ((!$el.length || !$el.is(':visible') || isOffScreen) && item.fallbackTarget) {
+                    var $fb = dialog.find(item.fallbackTarget);
+                    if ($fb.length && $fb.is(':visible')) {
+                        $el = $fb;
+                        isOffScreen = false;
+                    }
+                }
+                if ((!$el.length || !$el.is(':visible') || isOffScreen) && item.secondFallback) {
+                    var $sf = dialog.find(item.secondFallback);
+                    if ($sf.length && $sf.is(':visible')) {
+                        $el = $sf;
+                    }
                 }
                 if (!$el.length || !$el.is(':visible')) return;
 
@@ -1512,8 +1656,11 @@
                 var elW = elRect.width;
                 var elH = elRect.height;
 
+                // If element was redirected to a fallback column (e.g. at 150% zoom), update colIdx
+                var parentTh = $el.closest('.s4t-sheet-th');
+                var actualColIdx = parentTh.length ? parentTh.index() : item.colIdx;
+
                 // Precision bounding cutout with 4px padding hugging target
-                // For small icon buttons (eye icon, drag handle), ensure minimum 26px box so spotlight is clearly visible
                 var pad = 4;
                 var minW = (item.id === 'col-hide' || item.id === 'col-drag') ? 26 : Math.round(elW + (pad * 2));
                 var minH = (item.id === 'col-hide' || item.id === 'col-drag') ? 26 : Math.round(elH + (pad * 2));
@@ -1529,6 +1676,7 @@
                 validElements.push({
                     item: item,
                     $el: $el,
+                    actualColIdx: actualColIdx,
                     targetLeft: targetLeft,
                     targetTop: targetTop,
                     elW: elW,
@@ -1567,10 +1715,10 @@
                 var hasSvgStem = true;
 
                 if (item.id === 'match-count') {
-                    // Position in the empty header space to the right of the badge with an arrow-left pointing to it
-                    left = Math.round(v.targetLeft + v.elW + 16);
-                    top = Math.max(8, Math.round(targetTopY + (v.elH / 2) - 34));
-                    arrowClass = 'arrow-left';
+                    // Position cleanly below the matching count badge with an upward pointing arrow
+                    left = Math.max(14, Math.round(v.targetLeft));
+                    top = Math.round(targetBottomY + 12);
+                    arrowClass = 'arrow-top';
                 } else if (item.id === 'exclusions') {
                     // Position directly centered below the Settings button with an SVG stem arrow
                     left = Math.round(targetCenterX - (tipW / 2));
@@ -1578,22 +1726,31 @@
                     top = Math.round(targetBottomY + 16);
                     arrowClass = 'arrow-top';
                 } else if (item.tier === 1) {
-                    // Tier 1 column features (Cols 0, 2, 4, 6): positioned just below column cards with glowing SVG stem
-                    var colTh1 = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
+                    // Tier 1 column features (Cols 0, 2, 4): positioned just below column cards with glowing SVG stem
+                    var colTh1 = dialog.find('.s4t-sheet-th:eq(' + v.actualColIdx + ')');
                     var cCenterX1 = colTh1.length ? (colTh1[0].getBoundingClientRect().left - originX + (colTh1[0].getBoundingClientRect().width / 2)) : targetCenterX;
                     left = Math.round(cCenterX1 - (tipW / 2));
                     top = Math.round(maxCardBottom + 16);
                     arrowClass = 'arrow-top';
                 } else if (item.tier === 2) {
-                    // Tier 2 column features (Cols 1, 3, 5): positioned in the lower middle row with extended SVG stems
-                    var colTh2 = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
+                    // Tier 2 column features (Cols 1, 3, 5): positioned in middle row with extended SVG stems
+                    var colTh2 = dialog.find('.s4t-sheet-th:eq(' + v.actualColIdx + ')');
                     var cCenterX2 = colTh2.length ? (colTh2[0].getBoundingClientRect().left - originX + (colTh2[0].getBoundingClientRect().width / 2)) : targetCenterX;
                     left = Math.round(cCenterX2 - (tipW / 2));
                     top = Math.round(maxCardBottom + 115);
                     arrowClass = 'arrow-top';
+                } else if (item.tier === 3) {
+                    // Tier 3 column features (Custom options): positioned in third row below Dtype
+                    var colTh3 = dialog.find('.s4t-sheet-th:eq(' + v.actualColIdx + ')');
+                    var cCenterX3 = colTh3.length ? (colTh3[0].getBoundingClientRect().left - originX + (colTh3[0].getBoundingClientRect().width / 2)) : targetCenterX;
+                    left = Math.round(cCenterX3 - (tipW / 2));
+                    top = Math.round(maxCardBottom + 215);
+                    arrowClass = 'arrow-top';
                 } else if (item.id === 'preview-card') {
                     left = Math.round(targetCenterX - (tipW / 2));
-                    top = Math.round(targetBottomY + 14);
+                    // In 'all' mode, ensure preview tooltip is placed below Tier 2 column tooltips
+                    var minPreviewTop = (currentGuideStep === 'all') ? (maxCardBottom + 195) : (targetBottomY + 14);
+                    top = Math.max(minPreviewTop, Math.round(targetBottomY + 14));
                     arrowClass = 'arrow-top';
                 } else if (item.id === 'col-count') {
                     left = 14;
@@ -1609,59 +1766,14 @@
                     arrowClass = 'arrow-top';
                 }
 
-                var pad = 14;
-                left = Math.max(pad, Math.min(left, dialogWidth - tipW - pad));
-                top = Math.max(pad, Math.min(top, dialogHeight - tipH - pad));
-
-                if (hasSvgStem) {
-                    var stemX = Math.round(targetCenterX);
-                    if (arrowClass === 'arrow-bottom') {
-                        var stemY1 = Math.round(top + tipH + 2);
-                        var stemY2 = Math.round(v.ringY - 2);
-                        var lineStartX = Math.max(left + 16, Math.min(stemX, left + tipW - 16));
-                        if (stemY2 <= stemY1) stemY2 = stemY1 + 10;
-                        svgStemLines.push(
-                            '<line class="s4t-guide-stem-line" x1="' + lineStartX + '" y1="' + stemY1 + '" x2="' + stemX + '" y2="' + stemY2 + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
-                            '<polygon class="s4t-guide-stem-arrow" points="' + (stemX - 5) + ',' + (stemY2 - 6) + ' ' + (stemX + 5) + ',' + (stemY2 - 6) + ' ' + stemX + ',' + stemY2 + '" fill="#10b981" />'
-                        );
-                    } else if (item.gutterRoute) {
-                        // Clean side gutter route: rises in the empty space between columns and points into the input side
-                        var colTh = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
-                        var colLeft = colTh.length ? (colTh[0].getBoundingClientRect().left - originX) : v.ringX;
-                        var gutterX = Math.round(Math.min(v.ringX - 8, colLeft - 4));
-                        var targetCenterY = Math.round(v.targetTop + (v.elH / 2));
-                        var lineStartX = Math.max(left + 16, Math.min(gutterX, left + tipW - 16));
-                        var stemY2 = Math.round(top - 2);
-                        var targetArrowX = Math.round(v.ringX - 2);
-
-                        svgStemLines.push(
-                            '<path class="s4t-guide-stem-line" d="M ' + lineStartX + ' ' + stemY2 + ' L ' + gutterX + ' ' + stemY2 + ' L ' + gutterX + ' ' + targetCenterY + ' L ' + targetArrowX + ' ' + targetCenterY + '" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
-                            '<polygon class="s4t-guide-stem-arrow" points="' + targetArrowX + ',' + targetCenterY + ' ' + (targetArrowX - 6) + ',' + (targetCenterY - 5) + ' ' + (targetArrowX - 6) + ',' + (targetCenterY + 5) + '" fill="#10b981" />'
-                        );
-                    } else if (arrowClass === 'arrow-left') {
-                        var targetRightX = Math.round(v.ringX + v.ringW + 2);
-                        var targetCenterY = Math.round(v.targetTop + (v.elH / 2));
-                        var lineEndX = Math.round(left - 2);
-                        if (lineEndX <= targetRightX) lineEndX = targetRightX + 10;
-                        svgStemLines.push(
-                            '<line class="s4t-guide-stem-line" x1="' + lineEndX + '" y1="' + targetCenterY + '" x2="' + targetRightX + '" y2="' + targetCenterY + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
-                            '<polygon class="s4t-guide-stem-arrow" points="' + targetRightX + ',' + targetCenterY + ' ' + (targetRightX + 6) + ',' + (targetCenterY - 5) + ' ' + (targetRightX + 6) + ',' + (targetCenterY + 5) + '" fill="#10b981" />'
-                        );
-                    } else {
-                        var stemY1 = Math.round(v.ringY + v.ringH + 2);
-                        var stemY2 = Math.round(top - 2);
-                        var lineEndX = Math.max(left + 16, Math.min(stemX, left + tipW - 16));
-                        if (stemY2 <= stemY1) stemY2 = stemY1 + 10;
-                        svgStemLines.push(
-                            '<line class="s4t-guide-stem-line" x1="' + stemX + '" y1="' + stemY1 + '" x2="' + lineEndX + '" y2="' + stemY2 + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
-                            '<polygon class="s4t-guide-stem-arrow" points="' + (stemX - 5) + ',' + (stemY1 + 6) + ' ' + (stemX + 5) + ',' + (stemY1 + 6) + ' ' + stemX + ',' + stemY1 + '" fill="#10b981" />'
-                        );
-                    }
-                }
+                var padMargin = 14;
+                left = Math.max(padMargin, Math.min(left, dialogWidth - tipW - padMargin));
+                top = Math.max(padMargin, Math.min(top, dialogHeight - tipH - padMargin));
 
                 placedTooltips.push({
                     $tooltip: $tooltip,
                     item: item,
+                    vElem: v,
                     targetCenterX: targetCenterX,
                     arrowClass: arrowClass,
                     hasSvgStem: hasSvgStem,
@@ -1670,6 +1782,122 @@
                     width: tipW,
                     height: tipH
                 });
+            });
+
+            // Automated AABB Collision Avoidance and Resolution:
+            // Ensures zero overlaps between any tooltips, and between tooltips and the top Stepper Pill
+            var minGapX = 14;
+            var minGapY = 14;
+
+            // 1. Resolve collisions with the top Stepper Pill (which sits at top: 8px)
+            var pillLeft = Math.round((dialogWidth - (isHighZoom ? 240 : 320)) / 2);
+            var pillRight = pillLeft + (isHighZoom ? 240 : 320);
+            var pillBottom = 48;
+            if (stepperPillPos && typeof stepperPillPos.left === 'number' && typeof stepperPillPos.top === 'number') {
+                pillLeft = stepperPillPos.left;
+                pillRight = pillLeft + (isHighZoom ? 240 : 320);
+                pillBottom = stepperPillPos.top + 40;
+            }
+
+            placedTooltips.forEach(function (t) {
+                if (t.left < pillRight + minGapX && t.left + t.width + minGapX > pillLeft &&
+                    t.top < pillBottom + minGapY && t.top + t.height + minGapY > 8) {
+                    t.top = Math.round(pillBottom + minGapY);
+                }
+            });
+
+            // 2. Resolve pairwise tooltip collisions
+            for (var pass = 0; pass < 8; pass++) {
+                var hadCollision = false;
+                for (var i = 0; i < placedTooltips.length; i++) {
+                    for (var j = i + 1; j < placedTooltips.length; j++) {
+                        var t1 = placedTooltips[i];
+                        var t2 = placedTooltips[j];
+
+                        var overlapX = (t1.left < t2.left + t2.width + minGapX) && (t1.left + t1.width + minGapX > t2.left);
+                        var overlapY = (t1.top < t2.top + t2.height + minGapY) && (t1.top + t1.height + minGapY > t2.top);
+
+                        if (overlapX && overlapY) {
+                            hadCollision = true;
+                            if (t2.top >= t1.top) {
+                                t2.top = t1.top + t1.height + minGapY;
+                            } else {
+                                t1.top = t2.top + t2.height + minGapY;
+                            }
+
+                            var maxAllowedTop = dialogHeight - t2.height - 18;
+                            if (t2.top > maxAllowedTop) {
+                                t2.top = maxAllowedTop;
+                                if (t1.left + t1.width + t2.width + minGapX <= dialogWidth - 14) {
+                                    t2.left = t1.left + t1.width + minGapX;
+                                } else if (t1.left - t2.width - minGapX >= 14) {
+                                    t2.left = t1.left - t2.width - minGapX;
+                                }
+                            }
+
+                            t2.left = Math.max(14, Math.min(t2.left, dialogWidth - t2.width - 14));
+                            t2.top = Math.max(14, Math.min(t2.top, dialogHeight - t2.height - 14));
+                        }
+                    }
+                }
+                if (!hadCollision) break;
+            }
+
+            // Generate clean SVG stems connecting each target element to its finalized non-overlapping tooltip position
+            placedTooltips.forEach(function (t) {
+                var v = t.vElem;
+                var item = t.item;
+                if (!t.hasSvgStem || !v) return;
+
+                var stemX = Math.round(t.targetCenterX);
+                stemX = Math.max(14, Math.min(dialogWidth - 14, stemX));
+                var left = t.left;
+                var top = t.top;
+                var tipW = t.width;
+                var tipH = t.height;
+
+                if (t.arrowClass === 'arrow-bottom') {
+                    var stemY1 = Math.round(top + tipH + 2);
+                    var stemY2 = Math.round(v.ringY - 2);
+                    var lineStartX = Math.max(left + 16, Math.min(stemX, left + tipW - 16));
+                    if (stemY2 <= stemY1) stemY2 = stemY1 + 10;
+                    svgStemLines.push(
+                        '<line class="s4t-guide-stem-line" x1="' + lineStartX + '" y1="' + stemY1 + '" x2="' + stemX + '" y2="' + stemY2 + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
+                        '<polygon class="s4t-guide-stem-arrow" points="' + (stemX - 5) + ',' + (stemY2 - 6) + ' ' + (stemX + 5) + ',' + (stemY2 - 6) + ' ' + stemX + ',' + stemY2 + '" fill="#10b981" />'
+                    );
+                } else if (item.gutterRoute) {
+                    var colTh = dialog.find('.s4t-sheet-th:eq(' + item.colIdx + ')');
+                    var colLeft = colTh.length ? (colTh[0].getBoundingClientRect().left - originX) : v.ringX;
+                    var gutterX = Math.round(Math.min(v.ringX - 8, colLeft - 4));
+                    gutterX = Math.max(14, Math.min(dialogWidth - 14, gutterX));
+                    var targetCenterY = Math.round(v.targetTop + (v.elH / 2));
+                    var lineStartX = Math.max(left + 16, Math.min(gutterX, left + tipW - 16));
+                    var stemY2 = Math.round(top - 2);
+                    var targetArrowX = Math.max(14, Math.min(dialogWidth - 14, Math.round(v.ringX - 2)));
+
+                    svgStemLines.push(
+                        '<path class="s4t-guide-stem-line" d="M ' + lineStartX + ' ' + stemY2 + ' L ' + gutterX + ' ' + stemY2 + ' L ' + gutterX + ' ' + targetCenterY + ' L ' + targetArrowX + ' ' + targetCenterY + '" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+                        '<polygon class="s4t-guide-stem-arrow" points="' + targetArrowX + ',' + targetCenterY + ' ' + (targetArrowX - 6) + ',' + (targetCenterY - 5) + ' ' + (targetArrowX - 6) + ',' + (targetCenterY + 5) + '" fill="#10b981" />'
+                    );
+                } else if (t.arrowClass === 'arrow-left') {
+                    var targetRightX = Math.max(14, Math.min(dialogWidth - 14, Math.round(v.ringX + v.ringW + 2)));
+                    var targetCenterY = Math.round(v.targetTop + (v.elH / 2));
+                    var lineEndX = Math.round(left - 2);
+                    if (lineEndX <= targetRightX) lineEndX = targetRightX + 10;
+                    svgStemLines.push(
+                        '<line class="s4t-guide-stem-line" x1="' + lineEndX + '" y1="' + targetCenterY + '" x2="' + targetRightX + '" y2="' + targetCenterY + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
+                        '<polygon class="s4t-guide-stem-arrow" points="' + targetRightX + ',' + targetCenterY + ' ' + (targetRightX + 6) + ',' + (targetCenterY - 5) + ' ' + (targetRightX + 6) + ',' + (targetCenterY + 5) + '" fill="#10b981" />'
+                    );
+                } else {
+                    var stemY1 = Math.round(v.ringY + v.ringH + 2);
+                    var stemY2 = Math.round(top - 2);
+                    var lineEndX = Math.max(left + 16, Math.min(stemX, left + tipW - 16));
+                    if (stemY2 <= stemY1) stemY2 = stemY1 + 10;
+                    svgStemLines.push(
+                        '<line class="s4t-guide-stem-line" x1="' + stemX + '" y1="' + stemY1 + '" x2="' + lineEndX + '" y2="' + stemY2 + '" stroke="#10b981" stroke-width="2" stroke-linecap="round" />' +
+                        '<polygon class="s4t-guide-stem-arrow" points="' + (stemX - 5) + ',' + (stemY1 + 6) + ' ' + (stemX + 5) + ',' + (stemY1 + 6) + ' ' + stemX + ',' + stemY1 + '" fill="#10b981" />'
+                    );
+                }
             });
 
             // Build SVG freeze overlay including mask cutouts, spotlight rings, and glowing stem lines
@@ -1753,6 +1981,12 @@
                 .attr('aria-label', isAll ? 'Switch to Step View' : 'Show all tooltips at once')
                 .on('click', function (e) {
                     e.stopPropagation();
+                    if (s4tIsHighZoomOrResolution(null, dialog)) {
+                        currentGuideStep = 1;
+                        showGuideToast('Screen resolution is zoomed — keeping Step View for clear display', 'info');
+                        renderCloudyTooltips();
+                        return;
+                    }
                     currentGuideStep = isAll ? 1 : 'all';
                     renderCloudyTooltips();
                 });
@@ -1764,6 +1998,10 @@
                 });
 
             $actions.append($backBtn, $nextBtn, $toggleAllBtn, $closeBtn);
+            if (isHighZoom) {
+                $stepperPill.addClass('s4t-guide-step-only');
+                $toggleAllBtn.hide();
+            }
             $stepperPill.append($dragGrip, $stepTitle, $actions);
 
             // Re-apply preserved user-dragged coordinates if user repositioned the pill
@@ -1779,7 +2017,7 @@
 
             // Re-apply preserved user-dragged coordinates if user repositioned the pill
             if (stepperPillPos && typeof stepperPillPos.top === 'number' && typeof stepperPillPos.left === 'number') {
-                var estW = 320;
+                var estW = isHighZoom ? 240 : 320;
                 var estH = 40;
                 var maxClampedL = Math.max(8, dialogWidth - estW - 8);
                 var maxClampedT = Math.max(8, dialogHeight - estH - 8);
@@ -3566,6 +3804,56 @@
                 formatToggle.attr('aria-expanded', 'false');
             });
 
+            function hasCustomDtypeColumns() {
+                return s4tHasCustomDtypeColumns(state.columns);
+            }
+
+            function showCsvWarningModal(onConfirm, onCancel) {
+                dialog.find('#s4t-csv-warning-popup').remove();
+
+                var $overlay = $('<div class="s4t-csv-warning-backdrop" id="s4t-csv-warning-popup" role="dialog" aria-modal="true" aria-labelledby="s4t-csv-warning-title">');
+                var $card = $('<div class="s4t-csv-warning-card">');
+
+                var $header = $('<div class="s4t-csv-warning-header">');
+                $header.append($('<span class="s4t-csv-warning-icon">⚠️</span>'));
+                $header.append($('<span class="s4t-csv-warning-title" id="s4t-csv-warning-title">CSV Format Notice</span>'));
+
+                var $body = $('<div class="s4t-csv-warning-body">')
+                    .html('In case of CSV, interactive dropdown selectors and custom options are not supported in spreadsheet applications (CSV is plain text only).<br><br><strong>Are you sure you want to proceed with CSV?</strong>');
+
+                var $actions = $('<div class="s4t-csv-warning-actions">');
+                var $btnCancel = $('<button type="button" class="s4t-btn s4t-csv-warning-btn-cancel">Cancel</button>');
+                var $btnConfirm = $('<button type="button" class="s4t-btn s4t-csv-warning-btn-confirm">Yes, Proceed with CSV</button>');
+
+                function closeWarning() {
+                    $overlay.remove();
+                    $(document).off('keydown.s4tcsvwarn');
+                }
+
+                $btnCancel.on('click', function () {
+                    closeWarning();
+                    if (typeof onCancel === 'function') onCancel();
+                });
+
+                $btnConfirm.on('click', function () {
+                    closeWarning();
+                    if (typeof onConfirm === 'function') onConfirm();
+                });
+
+                $(document).on('keydown.s4tcsvwarn', function (e) {
+                    if (e.key === 'Escape') {
+                        closeWarning();
+                        if (typeof onCancel === 'function') onCancel();
+                    }
+                });
+
+                $actions.append($btnCancel, $btnConfirm);
+                $card.append($header, $body, $actions);
+                $overlay.append($card);
+                dialog.append($overlay);
+                $btnConfirm.focus();
+            }
+
             // Format selection
             dialog.find('.s4t-split-item').on('mousedown', function (e) {
                 e.preventDefault();
@@ -3584,16 +3872,34 @@
                     return;
                 }
                 var fmt = $(this).attr('data-fmt');
-                state.selectedFormat = fmt;
-                if (fmt === 'csv') {
-                    dialog.find('#s4t-btn-main-download').text('📄 Download CSV (.csv)');
-                } else if (fmt === 'legacy_xls') {
-                    dialog.find('#s4t-btn-main-download').text('📊 Download Excel (.xls)');
-                } else {
-                    dialog.find('#s4t-btn-main-download').text('📊 Download Excel (.xlsx)');
-                }
                 dialog.find('#s4t-format-menu').prop('hidden', true);
                 dialog.find('#s4t-btn-format-toggle').attr('aria-expanded', 'false');
+
+                function applyFormat(selectedFmt) {
+                    state.selectedFormat = selectedFmt;
+                    if (selectedFmt === 'csv') {
+                        dialog.find('#s4t-btn-main-download').text('📄 Download CSV (.csv)');
+                    } else if (selectedFmt === 'legacy_xls') {
+                        dialog.find('#s4t-btn-main-download').text('📊 Download Excel (.xls)');
+                    } else {
+                        dialog.find('#s4t-btn-main-download').text('📊 Download Excel (.xlsx)');
+                    }
+                }
+
+                if (fmt === 'csv' && hasCustomDtypeColumns()) {
+                    showCsvWarningModal(
+                        function () {
+                            state.csvWarningConfirmed = true;
+                            applyFormat('csv');
+                        },
+                        function () {
+                            // User cancelled, keep existing format
+                        }
+                    );
+                } else {
+                    state.csvWarningConfirmed = false;
+                    applyFormat(fmt);
+                }
             });
 
             // Main download button click
@@ -3615,22 +3921,35 @@
                     showToast('No cards to export with current exclusions.');
                     return;
                 }
-                var $btn = $(this);
-                pulseButton($btn);
-                var safeBase = (boardName.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'board') + '_cards';
-                if (state.selectedFormat === 'csv') {
-                    var csv = s4tBuildExportCsv(state.columns, state.filteredCards, state.lookup, exportOpts());
-                    triggerDownload(csv, safeBase + '.csv', 'text/csv;charset=utf-8;');
-                    showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as CSV (.csv)!');
-                } else if (state.selectedFormat === 'legacy_xls') {
-                    var excel = s4tBuildExportExcel(state.columns, state.filteredCards, state.lookup, boardName, exportOpts());
-                    triggerDownload(excel, safeBase + '.xls', 'application/ms-excel');
-                    showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as Excel (.xls)!');
-                } else {
-                    var xlsx = s4tBuildExportXlsx(state.columns, state.filteredCards, state.lookup, boardName, exportOpts());
-                    triggerDownload(xlsx, safeBase + '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                    showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as Excel (.xlsx)!');
+
+                function doDownload() {
+                    var $btn = dialog.find('#s4t-btn-main-download');
+                    pulseButton($btn);
+                    var safeBase = (boardName.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || 'board') + '_cards';
+                    if (state.selectedFormat === 'csv') {
+                        var csv = s4tBuildExportCsv(state.columns, state.filteredCards, state.lookup, exportOpts());
+                        triggerDownload(csv, safeBase + '.csv', 'text/csv;charset=utf-8;');
+                        showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as CSV (.csv)!');
+                    } else if (state.selectedFormat === 'legacy_xls') {
+                        var excel = s4tBuildExportExcel(state.columns, state.filteredCards, state.lookup, boardName, exportOpts());
+                        triggerDownload(excel, safeBase + '.xls', 'application/ms-excel');
+                        showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as Excel (.xls)!');
+                    } else {
+                        var xlsx = s4tBuildExportXlsx(state.columns, state.filteredCards, state.lookup, boardName, exportOpts());
+                        triggerDownload(xlsx, safeBase + '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                        showToast('✓ Downloaded ' + state.filteredCards.length + ' cards as Excel (.xlsx)!');
+                    }
                 }
+
+                if (state.selectedFormat === 'csv' && hasCustomDtypeColumns() && !state.csvWarningConfirmed) {
+                    showCsvWarningModal(function () {
+                        state.csvWarningConfirmed = true;
+                        doDownload();
+                    });
+                    return;
+                }
+
+                doDownload();
             });
         }
 
@@ -3734,6 +4053,8 @@
     return {
         s4tOpenCardExport: s4tOpenCardExport,
         s4tCloseCardExport: s4tCloseCardExport,
+        DEFAULT_COLUMNS: DEFAULT_COLUMNS,
+        s4tGetDefaultColumns: function () { return JSON.parse(JSON.stringify(DEFAULT_COLUMNS)); },
         s4tExportCardFields: FIELD_DEFINITIONS,
         s4tExtractFieldValue: s4tExtractFieldValue,
         s4tGetEffectiveCellValue: s4tGetEffectiveCellValue,
@@ -3743,6 +4064,8 @@
         s4tBuildExportTsv: s4tBuildExportTsv,
         s4tFilterAndSortCards: s4tFilterAndSortCards,
         s4tParseCustomOptions: s4tParseCustomOptions,
-        s4tGetDotLabels: s4tGetDotLabels
+        s4tGetDotLabels: s4tGetDotLabels,
+        s4tIsHighZoomOrResolution: s4tIsHighZoomOrResolution,
+        s4tHasCustomDtypeColumns: s4tHasCustomDtypeColumns
     };
 }));
