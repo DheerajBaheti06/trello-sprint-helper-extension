@@ -16,7 +16,8 @@
             "eow-update.js",
             "hover-selectors.js",
             "card-peek.js",
-            "google-sheets.js"
+            "google-sheets.js",
+            "card-export.js"
          ],
          "matches": [
             "https://trello.com/*"

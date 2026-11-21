@@ -17,6 +17,7 @@ Built on [Scrum for Trello](https://github.com/Q42/TrelloScrum) by Q42, it exten
 | **Cards List & Slack Preview** | Select filtered cards, group them by developer, label or list, choose title/link formats, optionally append developer names when grouping by labels, and copy from the preview panel. |
 | **EOW Update** | Build weekly reports with task categories, drag-and-drop organization, list exclusions, points display and editable Slack previews. |
 | **Quick View (Peek Out)** | Hover the registration paper icon on any board card to preview its Description / Scope, checklist completion, and required comment statuses without opening the card modal. Copy formatted markdown descriptions with nested sub-bullets directly from the popover. |
+| **Export Cards** | Custom sheet designer to export board cards to Excel (.xls), CSV, or Google Sheets. Dynamically add, rename, map and shift columns across 14 card fields with descriptions, apply list/member/label exclusions, sort rows, and inspect a live 4–5 card demo preview before download. |
 | **Card productivity** | Search and navigate comments, complete an individual checklist in one action, copy card titles and formatted descriptions with nested sub-bullets, and manage estimated/completed story points. |
 
 The four main popups follow Trello’s theme and include contextual **info help**. Slack previews remain editable and are copied manually for review and sharing.

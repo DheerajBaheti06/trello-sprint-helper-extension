@@ -121,7 +121,16 @@ $(function () {
     $('.js-input').on('keyup', calcListPoints);
     $('.js-share').off('mouseup');
     $('.js-share').on('mouseup', function () {
-        setTimeout(checkExport, 500)
+        setTimeout(checkExport, 500);
+    });
+    $(document).off('click.s4tExportShare mouseup.s4tExportShare').on('click.s4tExportShare mouseup.s4tExportShare', function (e) {
+        var el = e.target;
+        if (!el) return;
+        if (el.closest && el.closest('[data-testid*="menu"], [data-testid*="export"], [data-testid*="share"], [data-testid*="popover"], .board-header-btn-show-menu, .js-share, button, a')) {
+            setTimeout(checkExport, 50);
+            setTimeout(checkExport, 250);
+            setTimeout(checkExport, 700);
+        }
     });
 
     calcListPoints();
@@ -286,6 +295,7 @@ function updateBurndownLink() {
             .append('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 16l2 2 5-5"/></svg>')
             .on('click.s4t', function () { s4tOpenEow(); }).appendTo(toolbar);
     }
+    toolbar.find('#s4t-export-launch').remove();
     // All actions mount together at one stable native toolbar anchor.
     if (anchor.previousElementSibling !== toolbar[0]) $(anchor).before(toolbar);
 }
@@ -340,7 +350,7 @@ function fetchBoardData(shortLink, forceRefresh, callback) {
         callback(null, data);
     }
     // Try Trello REST API first for maximum efficiency
-    var apiUrl = '/1/boards/' + shortLink + '?fields=name,shortLink&cards=open&card_fields=name,idList,idMembers,idLabels,labels,dueComplete,closed&labels=all&label_fields=name,color&lists=open&list_fields=name,closed&members=all&member_fields=fullName,username,avatarUrl,initials';
+    var apiUrl = '/1/boards/' + shortLink + '?fields=name,shortLink&cards=open&card_fields=name,idList,idMembers,idLabels,labels,dueComplete,closed,desc,due,shortUrl,badges&labels=all&label_fields=name,color&lists=open&list_fields=name,closed&members=all&member_fields=fullName,username,avatarUrl,initials';
 
     $.ajax({
         url: apiUrl,
@@ -1379,6 +1389,12 @@ function renderMembersBurndownModal(data) {
             '<span>Push to Sheets</span>',
             '</button>'
         ].join('') : ''),
+        ((typeof s4tPreferences === 'undefined' || s4tPreferences.enabled('exportCards')) ? [
+            '<button type="button" id="s4t-burndown-export-btn" class="s4t-sheets-btn s4t-export-modal-btn" data-tooltip="Export cards to Excel, CSV or Google Sheets">',
+            '<svg class="s4t-sheets-btn-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>',
+            '<span>Export Cards</span>',
+            '</button>'
+        ].join('') : ''),
         '<label data-tooltip="Exclude Not Sure list cards from member points, progress and card counts. Team summaries stay unchanged."><input type="checkbox" id="s4t-exclude-not-sure" checked> Exclude Not Sure list</label>',
         '</div>',
         '<div class="s4t-members-list" id="s4t-members-container">',
@@ -1394,6 +1410,17 @@ function renderMembersBurndownModal(data) {
     $('#s4t-members-modal').data('members', data.members);
     $('#s4t-exclude-not-sure').on('change', function () {
         s4tRenderMemberRows($('#s4t-members-modal').data('members'), this.checked);
+    });
+
+    $('#s4t-burndown-export-btn').off('click.s4tBurndownExport').on('click.s4tBurndownExport', function () {
+        $('#s4t-modal-overlay').remove();
+        if (typeof s4tOpenCardExport === 'function') {
+            s4tOpenCardExport({
+                boardData: cachedBoardData,
+                boardName: (data && data.boardName) || $('.board-name span.text, [data-testid="board-name-display"]').text().trim(),
+                boardShortLink: typeof getBoardShortLink === 'function' ? getBoardShortLink() : ''
+            });
+        }
     });
 
     function bindPushSheetsAction() {
@@ -2034,19 +2061,125 @@ var $excel_btn, $excel_dl;
 window.URL = window.URL || window.webkitURL;
 
 function checkExport() {
+    if (typeof s4tPreferences !== 'undefined' && !s4tPreferences.enabled('exportCards')) {
+        $('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').each(function () {
+            var $item = $(this);
+            var $li = $item.closest('li');
+            if ($li.length && $li.children().length === 1 && $li.find('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').length) {
+                $li.remove();
+            } else {
+                $item.remove();
+            }
+        });
+        $excel_btn = null;
+        return;
+    }
     if ($excel_btn && $excel_btn.filter(':visible').length) return;
     if ($('.pop-over-list').find('.js-export-excel').length) return;
-    var $js_btn = $('.pop-over-list').find('.js-export-json');
+    if ($('.js-export-excel:visible').length) return;
+
+    var excelIconSvg = '<svg class="s4t-menu-excel-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>';
+
+    // 1. Legacy Trello selector (.pop-over-list .js-export-json)
+    var $js_btn = $('.pop-over-list, .pop-over').find('.js-export-json');
     var $ul = $js_btn.closest('ul:visible');
-    if (!$js_btn.length) return;
-    $js_btn.parent().after($('<li>').append(
-        $excel_btn = $('<a href="#" target="_blank" title="Open downloaded file with Excel">Excel</a>')
-            .click(showExcelExport)
-    ))
+    if ($js_btn.length && $ul.length) {
+        $js_btn.parent().after($('<li>').append(
+            $excel_btn = $('<a href="#" target="_blank" class="js-export-excel s4t-menu-excel-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></a>')
+                .click(showExcelExport)
+        ));
+        return;
+    }
+
+    // 2. Modern Trello: find JSON export link / button in open popovers or board menus
+    var $modernJson = null;
+    var jsonCandidates = document.querySelectorAll(
+        'a[href*="/cards"][href*="json"], a[href$=".json"], a[href*="/export/json"], [data-testid*="export-json"], [data-testid*="export_json"]'
+    );
+    for (var i = 0; i < jsonCandidates.length; i++) {
+        var el = jsonCandidates[i];
+        if (el && (el.offsetParent !== null || window.getComputedStyle(el).display !== 'none')) {
+            $modernJson = $(el);
+            break;
+        }
+    }
+
+    // 3. Fallback: Search in open dialogs / popovers / board menus for text "Export as JSON" or "Export JSON"
+    if (!$modernJson || !$modernJson.length) {
+        var containers = document.querySelectorAll(
+            '[data-testid*="popover"], [data-testid*="menu"], [data-testid*="drawer"], [role="dialog"], [role="menu"], .pop-over, .board-menu-container, .board-menu'
+        );
+        for (var mi = 0; mi < containers.length; mi++) {
+            var items = containers[mi].querySelectorAll('a, button, li, div[role="button"], span');
+            for (var ii = 0; ii < items.length; ii++) {
+                var it = items[ii];
+                var t = (it.textContent || '').trim().toLowerCase();
+                if ((t === 'export as json' || t === 'export json' || (t.includes('export') && t.includes('json') && !t.includes('excel') && !t.includes('sheet'))) && (it.offsetParent !== null)) {
+                    $modernJson = $(it.closest('a, button, li') || it);
+                    break;
+                }
+            }
+            if ($modernJson && $modernJson.length) break;
+        }
+    }
+
+    if ($modernJson && $modernJson.length) {
+        var $parentContainer = $modernJson.closest('ul, ol, div, nav');
+        if ($parentContainer.find('.js-export-excel, #s4t-excel-export-menu-item').length) return;
+
+        var $liContainer = $modernJson.closest('li');
+        if ($liContainer.length) {
+            $excel_btn = $('<a href="#" target="_blank" class="js-export-excel s4t-menu-excel-item" id="s4t-excel-export-menu-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></a>')
+                .click(showExcelExport);
+            var existingClasses = $modernJson.attr('class');
+            if (existingClasses) {
+                $excel_btn.addClass(existingClasses);
+            }
+            var $newLi = $('<li>').addClass($liContainer.attr('class') || '').append($excel_btn);
+            $liContainer.after($newLi);
+            return;
+        }
+
+        $excel_btn = $('<button type="button" class="js-export-excel s4t-menu-excel-item" id="s4t-excel-export-menu-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></button>')
+            .click(showExcelExport);
+        var btnClasses = $modernJson.attr('class');
+        if (btnClasses) {
+            $excel_btn.attr('class', btnClasses + ' js-export-excel s4t-menu-excel-item');
+        }
+        $modernJson.after($excel_btn);
+        return;
+    }
+
+    // 4. Board Menu drawer fallback (next to "Print, export, and share")
+    var $printExportBtn = $('[data-testid="board-menu-print-export-button"], button:contains("Print, export, and share"), a:contains("Print, export, and share")').filter(':visible').first();
+    if ($printExportBtn.length) {
+        var $peLi = $printExportBtn.closest('li');
+        if ($peLi.length && !$peLi.parent().find('.s4t-menu-excel-export').length) {
+            var $menuExcel = $('<a href="#" target="_blank" class="s4t-menu-excel-export js-export-excel s4t-menu-excel-item" title="Export board cards to Excel spreadsheet">' + excelIconSvg + '<span class="s4t-menu-excel-text">Export as Excel</span></a>')
+                .click(showExcelExport);
+            var peClasses = $printExportBtn.attr('class');
+            if (peClasses) $menuExcel.addClass(peClasses);
+            var $newMenuLi = $('<li>').addClass($peLi.attr('class') || '').append($menuExcel);
+            $peLi.after($newMenuLi);
+            $excel_btn = $menuExcel;
+        }
+    }
 };
 
-function showExcelExport() {
-    $excel_btn.text('Generating...');
+function showExcelExport(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (typeof s4tPreferences !== 'undefined' && !s4tPreferences.enabled('exportCards')) {
+        return false;
+    }
+    if (typeof s4tOpenCardExport === 'function') {
+        s4tOpenCardExport({
+            boardData: cachedBoardData,
+            boardName: $('.board-name span.text, [data-testid="board-name-display"]').text().trim(),
+            boardShortLink: typeof getBoardShortLink === 'function' ? getBoardShortLink() : ''
+        });
+        return false;
+    }
+    if ($excel_btn && $excel_btn.text) $excel_btn.text('Generating...');
 
     $.getJSON($('.pop-over-list').find('.js-export-json').attr('href'), function (data) {
         var s = '<table id="export" border=1>';
@@ -2609,6 +2742,21 @@ function s4tCardsNativeSelection(boardData, query, renderedShortLinks) {
         if (!s4tPreferences.enabled('attention')) {
             selected = []; excluded = []; memberFilters = []; labelFilters = []; matchAll = false; hideEmptyLists = false;
             commentRequest++; commentLoading = false; commentError = ''; close();
+        }
+        if (!s4tPreferences.enabled('exportCards')) {
+            $('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').each(function () {
+                var $item = $(this);
+                var $li = $item.closest('li');
+                if ($li.length && $li.children().length === 1 && $li.find('.js-export-excel, #s4t-excel-export-menu-item, .s4t-menu-excel-item, .s4t-menu-excel-export').length) {
+                    $li.remove();
+                } else {
+                    $item.remove();
+                }
+            });
+            $excel_btn = null;
+            if (typeof s4tCloseCardExport === 'function') {
+                s4tCloseCardExport();
+            }
         }
     }
     document.addEventListener('s4t-preferences-changed', function () { applyFeaturePreferences(); clearHiddenNativeFilters(); apply(); });
@@ -4428,7 +4576,7 @@ var s4tOpenCardsList = (function () {
 /* Shared tooltips stay outside scroll containers and dismiss on pointer down. */
 (function () {
     if (typeof document === 'undefined') return;
-    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-comment-layout-toggle[data-tooltip], .s4t-checklist-action, .s4t-card-copy[data-tooltip], .s4t-card-peek-copy-btn[data-tooltip], #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip]';
+    var selector = '#s4t-preferences-launch, #s4t-eow-launch, #s4t-eow-dialog [data-tooltip], #s4t-members-modal [data-tooltip], .s4t-comment-navigator [data-tooltip], .s4t-comment-jumps [data-tooltip], .s4t-comment-layout-toggle[data-tooltip], .s4t-checklist-action, .s4t-card-copy[data-tooltip], .s4t-card-peek-copy-btn[data-tooltip], #membersBurndownLink, #s4t-attention-controls [data-tooltip], #s4t-cards-launch, #s4t-attention-panel [data-tooltip], #s4t-cards-dialog [data-tooltip], #s4t-export-dialog [data-tooltip]';
     var tip, owner, timer, leaveTimer, pinned = false;
     function hide() {
         clearTimeout(timer); clearTimeout(leaveTimer); pinned = false;
