@@ -1593,21 +1593,21 @@ test('card-export: s4tGetEffectiveCellValue populates sensible default values fo
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[0], lookup), 'In Progress (Sprint 24)');
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[1], lookup), 'Build auth flow');
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[2], lookup), 'Feature');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[3], lookup), 'Going Live');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[3], lookup), ''); // Blank column, no default selection
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[4], lookup), 'Arman Khan');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[5], lookup), 'High');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[6], lookup), 'High');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[5], lookup), ''); // Blank column, no default selection
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[6], lookup), ''); // Blank column, no default selection
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[7], lookup), 'Prapti'); // Extracted from card dot label
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[8], lookup), 'High');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[9], lookup), 'Tanisha'); // Configured CS Owner
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[10], lookup), 'High');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[8], lookup), ''); // Blank column, no default selection
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[9], lookup), ''); // Blank column, no default selection
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[10], lookup), ''); // Blank column, no default selection
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[11], lookup), 'None');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[12], lookup), 'Ready for QA');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardActive, cols[12], lookup), 'None');
 
     // Card 2 in Backlog List:
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[3], lookup), 'Not Going Live');
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[3], lookup), ''); // Blank column, no default selection
     assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[4], lookup), 'Sarah Chen');
-    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[7], lookup), 'Prapti'); // Default to first PO option
+    assert.equal(cardExport.s4tGetEffectiveCellValue(cardBacklog, cols[7], lookup), ''); // No dot label on card
 
     // Manual edit override:
     const edited = { editedCells: { 'c1_c_status': 'Not Going Live', 'c1_c_dev_conf': 'Medium' } };
@@ -1745,12 +1745,12 @@ test('card-export: warns user with confirmation popup when selecting or download
     assert.ok(css.includes('[data-color-mode="dark"] #s4t-export-dialog .s4t-csv-warning-card'), 'sprint-helper.css must include dark mode styles for warning card');
 });
 
-test('card-export: s4tGetEffectiveCellValue populates non-empty default values across all 13 columns', () => {
+test('card-export: s4tGetEffectiveCellValue accurately extracts card fields and leaves blank custom columns unselected', () => {
     const card = {
         id: 'c1',
         idList: 'l1',
         name: 'FE-102: Implement responsive layout',
-        desc: 'Risk: None\nResolution: Ready for QA',
+        desc: 'Risk: Low dependency\nResolution: Pending deployment',
         labels: [{ name: 'frontend' }, { name: 'Alice M.' }],
         members: [{ id: 'm1', fullName: 'Bob Dev', username: 'bob' }],
         idMembers: ['m1']
@@ -1775,28 +1775,37 @@ test('card-export: s4tGetEffectiveCellValue populates non-empty default values a
     assert.strictEqual(effectiveValues[1], 'FE-102: Implement responsive layout');
     // Col 2: Labels -> 'frontend' (dot label 'Alice M.' filtered out to Product Owner)
     assert.strictEqual(effectiveValues[2], 'frontend');
-    // Col 3: Status -> 'Going Live'
-    assert.strictEqual(effectiveValues[3], 'Going Live');
-    // Col 4: Dev Owner -> 'Bob Dev'
+    // Col 3: Status -> '' (blank custom dropdown, unselected by default)
+    assert.strictEqual(effectiveValues[3], '');
+    // Col 4: Dev Owner -> 'Bob Dev' (assigned member)
     assert.strictEqual(effectiveValues[4], 'Bob Dev');
-    // Col 5: Dev Confidence -> 'High'
-    assert.strictEqual(effectiveValues[5], 'High');
-    // Col 6: Mgr Confidence -> 'High'
-    assert.strictEqual(effectiveValues[6], 'High');
+    // Col 5: Dev Confidence -> '' (blank custom dropdown, unselected by default)
+    assert.strictEqual(effectiveValues[5], '');
+    // Col 6: Mgr Confidence -> '' (blank custom dropdown, unselected by default)
+    assert.strictEqual(effectiveValues[6], '');
     // Col 7: Product Owner -> 'Alice M' (from dot label with dot stripped)
     assert.strictEqual(effectiveValues[7], 'Alice M');
-    // Col 8: Product Confidence -> 'High'
-    assert.strictEqual(effectiveValues[8], 'High');
-    // Col 9: CS Owner -> 'Support Team' (from configured csOwners)
-    assert.strictEqual(effectiveValues[9], 'Support Team');
-    // Col 10: CS Confidence -> 'High'
-    assert.strictEqual(effectiveValues[10], 'High');
+    // Col 8: Product Confidence -> '' (blank custom dropdown, unselected by default)
+    assert.strictEqual(effectiveValues[8], '');
+    // Col 9: CS Owner -> '' (blank custom dropdown, unselected by default)
+    assert.strictEqual(effectiveValues[9], '');
+    // Col 10: CS Confidence -> '' (blank custom dropdown, unselected by default)
+    assert.strictEqual(effectiveValues[10], '');
+    // Col 11: Risk (Comments) -> 'Low dependency' (extracted from desc)
+    assert.strictEqual(effectiveValues[11], 'Low dependency');
+    // Col 12: Resolution (Comments) -> 'Pending deployment' (extracted from desc)
+    assert.strictEqual(effectiveValues[12], 'Pending deployment');
 
-    // Backlog status defaults to Not Going Live
+    // Card without risk/resolution in desc defaults both to 'None'
+    const cardNoComments = { id: 'c2', idList: 'l1', name: 'Task without comments', desc: '', labels: [] };
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(cardNoComments, cols[11], lookup), 'None');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(cardNoComments, cols[12], lookup), 'None');
+
+    // Blank custom select without manual edit remains empty
     const backlogCard = { id: 'c2', idList: 'l2', name: 'Backlog Item', labels: [], idMembers: [] };
     const backlogLookup = { lists: { l2: 'Backlog / Icebox' }, members: {}, developers: [], productOwners: [], csOwners: [] };
     const backlogStatus = cardExport.s4tGetEffectiveCellValue(backlogCard, cols[3], backlogLookup);
-    assert.strictEqual(backlogStatus, 'Not Going Live');
+    assert.strictEqual(backlogStatus, '');
 
     // Edited cell override
     const editedOptions = { editedCells: { 'c1:c_status': 'Not Going Live', 'c1:c_dev_conf': 'Low' } };
@@ -1884,6 +1893,82 @@ test('card-export: guide collision avoidance engine guarantees zero overlapping 
     assert.ok(ce.includes('t2.top = t1.top + t1.height + minGapY'), 'Guide must push colliding tooltips downward');
     assert.ok(ce.includes('tier === 3'), 'Guide must support Tier 3 vertical tiering for custom options');
     assert.ok(ce.includes('visibleCustomCol'), 'Guide must dynamically detect visible columns to avoid off-screen stems');
+});
+
+test('card-export: blank custom dropdowns are unselected by default and resolution comments default to None', () => {
+    const defaultCols = cardExport.s4tGetDefaultColumns();
+    const lookup = {
+        lists: { l1: 'Sprint Active' },
+        members: { m1: 'Bob Dev' },
+        developers: ['Bob Dev', 'Charlie Dev'],
+        productOwners: ['prapti', 'kashvi'],
+        csOwners: ['harshali', 'tanisha']
+    };
+
+    // Card with no comments and no dot label
+    const card = {
+        id: 'card_test_1',
+        idList: 'l1',
+        name: 'FE-500: Test blank dropdown defaults',
+        desc: '',
+        labels: [{ name: 'frontend' }],
+        members: [{ id: 'm1', fullName: 'Bob Dev', username: 'bob' }],
+        idMembers: ['m1']
+    };
+
+    // 1. Status (c_status, blank source, custom_select) must return empty string, NOT 'Going Live'
+    const statusCol = defaultCols.find(c => c.id === 'c_status');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, statusCol, lookup), '', 'Status must be blank by default');
+
+    // 2. Confidences (Dev, Mgr, Product, CS) must return empty string, NOT 'High'
+    const devConfCol = defaultCols.find(c => c.id === 'c_dev_conf');
+    const mgrConfCol = defaultCols.find(c => c.id === 'c_mgr_conf');
+    const poConfCol = defaultCols.find(c => c.id === 'c_po_conf');
+    const csConfCol = defaultCols.find(c => c.id === 'c_cs_conf');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, devConfCol, lookup), '', 'Dev Confidence must be blank by default');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, mgrConfCol, lookup), '', 'Mgr Confidence must be blank by default');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, poConfCol, lookup), '', 'Product Confidence must be blank by default');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, csConfCol, lookup), '', 'CS Confidence must be blank by default');
+
+    // 3. Product Owner (c_po_owner) without dot label must return empty string, NOT 'prapti'
+    const poCol = defaultCols.find(c => c.id === 'c_po_owner');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, poCol, lookup), '', 'Product Owner without dot label must be blank');
+
+    // 4. CS Owner (c_cs_owner) must return empty string, NOT 'harshali'
+    const csCol = defaultCols.find(c => c.id === 'c_cs_owner');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, csCol, lookup), '', 'CS Owner must be blank by default');
+
+    // 5. Resolution (Comments) without resolution in desc must return 'None', NOT 'Ready for QA'
+    const resCol = defaultCols.find(c => c.id === 'c_resolution');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, resCol, lookup), 'None', 'Resolution (Comments) must default to None');
+
+    // 6. Risk (Comments) without risk in desc must return 'None'
+    const riskCol = defaultCols.find(c => c.id === 'c_risk');
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, riskCol, lookup), 'None', 'Risk (Comments) must default to None');
+
+    // 7. Verify in exported CSV
+    const csv = cardExport.s4tBuildExportCsv(defaultCols, [card], lookup);
+    const csvLines = csv.split('\r\n');
+    const dataRow = csvLines[1];
+    // Data row should have empty cells for Status, Confidences, PO, CS, and 'None' for Risk & Resolution
+    assert.ok(dataRow.includes('"None","None"'), 'CSV must export None for risk and resolution comments');
+    assert.ok(!dataRow.includes('"Going Live"'), 'CSV must not export Going Live by default');
+    assert.ok(!dataRow.includes('"High"'), 'CSV must not export High by default');
+    assert.ok(!dataRow.includes('"prapti"'), 'CSV must not export prapti when no dot label');
+    assert.ok(!dataRow.includes('"harshali"'), 'CSV must not export harshali by default');
+    assert.ok(!dataRow.includes('"Ready for QA"'), 'CSV must not export Ready for QA by default');
+
+    // 8. Verify in exported TSV (for Google Sheets)
+    const tsv = cardExport.s4tBuildExportTsv(defaultCols, [card], lookup);
+    const tsvDataRow = tsv.split('\n')[1];
+    assert.ok(tsvDataRow.includes('None\tNone'), 'TSV must export None for risk and resolution');
+    assert.ok(!tsvDataRow.includes('Going Live'), 'TSV must not export Going Live by default');
+    assert.ok(!tsvDataRow.includes('High'), 'TSV must not export High by default');
+    assert.ok(!tsvDataRow.includes('Ready for QA'), 'TSV must not export Ready for QA by default');
+
+    // 9. Verify any user-added custom_select column with source blank also defaults to empty string
+    const customUserCol = { id: 'c_custom_dept', header: 'Department', source: 'blank', cellType: 'custom_select', customOptions: 'Eng, QA, Product' };
+    assert.strictEqual(cardExport.s4tGetEffectiveCellValue(card, customUserCol, lookup), '', 'Custom blank dropdown column must default to empty');
 });
 
 

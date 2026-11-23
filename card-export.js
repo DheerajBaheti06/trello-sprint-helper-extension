@@ -493,66 +493,7 @@
             if (extracted !== '') return extracted;
         }
 
-        // 3. Fallbacks and defaults so that columns 4 through 13 have proper values
-
-        // Status (c_status)
-        if (colId === 'c_status' || hNorm === 'status') {
-            var listName = s4tExtractFieldValue(card, 'list', lookup);
-            if (!listName && card) {
-                listName = card.listName || (card.list && card.list.name) || '';
-                if (!listName && lookup && card.idList) {
-                    if (lookup.listsById && typeof lookup.listsById.get === 'function') {
-                        var lObj = lookup.listsById.get(card.idList);
-                        listName = typeof lObj === 'string' ? lObj : (lObj ? lObj.name : '');
-                    }
-                    if (!listName && lookup.lists) {
-                        var lVal = lookup.lists[card.idList] || (typeof lookup.lists.get === 'function' && lookup.lists.get(card.idList));
-                        listName = typeof lVal === 'string' ? lVal : (lVal ? lVal.name : '');
-                    }
-                }
-            }
-            var isBacklog = /\b(backlog|icebox|hold|blocked|cancelled|deprecat)\b/i.test(listName);
-            return isBacklog ? 'Not Going Live' : 'Going Live';
-        }
-
-        // Confidence columns (Dev Confidence, Mgr Confidence, Product Confidence, CS Confidence)
-        if (colId === 'c_dev_conf' || colId === 'c_mgr_conf' || colId === 'c_po_conf' || colId === 'c_cs_conf' || hNorm.includes('confidence')) {
-            var confOpts = s4tParseCustomOptions(col.customOptions, 'High, Medium, Low, NA');
-            return (confOpts.length && confOpts[0]) ? confOpts[0] : 'High';
-        }
-
-        // Product Owner (c_po_owner)
-        if (colId === 'c_po_owner' || hNorm === 'product owner' || colSource === 'product_owner') {
-            var poLabels = Array.isArray(card.labels) ? card.labels : [];
-            for (var pi = 0; pi < poLabels.length; pi++) {
-                var pName = (poLabels[pi] && (poLabels[pi].name || (typeof poLabels[pi] === 'string' ? poLabels[pi] : '')) || '').trim();
-                if (/[.．…]$/.test(pName)) {
-                    return pName.replace(/[.．…]+$/, '').trim();
-                }
-            }
-            if (lookup && Array.isArray(lookup.productOwners) && lookup.productOwners.length) {
-                return lookup.productOwners[0];
-            }
-            var parsedPo = s4tParseCustomOptions(col.customOptions);
-            if (parsedPo.length) return parsedPo[0];
-        }
-
-        // Dev Owner (c_dev_owner)
-        if (colId === 'c_dev_owner' || hNorm === 'dev owner' || col.cellType === 'dev_select') {
-            if (lookup && Array.isArray(lookup.developers) && lookup.developers.length === 1) {
-                return lookup.developers[0];
-            }
-        }
-
-        // CS Owner (c_cs_owner)
-        if (colId === 'c_cs_owner' || hNorm === 'cs owner') {
-            if (lookup && Array.isArray(lookup.csOwners) && lookup.csOwners.length) {
-                return lookup.csOwners[0];
-            }
-            var parsedCs = s4tParseCustomOptions(col.customOptions);
-            if (parsedCs.length) return parsedCs[0];
-        }
-
+        // 3. Fallbacks and defaults
         // Risk (Comments) (c_risk)
         if (colId === 'c_risk' || hNorm.includes('risk')) {
             var desc = card.desc || '';
@@ -566,9 +507,23 @@
             var desc2 = card.desc || '';
             var resMatch = desc2.match(/resolution\s*[:=]\s*([^\r\n]+)/i);
             if (resMatch && resMatch[1].trim()) return resMatch[1].trim();
-            return 'Ready for QA';
+            return 'None';
         }
 
+        // Product Owner (c_po_owner) - check card.labels directly if not extracted in step 2
+        if (colId === 'c_po_owner' || hNorm === 'product owner' || colSource === 'product_owner') {
+            var poLabels = Array.isArray(card.labels) ? card.labels : [];
+            for (var pi = 0; pi < poLabels.length; pi++) {
+                var pName = (poLabels[pi] && (poLabels[pi].name || (typeof poLabels[pi] === 'string' ? poLabels[pi] : '')) || '').trim();
+                if (/[.．…]$/.test(pName)) {
+                    return pName.replace(/[.．…]+$/, '').trim();
+                }
+            }
+            return '';
+        }
+
+        // Blank columns, custom select dropdowns, confidence columns, status, etc.
+        // By default, none of the default values should be selected.
         return '';
     }
 
@@ -3130,6 +3085,15 @@
                                 optList = state.dotLabels.slice();
                             }
                         }
+                        if (!optList || !optList.length) {
+                            if (col.id === 'c_status' || (col.header && col.header.trim().toLowerCase() === 'status')) {
+                                optList = ['Going Live', 'Not Going Live'];
+                            } else if (col.id === 'c_dev_conf' || col.id === 'c_mgr_conf' || col.id === 'c_po_conf' || col.id === 'c_cs_conf' || (col.header && col.header.toLowerCase().includes('confidence'))) {
+                                optList = ['High', 'Medium', 'Low', 'NA'];
+                            } else if ((col.id === 'c_cs_owner' || (col.header && col.header.trim().toLowerCase() === 'cs owner')) && state.lookup && Array.isArray(state.lookup.csOwners)) {
+                                optList = state.lookup.csOwners.slice();
+                            }
+                        }
                         var isCellEdited = !!(state.editedCells && state.editedCells[cellKey] !== undefined);
                         var isTitleLeak = (col.source === 'title' || col.source === 'title_raw' || col.id === 'c_status' || (col.header && col.header.trim().toLowerCase() === 'status')) && !isCellEdited;
                         var isPoCol = col.source === 'product_owner' || (col.header && col.header.trim().toLowerCase() === 'product owner') || col.id === 'c_po_owner';
@@ -3146,6 +3110,8 @@
                             custSel.append($('<option value="">').text('-- Select --').prop('selected', true));
                         } else if ((!val || isTitleLeak) && isPoCol) {
                             custSel.append($('<option value="">').text('-- Select PO --').prop('selected', true));
+                        } else if (!val) {
+                            custSel.append($('<option value="">').text('-- Select --').prop('selected', true));
                         }
                         optList.forEach(function (optVal) {
                             var opt = $('<option>').val(optVal).text(optVal);
@@ -3154,7 +3120,7 @@
                             }
                             custSel.append(opt);
                         });
-                        if (val) {
+                        if (val && !isTitleLeak) {
                             var matchingOpt = custSel.find('option').filter(function () {
                                 return $(this).val().toLowerCase() === val.toLowerCase();
                             });
