@@ -1098,8 +1098,31 @@ h3.s4t-comment-heading-current { outline: 2px solid var(--ds-border-warning, #e2
 .s4t-comment-text-current { outline: 2px solid var(--ds-border-warning, #e2b203); outline-offset: 2px; }
 
 /* Compact comment search directly before the card toolbar's Cover action. */
-.s4t-card-header-search { display: flex; align-items: center; flex: 0 1 auto; width: max-content; max-width: calc(100vw - 220px); min-width: 0; height: 32px; max-height: 32px; overflow-x: auto; scrollbar-width: none; padding: 0; margin: 0 8px 0 auto; align-self: center; box-sizing: border-box; }
-.s4t-card-header-search .s4t-comment-navigator { flex: 0 0 240px; min-width: 240px; max-width: 240px; width: 240px; height: 32px; }
+.s4t-card-header-search { display: flex; align-items: center; flex: 0 1 auto; width: max-content; max-width: calc(100vw - 220px); min-width: 0; height: 32px; max-height: 32px; overflow-x: auto; scrollbar-width: none; padding: 0; margin: 0 8px 0 auto; align-self: center; box-sizing: border-box; flex-wrap: nowrap !important; }
+.s4t-card-header-search .s4t-comment-navigator { flex: 0 1 240px; min-width: 130px; max-width: 240px; width: 240px; height: 32px; }
+.s4t-comment-search-slot { flex-wrap: nowrap !important; }
+
+/* When a board/list badge appears in header actions (e.g. on closed boards or cross-board cards opened from search/links),
+   expand header actions full-width and push the badge to the left where users expect it, leaving the right side for extension search & native controls. */
+.s4t-card-header-board-badge,
+[data-testid="card-back-header-actions"] > :is(a[href*="/b/"], a[href*="/boards/"], [data-testid*="board"], [data-testid*="list"]):not(.s4t-comment-search-slot *) {
+    order: -2 !important;
+    margin-right: auto !important;
+    max-width: 260px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    flex-shrink: 1 !important;
+}
+
+[data-testid="card-back-header-actions"]:has(.s4t-card-header-board-badge, > :is(a[href*="/b/"], a[href*="/boards/"], [data-testid*="board"], [data-testid*="list"])),
+header:has(.s4t-card-header-board-badge) {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
 
 /* Card title & header: protect title width and eliminate vertical scrollbar in title textarea */
 [data-testid="card-back"],

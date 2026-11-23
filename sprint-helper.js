@@ -5070,8 +5070,25 @@ function s4tCommentSearchSpans(text, query) {
             if(existing&&(existing===cover||existing.contains(cover)))return {host:slot.parentElement,anchor:existing};
         }
         if (!cover) {
-            var toolbar=card.querySelector('[data-testid="card-back-header-actions"], [role="toolbar"], [data-testid="card-back-header"], header');
-            cover=toolbar&&Array.from(toolbar.querySelectorAll('button, [role="button"]')).find(function(node){return !node.closest('.s4t-comment-search-slot');});
+            var toolbar = card.querySelector('[data-testid="card-back-header-actions"], [role="toolbar"], [data-testid="card-back-header"], header');
+            if (toolbar) {
+                var isBoardBadge = function(node) {
+                    if (!node || node.closest('.s4t-comment-search-slot')) return false;
+                    var testid = (node.getAttribute('data-testid') || '').toLowerCase();
+                    var label = (node.getAttribute('aria-label') || '').toLowerCase();
+                    var href = (node.getAttribute('href') || (node.querySelector('a') && node.querySelector('a').getAttribute('href')) || '').toLowerCase();
+                    if (testid.includes('board') || testid.includes('list') || href.includes('/b/') || href.includes('/boards/')) return true;
+                    var isAction = /(?:^|-)(?:watch|following|more|close|cover)(?:-|$)/.test(testid) ||
+                        /^(?:watch|following|actions?|more actions?|close(?: card)?|cover)$/.test(label.trim());
+                    return !isAction && (node.textContent || '').trim().length > 0 && !node.matches('textarea, input');
+                };
+                var boardBadge = Array.from(toolbar.querySelectorAll('a, button, [role="button"]')).find(isBoardBadge);
+                if (boardBadge) boardBadge.classList.add('s4t-card-header-board-badge');
+                var buttons = Array.from(toolbar.querySelectorAll('button, [role="button"]')).filter(function(node){
+                    return !node.closest('.s4t-comment-search-slot') && node !== boardBadge && (!boardBadge || !boardBadge.contains(node));
+                });
+                cover = buttons[0] || boardBadge;
+            }
         }
         if (!cover) return toolbar ? {host:toolbar,anchor:null} : null; // Reserve the navbar slot before native actions finish loading.
         var anchor = cover;

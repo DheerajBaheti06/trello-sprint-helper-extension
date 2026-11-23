@@ -25,3 +25,10 @@ assert.match(ctx.s4tChartCopyText(board,true,'labels',fields),/1 cards · Hotfix
 assert.equal(ctx.s4tChartCopyText(board,true,'dev',fields.map(f=>({...f,enabled:false}))), '');
 const cleaned=ctx.s4tChartCopyFields('labels',[{key:'cards',enabled:false},{key:'cards'},{key:'unknown'}]);assert.equal(cleaned.length,4);assert.equal(cleaned[0].enabled,false);
 });
+test('charts dialog typography uses compact font sizes',()=>{
+const chartsSrc=fs.readFileSync('charts.js','utf8');
+assert.match(chartsSrc,/\.s4t-chart-dialog\{[^}]*font:14px\/1\.4/);
+assert.match(chartsSrc,/\.s4t-chart-dialog h2\{[^}]*font-size:17px;/);
+assert.doesNotMatch(chartsSrc,/font-size:36px;/);
+assert.doesNotMatch(chartsSrc,/font:28px\/1\.4/);
+});

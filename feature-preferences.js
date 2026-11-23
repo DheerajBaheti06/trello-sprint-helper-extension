@@ -138,21 +138,69 @@ var s4tPreferences = (function () {
             sheetsStatus.className = 's4t-preferences-sheets-status';
             sheetsStatus.setAttribute('role', 'status');
 
-            var isInitialVerified = !!(values.sheetsDeploymentId && (values.sheetsVerified || (typeof localStorage !== 'undefined' && localStorage.getItem('s4t_sheets_verified') === 'true')));
-            if (isInitialVerified) {
-                sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-success';
-                sheetsStatus.innerHTML = '<span>✓</span> Webhook URL is verified and active. Push to Sheets is enabled in Members Burndown.';
-                sheetsStatus.style.display = 'flex';
+            var savedDeploymentId = (values.sheetsDeploymentId || '').trim();
+            var isSavedVerified = !!(savedDeploymentId && (values.sheetsVerified || (typeof localStorage !== 'undefined' && localStorage.getItem('s4t_sheets_verified') === 'true')));
+
+            var sheetsVerifyCache = (typeof window !== 'undefined' && window.__s4tVerifyCache) ? window.__s4tVerifyCache : {};
+            if (typeof window !== 'undefined') window.__s4tVerifyCache = sheetsVerifyCache;
+
+            function normalizeWebhookUrl(raw) {
+                if (typeof s4tNormalizeSheetsWebhookUrl === 'function') {
+                    return s4tNormalizeSheetsWebhookUrl(raw);
+                }
+                var str = String(raw || '').trim();
+                if (!str) return '';
+                if (str.startsWith('https://script.google.com/macros/s/') && str.endsWith('/exec')) return str;
+                if (str.startsWith('https://script.google.com/macros/s/')) return str.replace(/\/+$/, '') + '/exec';
+                var idm = str.match(/^([A-Za-z0-9_\-]+)$/);
+                if (idm) return 'https://script.google.com/macros/s/' + idm[1] + '/exec';
+                return str;
+            }
+
+            function updateButtonState() {
+                var curVal = sheetsInput.value.trim();
+                if (isSavedVerified && curVal === savedDeploymentId) {
+                    sheetsBtn.disabled = true;
+                    sheetsBtn.title = 'Webhook URL is already verified and active.';
+                    sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-success';
+                    sheetsStatus.innerHTML = '<span>✓</span> Webhook URL is verified and active. Push to Sheets is enabled in Members Burndown.';
+                    sheetsStatus.style.display = 'flex';
+                    return;
+                }
+                if (!curVal && !savedDeploymentId) {
+                    sheetsBtn.disabled = true;
+                    sheetsBtn.title = 'Enter a Deployment ID or Webhook URL to verify.';
+                    sheetsStatus.style.display = 'none';
+                    return;
+                }
+                if (!curVal && savedDeploymentId) {
+                    sheetsBtn.disabled = false;
+                    sheetsBtn.title = 'Click to clear Webhook URL.';
+                    sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-neutral';
+                    sheetsStatus.innerHTML = '<span>ℹ️</span> Click Verify & Save to clear Webhook URL and disable Push to Sheets.';
+                    sheetsStatus.style.display = 'flex';
+                    return;
+                }
+                sheetsBtn.disabled = false;
+                sheetsBtn.title = '';
+                if (isSavedVerified && curVal !== savedDeploymentId) {
+                    sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-neutral';
+                    sheetsStatus.innerHTML = '<span>ℹ️</span> Webhook URL changed. Click Verify & Save to test connection.';
+                    sheetsStatus.style.display = 'flex';
+                }
             }
 
             var sheetsHelp = document.createElement('small');
             sheetsHelp.textContent = 'Enter your Google Apps Script Deployment ID or Webhook URL. It is verified before saving to enable Push to Sheets.';
 
             function runVerification() {
+                if (sheetsBtn.disabled) return;
                 var val = sheetsInput.value.trim();
                 if (!val) {
                     var next = Object.assign({}, values, { sheetsDeploymentId: '', sheetsVerified: false });
                     save(next);
+                    savedDeploymentId = '';
+                    isSavedVerified = false;
                     try {
                         localStorage.removeItem('s4t_sheets_deployment_id');
                         localStorage.removeItem('s4t_sheets_verified');
@@ -165,17 +213,18 @@ var s4tPreferences = (function () {
                     sheetsStatus.style.display = 'flex';
                     status.textContent = 'Google Sheets URL cleared.';
                     document.dispatchEvent(new Event('s4t-sheets-verified-changed'));
+                    updateButtonState();
                     return;
                 }
 
-                sheetsBtn.disabled = true;
-                sheetsBtn.classList.add('is-busy');
-                sheetsBtn.querySelector('.s4t-preferences-sheets-btn-text').textContent = 'Verifying…';
-                sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-loading';
-                sheetsStatus.innerHTML = '<span>⏳</span> Verifying webhook connection…';
-                sheetsStatus.style.display = 'flex';
+                if (isSavedVerified && val === savedDeploymentId) {
+                    updateButtonState();
+                    return;
+                }
 
-                function onVerified(res) {
+                var normalizedKey = normalizeWebhookUrl(val);
+
+                function applyVerifiedResult(res, fromCache) {
                     sheetsBtn.disabled = false;
                     sheetsBtn.classList.remove('is-busy');
                     sheetsBtn.querySelector('.s4t-preferences-sheets-btn-text').textContent = 'Verify & Save';
@@ -183,6 +232,8 @@ var s4tPreferences = (function () {
                     if (res && res.success) {
                         var next = Object.assign({}, values, { sheetsDeploymentId: val, sheetsVerified: true });
                         save(next);
+                        savedDeploymentId = val;
+                        isSavedVerified = true;
                         try {
                             localStorage.setItem('s4t_sheets_deployment_id', val);
                             localStorage.setItem('s4t_sheets_verified', 'true');
@@ -195,10 +246,11 @@ var s4tPreferences = (function () {
                             });
                         }
                         sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-success';
-                        sheetsStatus.innerHTML = '<span>✓</span> <strong>Verified and saved!</strong> Push to Sheets is enabled in Members Burndown.';
+                        sheetsStatus.innerHTML = '<span>✓</span> <strong>' + (fromCache ? 'Verified (cached) and saved!' : 'Verified and saved!') + '</strong> Push to Sheets is enabled in Members Burndown.';
                         sheetsStatus.style.display = 'flex';
                         status.textContent = 'Google Sheets Webhook verified & saved.';
                         document.dispatchEvent(new Event('s4t-sheets-verified-changed'));
+                        updateButtonState();
                     } else {
                         var errReason = (res && res.message) || 'Could not reach webhook endpoint.';
                         sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-error';
@@ -206,6 +258,28 @@ var s4tPreferences = (function () {
                         sheetsStatus.style.display = 'flex';
                         status.textContent = 'Webhook verification failed.';
                     }
+                }
+
+                if (normalizedKey && sheetsVerifyCache[normalizedKey]) {
+                    var cached = sheetsVerifyCache[normalizedKey];
+                    if (Date.now() - cached.timestamp < 600000) {
+                        applyVerifiedResult(cached.res, true);
+                        return;
+                    }
+                }
+
+                sheetsBtn.disabled = true;
+                sheetsBtn.classList.add('is-busy');
+                sheetsBtn.querySelector('.s4t-preferences-sheets-btn-text').textContent = 'Verifying…';
+                sheetsStatus.className = 's4t-preferences-sheets-status s4t-pref-status-loading';
+                sheetsStatus.innerHTML = '<span>⏳</span> Verifying webhook connection…';
+                sheetsStatus.style.display = 'flex';
+
+                function onVerified(res) {
+                    if (res && normalizedKey) {
+                        sheetsVerifyCache[normalizedKey] = { res: res, timestamp: Date.now() };
+                    }
+                    applyVerifiedResult(res, false);
                 }
 
                 if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
@@ -223,10 +297,7 @@ var s4tPreferences = (function () {
                         }
                     });
                 } else if (typeof fetch === 'function') {
-                    var normalized = val.startsWith('https://script.google.com/macros/s/') && val.endsWith('/exec')
-                        ? val
-                        : (val.startsWith('https://script.google.com/macros/s/') ? val.replace(/\/+$/, '') + '/exec' : 'https://script.google.com/macros/s/' + val + '/exec');
-                    fetch(normalized, { method: 'GET', redirect: 'follow' })
+                    fetch(normalizedKey, { method: 'GET', redirect: 'follow' })
                         .then(function (r) { return r.text(); })
                         .then(function (text) {
                             if (text.startsWith('SUCCESS:') || text.toLowerCase().includes('success')) {
@@ -243,13 +314,20 @@ var s4tPreferences = (function () {
                 }
             }
 
-            sheetsBtn.onclick = runVerification;
+            sheetsBtn.onclick = function () {
+                if (!sheetsBtn.disabled) runVerification();
+            };
             sheetsInput.onkeydown = function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    runVerification();
+                    if (!sheetsBtn.disabled) runVerification();
                 }
             };
+            sheetsInput.addEventListener('input', updateButtonState);
+            sheetsInput.addEventListener('keyup', updateButtonState);
+            sheetsInput.addEventListener('change', updateButtonState);
+
+            updateButtonState();
 
             sheetsLabel.append(sheetsTitle, sheetsRow, sheetsStatus, sheetsHelp);
             sheetsField.append(sheetsLabel);

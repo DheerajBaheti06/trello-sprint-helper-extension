@@ -165,7 +165,9 @@ async function executePushToGoogleSheet(options, customFetch) {
     };
 }
 
-async function executeVerifyWebhookUrl(rawUrl, customFetch) {
+var webhookVerifyCache = {};
+
+async function executeVerifyWebhookUrl(rawUrl, customFetch, bypassCache) {
     var fetchFn = customFetch || (typeof fetch === 'function' ? fetch : null);
     if (!fetchFn) {
         throw new Error('fetch is not available in the current environment.');
@@ -178,6 +180,13 @@ async function executeVerifyWebhookUrl(rawUrl, customFetch) {
             message: 'Invalid Google Apps Script Webhook URL or Deployment ID.',
             errorType: 'invalid_url'
         };
+    }
+
+    if (!customFetch && !bypassCache && webhookVerifyCache[webhookUrl]) {
+        var cached = webhookVerifyCache[webhookUrl];
+        if (Date.now() - cached.timestamp < 300000) {
+            return Object.assign({}, cached.result, { fromCache: true });
+        }
     }
 
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -198,18 +207,26 @@ async function executeVerifyWebhookUrl(rawUrl, customFetch) {
         var resText = (await res.text()).trim();
 
         if (res.ok && (resText.startsWith('SUCCESS:') || resText.toLowerCase().includes('success'))) {
-            return {
+            var successResult = {
                 success: true,
                 message: resText || 'SUCCESS: Webhook URL is verified and active',
                 normalizedUrl: webhookUrl
             };
+            if (!customFetch) {
+                webhookVerifyCache[webhookUrl] = { result: successResult, timestamp: Date.now() };
+            }
+            return successResult;
         }
 
-        return {
+        var failResult = {
             success: false,
             message: resText || ('Endpoint returned HTTP ' + res.status),
             errorType: 'verification_failed'
         };
+        if (!customFetch) {
+            webhookVerifyCache[webhookUrl] = { result: failResult, timestamp: Date.now() };
+        }
+        return failResult;
     } catch (err) {
         if (timeoutId) clearTimeout(timeoutId);
         if (err && err.name === 'AbortError') {
@@ -261,7 +278,8 @@ if (typeof module !== 'undefined' && module.exports) {
         s4tNormalizeSheetsWebhookUrl: s4tNormalizeSheetsWebhookUrl,
         generateSheetTabCandidates: generateSheetTabCandidates,
         executePushToGoogleSheet: executePushToGoogleSheet,
-        executeVerifyWebhookUrl: executeVerifyWebhookUrl
+        executeVerifyWebhookUrl: executeVerifyWebhookUrl,
+        webhookVerifyCache: webhookVerifyCache
     };
 }
 

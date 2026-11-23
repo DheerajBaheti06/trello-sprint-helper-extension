@@ -82,3 +82,19 @@ test('card topbar elements mount reliably on first card open after reload withou
     assert.ok(cardCopy.includes('needsMount=((searchSlot&&(!shareButton||!shareButton.isConnected))||(!titleButton||!titleButton.isConnected))&&cardPresent;'), 'card-copy mounts share and title buttons reliably when needed');
 });
 
+test('closed board and cross-board header list badge pushes left without clashing with comment toolbar', () => {
+    const cssPath = path.join(__dirname, '..', 'sprint-helper.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const sprintHelperPath = path.join(__dirname, '..', 'sprint-helper.js');
+    const sprintHelper = fs.readFileSync(sprintHelperPath, 'utf8');
+    const commentLayoutPath = path.join(__dirname, '..', 'comment-layout.js');
+    const commentLayout = fs.readFileSync(commentLayoutPath, 'utf8');
+
+    assert.ok(css.includes('flex-wrap: nowrap !important'), 'prevents toolbar controls from wrapping into multiple rows');
+    assert.ok(css.includes('.s4t-card-header-board-badge'), 'includes closed-board header board/list badge styling');
+    assert.ok(css.includes('order: -2 !important') && css.includes('margin-right: auto !important'), 'pushes board/list badge to the far left away from right action buttons');
+    assert.ok(commentLayout.includes('flex-wrap:nowrap!important'), 'comment layout enforces flex-wrap nowrap');
+    assert.ok(commentLayout.includes('min-width:130px'), 'comment navigator allows flexible min-width');
+    assert.ok(sprintHelper.includes('isBoardBadge'), 'sprint-helper detects board/list badge in header when Cover action is absent');
+});
+

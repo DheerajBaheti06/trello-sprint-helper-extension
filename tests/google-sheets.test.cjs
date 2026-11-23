@@ -301,7 +301,25 @@ test('sprint-helper.css formats .s4t-preferences-sheets as full width beneath Ap
     assert.ok(css.includes('.s4t-pref-status-success'), 'css must style inline success state');
     assert.ok(css.includes('.s4t-pref-status-error'), 'css must style inline error state');
 });
+test('feature-preferences.js keeps verify button disabled when unchanged or already verified and uses cache', () => {
+    const fp = fs.readFileSync('feature-preferences.js', 'utf8');
+    assert.ok(fp.includes('updateButtonState'), 'must have updateButtonState to manage button state');
+    assert.ok(fp.includes('sheetsBtn.disabled = true;'), 'must disable button when unchanged or already verified');
+    assert.ok(fp.includes('sheetsVerifyCache'), 'must maintain verification cache');
+    assert.ok(fp.includes('applyVerifiedResult(cached.res, true)'), 'must apply cached verification results without refetching');
+});
 
+test('background.js caches verified webhook responses in webhookVerifyCache', async () => {
+    assert.ok(background.webhookVerifyCache, 'background must export webhookVerifyCache');
+    const fakeUrl = 'https://script.google.com/macros/s/AKfycbx_cache_test/exec';
+    background.webhookVerifyCache[fakeUrl] = {
+        result: { success: true, message: 'SUCCESS: Cached verification', normalizedUrl: fakeUrl },
+        timestamp: Date.now()
+    };
 
-
+    const res = await background.executeVerifyWebhookUrl(fakeUrl);
+    assert.equal(res.success, true);
+    assert.equal(res.fromCache, true);
+    assert.ok(res.message.includes('SUCCESS: Cached verification'));
+});
 
