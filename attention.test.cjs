@@ -10,6 +10,15 @@ vm.runInContext(main.slice(main.indexOf('/* Attention filters use their own clas
 const card = (overrides = {}) => ({name: 'Build feature', desc: '', idMembers: ['member'], idList: 'todo', ...overrides});
 const checklist = (name, states) => ({name, checkItems: states.map(state => ({state}))});
 const issues = (overrides, lists = [], names = []) => context.s4tAttentionIssues(card(overrides), lists, names);
+const stripHtml = (html) => {
+    let text = '', inTag = false;
+    for (let i = 0; i < (html || '').length; i++) {
+        if (html[i] === '<') inTag = true;
+        else if (html[i] === '>') inTag = false;
+        else if (!inTag) text += html[i];
+    }
+    return text;
+};
 
 test('missing scope checks whitespace, not description length', () => {
     assert.equal(issues({desc: ' \n\t '}).scope, true);
@@ -477,32 +486,32 @@ test('Not Sure exclusion updates member points and progress without changing tea
     assert.equal(result.members[0].notSureCompleted,1.5);
     const original=JSON.stringify(result);
     const filtered=context.renderMembersHtml(result.members,true);
-    assert.match(filtered.replace(/<[^>]*>/g,''),/5 assigned/);
-    assert.match(filtered.replace(/<[^>]*>/g,''),/✓ 2 done/);
-    assert.match(filtered.replace(/<[^>]*>/g,''),/3 remaining/);
+    assert.match(stripHtml(filtered),/5 assigned/);
+    assert.match(stripHtml(filtered),/✓ 2 done/);
+    assert.match(stripHtml(filtered),/3 remaining/);
     assert.match(filtered,/width:40%/);
-    assert.match(filtered.replace(/<[^>]*>/g, ''), /1 cards \(1 pending, 0 doing, 0 done\)/);
+    assert.match(stripHtml(filtered), /1 cards \(1 pending, 0 doing, 0 done\)/);
     assert.equal(result.team.cardsTotal,2);
     const unfiltered=context.renderMembersHtml(result.members,false);
-    assert.match(unfiltered.replace(/<[^>]*>/g,''),/7.5 assigned/);
-    assert.match(unfiltered.replace(/<[^>]*>/g,''),/✓ 3.5 done/);
-    assert.match(unfiltered.replace(/<[^>]*>/g,''),/4 remaining/);
-    assert.match(unfiltered.replace(/<[^>]*>/g, ''), /2 cards \(2 pending, 0 doing, 0 done\)/);
+    assert.match(stripHtml(unfiltered),/7.5 assigned/);
+    assert.match(stripHtml(unfiltered),/✓ 3.5 done/);
+    assert.match(stripHtml(unfiltered),/4 remaining/);
+    assert.match(stripHtml(unfiltered), /2 cards \(2 pending, 0 doing, 0 done\)/);
     assert.equal(result.team.assigned,7.5);
     assert.equal(JSON.stringify(result),original);
     const allExcluded=context.renderMembersHtml([{...result.members[0],notSureAssigned:7.5,notSureCompleted:3.5}],true);
-    assert.match(allExcluded.replace(/<[^>]*>/g,''),/0 assigned/);
-    assert.match(allExcluded.replace(/<[^>]*>/g,''),/✓ 0 done/);
-    assert.match(allExcluded.replace(/<[^>]*>/g,''),/0 remaining/);
+    assert.match(stripHtml(allExcluded),/0 assigned/);
+    assert.match(stripHtml(allExcluded),/✓ 0 done/);
+    assert.match(stripHtml(allExcluded),/0 remaining/);
     assert.match(allExcluded,/width:0%/);
 });
 
 test('Not Sure card counts include completed and unestimated cards', () => {
     const result = context.computeBurndownFromBoardData({name:'Sprint',members:[{id:'member',fullName:'Alex'}],lists:[{id:'todo',name:'Todo'},{id:'maybe',name:'Not Sure'}],cards:[card({name:'Keep',dueComplete:true}),card({name:'Optional',idList:'maybe'}),card({name:'Completed optional',idList:'maybe',dueComplete:true})]});
     const filtered=context.renderMembersHtml(result.members,true);
-    assert.match(filtered.replace(/<[^>]*>/g, ''), /1 cards \(0 pending, 0 doing, 1 done\)/);
+    assert.match(stripHtml(filtered), /1 cards \(0 pending, 0 doing, 1 done\)/);
     assert.match(filtered,/width:100%/);
-    assert.match(context.renderMembersHtml(result.members,false).replace(/<[^>]*>/g, ''), /3 cards \(1 pending, 0 doing, 2 done\)/);
+    assert.match(stripHtml(context.renderMembersHtml(result.members,false)), /3 cards \(1 pending, 0 doing, 2 done\)/);
     assert.equal(result.team.cardsTotal,3);
     assert.equal(result.team.cardsCompleted,2);
 });
@@ -642,10 +651,10 @@ test('Members Burndown counts actual completed points and preserves assigned poi
     assert.equal(result.team.cardsCompleted, 1);
 
     const html = context.renderMembersHtml(result.members, false);
-    assert.match(html.replace(/<[^>]*>/g, ''), /3 assigned/);
-    assert.match(html.replace(/<[^>]*>/g, ''), /✓ 0 done/);
-    assert.match(html.replace(/<[^>]*>/g, ''), /3 remaining/);
-    assert.match(html.replace(/<[^>]*>/g, ''), /1 cards \(0 pending, 0 doing, 1 done\)/);
+    assert.match(stripHtml(html), /3 assigned/);
+    assert.match(stripHtml(html), /✓ 0 done/);
+    assert.match(stripHtml(html), /3 remaining/);
+    assert.match(stripHtml(html), /1 cards \(0 pending, 0 doing, 1 done\)/);
 });
 
 test('Members Burndown classifies cards into pending (before doing), doing, and done (after doing) lists with 4-number cards progress', () => {
@@ -714,8 +723,8 @@ test('Members Burndown classifies cards into pending (before doing), doing, and 
 
     // Render HTML for member listing
     const html = context.renderMembersHtml(result.members, false);
-    assert.match(html.replace(/<[^>]*>/g, ''), /4 cards \(1 pending, 1 doing, 2 done\)/);
-    assert.match(html.replace(/<[^>]*>/g, ''), /2 cards \(1 pending, 1 doing, 0 done\)/);
+    assert.match(stripHtml(html), /4 cards \(1 pending, 1 doing, 2 done\)/);
+    assert.match(stripHtml(html), /2 cards \(1 pending, 1 doing, 0 done\)/);
 
     // Stat card 3 ('Cards progress') summary:
     const summary = context.s4tSprintSummary(result.team);
